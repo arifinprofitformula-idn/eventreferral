@@ -38,6 +38,7 @@
     font-family: inherit; outline: none;
   }
   .field input:focus { border-color: var(--gold); }
+  .hint { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.45; }
   .btn {
     width: 100%; background: var(--gold); color: var(--charcoal); font-weight: 700;
     font-size: 15.5px; padding: 15px; border: none; border-radius: 12px; cursor: pointer; margin-top: 8px;
@@ -65,7 +66,7 @@
 <div class="box">
   <img src="assets/logo.png" alt="rahasiaemas.id" class="logo">
   <h1>Buat Link Undanganmu</h1>
-  <p class="sub">Isi nama & WhatsApp kamu untuk membuat link undangan pribadi. Bagikan ke teman — dan setiap orang yang daftar lewat link ini akan langsung terhubung ke WhatsApp kamu.</p>
+  <p class="sub">Isi nama, WhatsApp, dan kode link pilihanmu. Bagikan ke teman — dan setiap orang yang daftar lewat link ini akan langsung terhubung ke WhatsApp kamu.</p>
 
   <form id="genForm">
     <div class="field">
@@ -75,6 +76,11 @@
     <div class="field">
       <label>Nomor WhatsApp Kamu</label>
       <input type="tel" name="whatsapp" placeholder="08xxxxxxxxxx" required minlength="9">
+    </div>
+    <div class="field">
+      <label>Kode Link yang Diinginkan</label>
+      <input type="text" name="ref_code" placeholder="contoh: budiemas" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_-]+">
+      <small class="hint">Gunakan 3-20 karakter: huruf, angka, strip (-), atau underscore (_).</small>
     </div>
     <button type="submit" class="btn" id="genBtn">Buat Link Undangan Saya</button>
   </form>
@@ -109,6 +115,7 @@ form.addEventListener('submit', async function (e) {
   const data = {
     name: form.name.value.trim(),
     whatsapp: form.whatsapp.value.trim(),
+    ref_code: form.ref_code.value.trim(),
   };
 
   try {

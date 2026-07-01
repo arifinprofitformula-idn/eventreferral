@@ -1,7 +1,7 @@
 <?php
 /**
  * api/create_referrer.php
- * Menerima nama + WhatsApp calon pengundang, generate ref_code unik,
+ * Menerima nama, WhatsApp, dan ref_code pilihan calon pengundang,
  * simpan ke tabel referrers, kembalikan link siap-share.
  */
 
@@ -21,6 +21,7 @@ if (!$input) {
 
 $name = clean($input['name'] ?? '');
 $wa   = clean($input['whatsapp'] ?? '');
+$requestedRefCode = strtolower(clean($input['ref_code'] ?? ''));
 
 $errors = [];
 if ($name === '' || mb_strlen($name) < 3) {
@@ -29,6 +30,11 @@ if ($name === '' || mb_strlen($name) < 3) {
 $waNormalized = normalize_whatsapp($wa);
 if (strlen($waNormalized) < 10 || strlen($waNormalized) > 15) {
     $errors[] = 'Nomor WhatsApp tidak valid.';
+}
+if ($requestedRefCode === '') {
+    $errors[] = 'Kode link wajib diisi.';
+} elseif (!preg_match('/^[a-z0-9_-]{3,20}$/', $requestedRefCode)) {
+    $errors[] = 'Kode link hanya boleh 3-20 karakter: huruf, angka, strip (-), atau underscore (_).';
 }
 
 if (!empty($errors)) {
@@ -40,26 +46,33 @@ if (!empty($errors)) {
 try {
     $pdo = get_db();
 
-    // Cek apakah nomor WA ini sudah pernah generate link sebelumnya -> pakai yang lama
-    $stmt = $pdo->prepare('SELECT ref_code FROM referrers WHERE whatsapp = ?');
+    // Cek apakah nomor WA ini sudah pernah membuat link sebelumnya.
+    $stmt = $pdo->prepare('SELECT ref_code FROM referrers WHERE whatsapp = ? ORDER BY id ASC LIMIT 1');
     $stmt->execute([$waNormalized]);
     $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($existing) {
         $refCode = $existing['ref_code'];
+        if ($requestedRefCode !== $refCode) {
+            http_response_code(409);
+            echo json_encode([
+                'success' => false,
+                'message' => "Nomor WhatsApp ini sudah punya kode link: {$refCode}. Gunakan kode tersebut atau hubungi admin untuk mengganti.",
+            ]);
+            exit;
+        }
     } else {
-        // Buat ref_code unik dari nama + angka acak, contoh: budi482
-        $base = strtolower(preg_replace('/[^a-zA-Z]/', '', $name));
-        $base = substr($base !== '' ? $base : 'user', 0, 12);
-
-        do {
-            $refCode = $base . rand(100, 999);
-            $stmt = $pdo->prepare('SELECT id FROM referrers WHERE ref_code = ?');
-            $stmt->execute([$refCode]);
-        } while ($stmt->fetch());
+        $stmt = $pdo->prepare('SELECT id FROM referrers WHERE ref_code = ?');
+        $stmt->execute([$requestedRefCode]);
+        if ($stmt->fetch()) {
+            http_response_code(409);
+            echo json_encode(['success' => false, 'message' => 'Kode link sudah dipakai. Silakan pilih kode lain.']);
+            exit;
+        }
 
         $stmt = $pdo->prepare('INSERT INTO referrers (ref_code, name, whatsapp) VALUES (?, ?, ?)');
-        $stmt->execute([$refCode, $name, $waNormalized]);
+        $stmt->execute([$requestedRefCode, $name, $waNormalized]);
+        $refCode = $requestedRefCode;
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';

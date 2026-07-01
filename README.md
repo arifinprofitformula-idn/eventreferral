@@ -76,8 +76,8 @@ Ganti juga:
 - **Dashboard admin:** `https://rahasiaemas.id/admin/` (masukkan PIN)
 
 Cara uji alur lengkap:
-1. Buka `buat-link.php`, isi nama & WA → dapat link, misal
-   `https://rahasiaemas.id/?ref=budi482`.
+1. Buka `buat-link.php`, isi nama, WA, dan kode link pilihan → dapat link,
+   misal `https://rahasiaemas.id/?ref=budiemas`.
 2. Buka link tersebut → landing page muncul dengan tulisan
    "Kamu diundang oleh Budi".
 3. Isi form pendaftaran → setelah submit, akan otomatis diarahkan ke
