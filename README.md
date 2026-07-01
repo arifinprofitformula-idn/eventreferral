@@ -50,10 +50,11 @@ Sistem ini terdiri dari 3 bagian:
      assets/
    ```
 
-## LANGKAH 4 — Edit `config.php`
+## LANGKAH 4 — Buat dan Edit `config.php`
 
-Buka file `config.php` lewat **File Manager → Edit** (atau download, edit,
-upload ulang), lalu isi bagian ini dengan data dari Langkah 1:
+Salin `config.example.php` menjadi `config.php`, lalu buka file `config.php`
+lewat **File Manager → Edit** (atau download, edit, upload ulang). Isi bagian
+ini dengan data dari Langkah 1:
 
 ```php
 define('DB_HOST', 'localhost');
@@ -107,4 +108,20 @@ tidak perlu edit file atau HTML.
 - Aktifkan **SSL/HTTPS gratis** (Let's Encrypt) lewat cPanel agar domain
   otomatis `https://` — biasanya tersedia gratis di menu **SSL/TLS Status**.
 - Backup database secara berkala lewat phpMyAdmin → **Export**.
+
+## Aturan Git / File yang Tidak Di-commit
+
+Project ini sudah dilengkapi `.gitignore`. File yang aman masuk repo adalah
+kode aplikasi, `install.sql`, asset publik, `.htaccess`, README, dan
+`config.example.php`.
+
+Jangan commit file/folder berikut:
+- `config.php` karena berisi kredensial database dan `ADMIN_PIN`.
+- `.env*`, kecuali `.env.example`.
+- `.agents/` dan `.codex/` karena hanya untuk workspace lokal.
+- `vendor/` dan `node_modules/` jika suatu saat dependency manager dipakai.
+- File runtime seperti `logs/`, `cache/`, `tmp/`, `uploads/`, `storage/`,
+  `exports/`, dan hasil export `*.csv`.
+- Dump/backup lokal seperti `*.sql.gz`, `*.dump`, `*.bak`, `*.backup`,
+  `*-old.*`, dan `*_old.*`.
 # eventreferral

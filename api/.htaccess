@@ -1,0 +1,12 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule !^(?:submit_lead|create_referrer)\.php$ - [F,L,NC]
+  RewriteCond %{REQUEST_METHOD} !POST
+  RewriteRule ^(?:submit_lead|create_referrer)\.php$ - [F,L]
+</IfModule>
+
+<FilesMatch "\.(?:sql|bak|backup|old|orig|save|swp|ini|log|md|yml|yaml|json|lock|sh|ps1|bat|cmd)$">
+  Require all denied
+</FilesMatch>

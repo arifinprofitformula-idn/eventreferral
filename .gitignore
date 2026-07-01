@@ -1,0 +1,44 @@
+# Local configuration and secrets
+config.php
+.env
+.env.*
+!.env.example
+
+# Local Codex/agent workspace files
+.agents/
+.codex/
+
+# Dependency folders
+vendor/
+node_modules/
+
+# Logs, caches, and temporary files
+*.log
+logs/
+cache/
+tmp/
+temp/
+
+# Runtime uploads and generated exports
+uploads/
+storage/
+exports/
+*.csv
+
+# Local database dumps and backups
+*.sql.gz
+*.sql.zip
+*.dump
+*.bak
+*.backup
+*-old.*
+*_old.*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
