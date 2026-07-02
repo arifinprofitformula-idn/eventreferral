@@ -1,0 +1,21 @@
+Example production layout:
+
+/home/USER/repositories/rahasiaemas.id
+/home/USER/shared/rahasiaemas.id/config.php
+/home/USER/shared/rahasiaemas.id/backups
+/home/USER/shared/rahasiaemas.id/deploy.log
+
+Recommended symlinks from repository root:
+
+config.php -> /home/USER/shared/rahasiaemas.id/config.php
+
+Runtime public folders remain inside the document root:
+
+/home/USER/repositories/rahasiaemas.id/e
+/home/USER/repositories/rahasiaemas.id/assets/rewards
+
+Their generated contents are ignored by Git, while placeholder/security files remain tracked:
+
+e/.htaccess
+e/README.txt
+assets/rewards/default.png

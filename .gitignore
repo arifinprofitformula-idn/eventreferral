@@ -25,6 +25,14 @@ storage/
 exports/
 *.csv
 
+# Public runtime content generated from the admin panel.
+# Keep placeholder/security files tracked, ignore uploaded event/reward content.
+e/*
+!e/.htaccess
+!e/README.txt
+assets/rewards/*
+!assets/rewards/default.png
+
 # Local database dumps and backups
 *.sql.gz
 *.sql.zip

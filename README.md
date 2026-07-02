@@ -128,4 +128,18 @@ Jangan commit file/folder berikut:
   `exports/`, dan hasil export `*.csv`.
 - Dump/backup lokal seperti `*.sql.gz`, `*.dump`, `*.bak`, `*.backup`,
   `*-old.*`, dan `*_old.*`.
+
+## Deployment via GitHub
+
+Untuk production jangka panjang, gunakan pola:
+
+```text
+repositories/rahasiaemas.id = source code dari GitHub
+shared/rahasiaemas.id       = config dan data runtime production
+domain root                 = diarahkan ke repositories/rahasiaemas.id
+```
+
+Panduan lengkap ada di `DEPLOYMENT.md`, termasuk contoh symlink `config.php`,
+folder event upload `e/`, folder reward image, cron deploy, dan script
+`deploy/deploy.sh`.
 # eventreferral
