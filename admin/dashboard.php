@@ -25,10 +25,21 @@ $eventSummary = $pdo->query('
 ')->fetchAll(PDO::FETCH_ASSOC);
 
 // Leaderboard pengundang
+// Hitungan leaderboard memakai WhatsApp unik per event berdasarkan pendaftaran pertama.
+// Raw leads tetap disimpan apa adanya untuk audit dan follow-up.
 $leaderboard = $pdo->query('
-    SELECT r.name, r.whatsapp, r.ref_code, e.name AS event_name, COUNT(l.id) AS total
+    SELECT r.name, r.whatsapp, r.ref_code, e.name AS event_name, COUNT(fl.id) AS total
     FROM referrers r
-    LEFT JOIN leads l ON l.event_slug = r.event_slug AND l.ref_code = r.ref_code
+    LEFT JOIN (
+        SELECT l1.id, l1.event_slug, l1.ref_code
+        FROM leads l1
+        INNER JOIN (
+            SELECT event_slug, whatsapp, MIN(id) AS first_id
+            FROM leads
+            WHERE whatsapp IS NOT NULL AND whatsapp <> ""
+            GROUP BY event_slug, whatsapp
+        ) first_lead ON first_lead.first_id = l1.id
+    ) fl ON fl.event_slug = r.event_slug AND fl.ref_code = r.ref_code
     LEFT JOIN events e ON e.slug = r.event_slug
     GROUP BY r.id
     ORDER BY total DESC, r.created_at ASC
@@ -793,7 +804,7 @@ function whatsapp_link(?string $number): ?string
           <span class="icon-badge" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Zm10 2h3a2 2 0 0 1-2 2h-1M7 6H4a2 2 0 0 0 2 2h1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           Leaderboard Pengundang Teraktif
         </h2>
-        <p class="section-desc">Pantau performa referral berdasarkan jumlah pendaftar yang masuk.</p>
+        <p class="section-desc">Pantau performa referral berdasarkan pendaftar unik dari WhatsApp pertama per event.</p>
       </div>
     </div>
   <?php if (empty($leaderboard)): ?>
@@ -801,7 +812,7 @@ function whatsapp_link(?string $number): ?string
   <?php else: ?>
   <div class="table-scroll desktop-table">
     <table class="leaderboard-table">
-      <thead><tr><th>#</th><th>Nama</th><th>WhatsApp</th><th>Kode Link</th><th>Event</th><th>Jumlah Pendaftar</th></tr></thead>
+      <thead><tr><th>#</th><th>Nama</th><th>WhatsApp</th><th>Kode Link</th><th>Event</th><th>Pendaftar Unik</th></tr></thead>
       <tbody>
       <?php foreach ($leaderboard as $i => $r): ?>
       <?php $waLink = whatsapp_link($r['whatsapp'] ?? ''); ?>

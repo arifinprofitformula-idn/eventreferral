@@ -19,11 +19,22 @@ if ($eventSlug !== '') {
 }
 
 // Ambil leaderboard: jika event dipilih -> hanya event itu. Jika tidak -> semua event digabung.
+// Skor challenge memakai WhatsApp unik per event berdasarkan pendaftaran pertama.
+// Raw leads tetap disimpan apa adanya untuk audit dan follow-up.
 if ($eventSlug !== '') {
     $stmt = $pdo->prepare('
-        SELECT r.name, COUNT(l.id) AS total
+        SELECT r.name, COUNT(fl.id) AS total
         FROM referrers r
-        LEFT JOIN leads l ON l.event_slug = r.event_slug AND l.ref_code = r.ref_code
+        LEFT JOIN (
+            SELECT l1.id, l1.event_slug, l1.ref_code
+            FROM leads l1
+            INNER JOIN (
+                SELECT event_slug, whatsapp, MIN(id) AS first_id
+                FROM leads
+                WHERE whatsapp IS NOT NULL AND whatsapp <> ""
+                GROUP BY event_slug, whatsapp
+            ) first_lead ON first_lead.first_id = l1.id
+        ) fl ON fl.event_slug = r.event_slug AND fl.ref_code = r.ref_code
         WHERE r.event_slug = ?
         GROUP BY r.id
         ORDER BY total DESC, r.created_at ASC
@@ -32,13 +43,18 @@ if ($eventSlug !== '') {
     $stmt->execute([$eventSlug]);
 } else {
     $stmt = $pdo->query('
-        SELECT r.name, SUM(cnt.total) AS total
+        SELECT r.name, COUNT(fl.id) AS total
         FROM referrers r
         LEFT JOIN (
-            SELECT event_slug, ref_code, COUNT(*) AS total
-            FROM leads
-            GROUP BY event_slug, ref_code
-        ) cnt ON cnt.event_slug = r.event_slug AND cnt.ref_code = r.ref_code
+            SELECT l1.id, l1.event_slug, l1.ref_code
+            FROM leads l1
+            INNER JOIN (
+                SELECT event_slug, whatsapp, MIN(id) AS first_id
+                FROM leads
+                WHERE whatsapp IS NOT NULL AND whatsapp <> ""
+                GROUP BY event_slug, whatsapp
+            ) first_lead ON first_lead.first_id = l1.id
+        ) fl ON fl.event_slug = r.event_slug AND fl.ref_code = r.ref_code
         GROUP BY r.name
         ORDER BY total DESC
         LIMIT 50
@@ -891,7 +907,7 @@ function display_initials(string $name): string
           <div class="rank-table-head">
             <span>#</span>
             <span>Pengundang</span>
-            <span>Jumlah Pendaftar</span>
+            <span>Pendaftar Unik</span>
           </div>
           <?php foreach ($leaderboard as $i => $row): ?>
             <?php
@@ -911,9 +927,9 @@ function display_initials(string $name): string
 
       <p class="last-note">
         <?php if ($lastUpdated): ?>
-          🔄 Terakhir diperbarui: <?= htmlspecialchars(date('d M Y, H:i', strtotime($lastUpdated))) ?> WIB
+          🔄 Leaderboard menghitung WhatsApp unik per event. Terakhir diperbarui: <?= htmlspecialchars(date('d M Y, H:i', strtotime($lastUpdated))) ?> WIB
         <?php else: ?>
-          Leaderboard diperbarui otomatis saat ada pendaftar baru.
+          Leaderboard menghitung WhatsApp unik per event dari pendaftaran pertama.
         <?php endif; ?>
       </p>
     </section>
@@ -931,7 +947,7 @@ function display_initials(string $name): string
         </div>
         <div class="join-step">
           <span class="step-num">3</span>
-          <div><div class="step-title">Naikkan peringkatmu</div><p class="step-copy">Setiap pendaftar dari link kamu akan masuk ke leaderboard.</p></div>
+          <div><div class="step-title">Naikkan peringkatmu</div><p class="step-copy">Setiap WhatsApp unik dari link kamu akan masuk ke leaderboard.</p></div>
         </div>
       </div>
       <a class="btn btn-gold" href="<?= htmlspecialchars($referralUrl) ?>">Buat Link Referral Sekarang</a>
