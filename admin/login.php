@@ -2,15 +2,39 @@
 require_once __DIR__ . '/../config.php';
 start_secure_session();
 
+$error = null;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $pin = $_POST['pin'] ?? '';
-    if (hash_equals(ADMIN_PIN, $pin)) {
-        session_regenerate_id(true);
-        $_SESSION['admin_authenticated'] = true;
-        header('Location: dashboard.php');
-        exit;
+    $username = $_POST['username'] ?? '';
+    $password = $_POST['password'] ?? '';
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+
+    $pdo = get_db(false);
+    if (!$pdo) {
+        $error = 'Koneksi database gagal. Coba lagi nanti.';
     } else {
-        $error = 'PIN salah. Coba lagi.';
+        $stmt = $pdo->prepare('DELETE FROM login_attempts WHERE created_at < (NOW() - INTERVAL ? MINUTE)');
+        $stmt->execute([LOGIN_LOCKOUT_MINUTES]);
+
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM login_attempts WHERE ip = ?');
+        $stmt->execute([$ip]);
+        $attemptCount = (int)$stmt->fetchColumn();
+
+        if ($attemptCount >= LOGIN_MAX_ATTEMPTS) {
+            $error = 'Terlalu banyak percobaan gagal. Coba lagi dalam beberapa menit.';
+        } elseif (hash_equals(ADMIN_USERNAME, $username) && password_verify($password, ADMIN_PASSWORD_HASH)) {
+            $stmt = $pdo->prepare('DELETE FROM login_attempts WHERE ip = ?');
+            $stmt->execute([$ip]);
+
+            session_regenerate_id(true);
+            $_SESSION['admin_authenticated'] = true;
+            header('Location: dashboard.php');
+            exit;
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO login_attempts (ip) VALUES (?)');
+            $stmt->execute([$ip]);
+            $error = 'Username atau password salah.';
+        }
     }
 }
 
@@ -37,8 +61,8 @@ if (!empty($_SESSION['admin_authenticated'])) {
   h1 { font-family: 'Playfair Display', serif; color: #C9A84C; font-size: 22px; margin-bottom: 24px; }
   input {
     width: 100%; background: #242424; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
-    padding: 15px; color: #FAFAFA; font-size: 20px; text-align: center; letter-spacing: 6px;
-    margin-bottom: 16px; outline: none;
+    padding: 14px; color: #FAFAFA; font-size: 15px; text-align: left;
+    margin-bottom: 14px; outline: none;
   }
   input:focus { border-color: #C9A84C; }
   button {
@@ -54,7 +78,8 @@ if (!empty($_SESSION['admin_authenticated'])) {
   <h1>🔒 Admin rahasiaemas.id</h1>
   <?php if (!empty($error)): ?><p class="error"><?= htmlspecialchars($error) ?></p><?php endif; ?>
   <form method="POST">
-    <input type="password" name="pin" placeholder="••••••" inputmode="numeric" maxlength="10" autofocus required>
+    <input type="text" name="username" placeholder="Username" autofocus required autocomplete="username">
+    <input type="password" name="password" placeholder="Password" required autocomplete="current-password">
     <button type="submit">Masuk</button>
   </form>
 </div>

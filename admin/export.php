@@ -9,9 +9,10 @@ if (empty($_SESSION['admin_authenticated'])) {
 
 $pdo = get_db();
 $leads = $pdo->query('
-    SELECT l.name, l.email, l.whatsapp, l.kota, l.ref_code, r.name AS referrer_name, l.created_at
+    SELECT l.name, l.email, l.whatsapp, l.kota, l.ref_code, r.name AS referrer_name, e.name AS event_name, l.created_at
     FROM leads l
-    LEFT JOIN referrers r ON r.ref_code = l.ref_code
+    LEFT JOIN referrers r ON r.event_slug = l.event_slug AND r.ref_code = l.ref_code
+    LEFT JOIN events e ON e.slug = l.event_slug
     ORDER BY l.created_at DESC
 ')->fetchAll(PDO::FETCH_ASSOC);
 
@@ -20,7 +21,7 @@ header('Content-Disposition: attachment; filename=pendaftar_rahasiaemas_' . date
 
 $out = fopen('php://output', 'w');
 fputs($out, "\xEF\xBB\xBF"); // BOM agar Excel baca UTF-8 dengan benar
-fputcsv($out, ['Nama', 'Email', 'WhatsApp', 'Kota', 'Kode Referral', 'Diundang Oleh', 'Waktu Daftar']);
+fputcsv($out, ['Nama', 'Email', 'WhatsApp', 'Kota', 'Kode Referral', 'Event', 'Diundang Oleh', 'Waktu Daftar'], ',', '"', '\\');
 
 foreach ($leads as $l) {
     fputcsv($out, [
@@ -29,9 +30,10 @@ foreach ($leads as $l) {
         $l['whatsapp'],
         $l['kota'],
         $l['ref_code'],
+        $l['event_name'] ?? '-',
         $l['referrer_name'] ?? '-',
         $l['created_at'],
-    ]);
+    ], ',', '"', '\\');
 }
 
 fclose($out);

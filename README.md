@@ -3,7 +3,7 @@
 Sistem ini terdiri dari 3 bagian:
 1. **Landing page acara** (`index.php`) — bisa dibuka lewat `rahasiaemas.id/?ref=KODE`
 2. **Buat link undangan** (`buat-link.php`) — dipakai siapapun untuk generate link pribadi
-3. **Dashboard admin** (`admin/`) — khusus Coach Arifin, dilindungi PIN
+3. **Dashboard admin** (`admin/`) — khusus Coach Arifin, dilindungi login username+password
 
 ---
 
@@ -64,7 +64,10 @@ define('DB_PASS', 'password_database_anda');
 ```
 
 Ganti juga:
-- `ADMIN_PIN` → PIN rahasia untuk masuk dashboard (default `482910`, WAJIB diganti).
+- `ADMIN_USERNAME` → username login dashboard (WAJIB diganti dari default `admin`).
+- `ADMIN_PASSWORD_HASH` → buka `admin/generate-password-hash.php` di browser,
+  masukkan password pilihan Anda, salin hasil hash-nya ke sini, lalu **hapus
+  file `admin/generate-password-hash.php` dari server** setelah selesai.
 - `EVENT_DAY`, `EVENT_TIME`, `EVENT_LOCATION`, `EVENT_SPEAKER`, `EVENT_CAPACITY`
   → nilai awal/fallback detail acara. Setelah login admin, detail acara bisa diubah
   langsung dari dashboard tanpa edit file.
@@ -73,7 +76,7 @@ Ganti juga:
 
 - **Landing page utama:** `https://rahasiaemas.id/`
 - **Buat link undangan:** `https://rahasiaemas.id/buat-link.php`
-- **Dashboard admin:** `https://rahasiaemas.id/admin/` (masukkan PIN)
+- **Dashboard admin:** `https://rahasiaemas.id/admin/` (masukkan username & password)
 
 Cara uji alur lengkap:
 1. Buka `buat-link.php`, isi nama, WA, dan kode link pilihan → dapat link,
@@ -100,11 +103,12 @@ tidak perlu edit file atau HTML.
 | "Koneksi database gagal" | Pastikan user database sudah di-attach ke database dengan ALL PRIVILEGES |
 | Form submit tidak jalan | Pastikan hosting mendukung PHP 7.4 ke atas dan folder `api/` ikut ter-upload |
 | Redirect WhatsApp tidak muncul | Cek format nomor WA pengundang di tabel `referrers`, harus diawali `62` |
-| Tidak bisa login admin | Cek `ADMIN_PIN` di `config.php`, cocokkan dengan yang diketik |
+| Tidak bisa login admin | Cek `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` di `config.php`, cocokkan dengan yang diketik |
+| Login diblokir "Terlalu banyak percobaan" | Tunggu `LOGIN_LOCKOUT_MINUTES` (default 15 menit), atau hapus baris terkait IP Anda di tabel `login_attempts` lewat phpMyAdmin |
 
 ## Keamanan Tambahan (Opsional tapi Disarankan)
 
-- Ganti `ADMIN_PIN` secara berkala.
+- Ganti `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` secara berkala lewat `admin/generate-password-hash.php` (hapus file itu lagi setelah dipakai).
 - Aktifkan **SSL/HTTPS gratis** (Let's Encrypt) lewat cPanel agar domain
   otomatis `https://` — biasanya tersedia gratis di menu **SSL/TLS Status**.
 - Backup database secara berkala lewat phpMyAdmin → **Export**.
@@ -116,7 +120,7 @@ kode aplikasi, `install.sql`, asset publik, `.htaccess`, README, dan
 `config.example.php`.
 
 Jangan commit file/folder berikut:
-- `config.php` karena berisi kredensial database dan `ADMIN_PIN`.
+- `config.php` karena berisi kredensial database dan hash password admin.
 - `.env*`, kecuali `.env.example`.
 - `.agents/` dan `.codex/` karena hanya untuk workspace lokal.
 - `vendor/` dan `node_modules/` jika suatu saat dependency manager dipakai.

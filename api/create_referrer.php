@@ -22,6 +22,12 @@ if (!$input) {
 $name = clean($input['name'] ?? '');
 $wa   = clean($input['whatsapp'] ?? '');
 $requestedRefCode = strtolower(clean($input['ref_code'] ?? ''));
+$eventSlug = clean($input['event'] ?? DEFAULT_EVENT_SLUG);
+
+$event = get_event_by_slug($eventSlug);
+if (!$event || $event['status'] !== 'active') {
+    $eventSlug = DEFAULT_EVENT_SLUG;
+}
 
 $errors = [];
 if ($name === '' || mb_strlen($name) < 3) {
@@ -45,39 +51,46 @@ if (!empty($errors)) {
 
 try {
     $pdo = get_db();
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'rahasiaemas.id';
 
-    // Cek apakah nomor WA ini sudah pernah membuat link sebelumnya.
-    $stmt = $pdo->prepare('SELECT ref_code FROM referrers WHERE whatsapp = ? ORDER BY id ASC LIMIT 1');
-    $stmt->execute([$waNormalized]);
+    // Cek apakah nomor WA ini sudah pernah membuat link sebelumnya untuk event ini.
+    $stmt = $pdo->prepare('SELECT ref_code FROM referrers WHERE event_slug = ? AND whatsapp = ? ORDER BY id ASC LIMIT 1');
+    $stmt->execute([$eventSlug, $waNormalized]);
     $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($existing) {
         $refCode = $existing['ref_code'];
         if ($requestedRefCode !== $refCode) {
+            $existingLink = $eventSlug === DEFAULT_EVENT_SLUG
+                ? "{$protocol}://{$host}/?ref={$refCode}"
+                : "{$protocol}://{$host}" . EVENTS_URL_BASE . "/{$eventSlug}/?ref={$refCode}";
             http_response_code(409);
             echo json_encode([
                 'success' => false,
-                'message' => "Nomor WhatsApp ini sudah punya kode link: {$refCode}. Gunakan kode tersebut atau hubungi admin untuk mengganti.",
+                'message' => "Nomor WhatsApp ini sudah punya kode link. Berikut ini adalah link referral Anda, Tap link untuk menyalin.",
+                'existing_ref_code' => $refCode,
+                'existing_link' => $existingLink,
             ]);
             exit;
         }
     } else {
-        $stmt = $pdo->prepare('SELECT id FROM referrers WHERE ref_code = ?');
-        $stmt->execute([$requestedRefCode]);
+        $stmt = $pdo->prepare('SELECT id FROM referrers WHERE event_slug = ? AND ref_code = ?');
+        $stmt->execute([$eventSlug, $requestedRefCode]);
         if ($stmt->fetch()) {
             http_response_code(409);
             echo json_encode(['success' => false, 'message' => 'Kode link sudah dipakai. Silakan pilih kode lain.']);
             exit;
         }
 
-        $stmt = $pdo->prepare('INSERT INTO referrers (ref_code, name, whatsapp) VALUES (?, ?, ?)');
-        $stmt->execute([$requestedRefCode, $name, $waNormalized]);
+        $stmt = $pdo->prepare('INSERT INTO referrers (ref_code, event_slug, name, whatsapp) VALUES (?, ?, ?, ?)');
+        $stmt->execute([$requestedRefCode, $eventSlug, $name, $waNormalized]);
         $refCode = $requestedRefCode;
     }
 
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'rahasiaemas.id';
-    $link = "{$protocol}://{$host}/?ref={$refCode}";
+    $link = $eventSlug === DEFAULT_EVENT_SLUG
+        ? "{$protocol}://{$host}/?ref={$refCode}"
+        : "{$protocol}://{$host}" . EVENTS_URL_BASE . "/{$eventSlug}/?ref={$refCode}";
 
     echo json_encode([
         'success' => true,

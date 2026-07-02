@@ -2,7 +2,7 @@ Options -Indexes
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule !^(?:submit_lead|create_referrer)\.php$ - [F,L,NC]
+  RewriteRule !^(?:submit_lead|create_referrer|event_info)\.php$ - [F,L,NC]
   RewriteCond %{REQUEST_METHOD} !POST
   RewriteRule ^(?:submit_lead|create_referrer)\.php$ - [F,L]
 </IfModule>

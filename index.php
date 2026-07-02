@@ -3,6 +3,7 @@ require_once __DIR__ . '/config.php';
 
 $refCode = isset($_GET['ref']) ? clean($_GET['ref']) : DEFAULT_REF_CODE;
 $referrerName = null;
+$pdo = null;
 
 try {
     $pdo = get_db(false);
@@ -24,7 +25,27 @@ try {
     $refCode = DEFAULT_REF_CODE;
 }
 
-$eventSettings = get_event_settings();
+$eventSettings = default_event_settings();
+
+$trackingEvent = null;
+if ($pdo) {
+    try {
+        $stmt = $pdo->prepare('SELECT event_day, event_time, event_location, event_speaker, event_capacity, meta_pixel_id, ga_measurement_id FROM events WHERE slug = ?');
+        $stmt->execute([DEFAULT_EVENT_SLUG]);
+        $trackingEvent = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($trackingEvent) {
+            $eventSettings = array_merge($eventSettings, array_filter([
+                'event_day' => $trackingEvent['event_day'],
+                'event_time' => $trackingEvent['event_time'],
+                'event_location' => $trackingEvent['event_location'],
+                'event_speaker' => $trackingEvent['event_speaker'],
+                'event_capacity' => $trackingEvent['event_capacity'],
+            ]));
+        }
+    } catch (Exception $e) {
+        $trackingEvent = null;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -138,13 +159,23 @@ $eventSettings = get_event_settings();
     width: min(calc(100% - 32px), 420px);
     text-align: center;
     transform: translateX(-50%);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
     box-shadow: 0 14px 36px rgba(201,168,76,0.38), 0 8px 28px rgba(0,0,0,0.35);
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
   }
   .floating-cta:hover {
     transform: translateX(-50%) translateY(-2px);
     box-shadow: 0 18px 42px rgba(201,168,76,0.45), 0 10px 30px rgba(0,0,0,0.38);
   }
   .floating-cta:active { transform: translateX(-50%); }
+  .floating-cta.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(16px);
+  }
   .scroll-hint { margin-top: 44px; color: var(--muted); font-size: 13px; }
 
   /* ---------- SECTIONS ---------- */
@@ -298,6 +329,29 @@ $eventSettings = get_event_settings();
   footer .disclaimer { font-size: 12.5px; color: var(--muted); max-width: 480px; margin: 0 auto 18px; }
   footer .copyright { font-size: 12px; color: var(--muted); opacity: 0.7; }
 </style>
+<?php if (!empty($trackingEvent['meta_pixel_id'])): ?>
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '<?= htmlspecialchars($trackingEvent['meta_pixel_id']) ?>');
+fbq('track', 'PageView');
+</script>
+<?php endif; ?>
+<?php if (!empty($trackingEvent['ga_measurement_id'])): ?>
+<script async src="https://www.googletagmanager.com/gtag/js?id=<?= urlencode($trackingEvent['ga_measurement_id']) ?>"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '<?= htmlspecialchars($trackingEvent['ga_measurement_id']) ?>');
+</script>
+<?php endif; ?>
 </head>
 <body>
 
@@ -311,7 +365,7 @@ $eventSettings = get_event_settings();
   <h1>"Kerja Keras Tiap Hari, Tapi Uangnya Kemana?"</h1>
   <p class="sub">Kamu bukan salah kelola. Kamu hanya belum tahu cara menyimpan nilai uangmu dengan benar. Jumat ini, kita bahas tuntas — gratis.</p>
   <img src="assets/flyer-rahasiaemasid.jpeg" alt="Flyer webinar finansial rahasiaemas.id" class="event-flyer">
-  <a href="#daftar" class="btn-gold floating-cta">Ya, Saya Mau Ikut — Daftar Sekarang</a>
+  <a href="#daftar" class="btn-gold floating-cta" id="floatingCta">Ya, Saya Mau Ikut — Daftar Sekarang</a>
   <div class="scroll-hint">↓ Scroll untuk lihat detail acara</div>
 </section>
 
@@ -426,6 +480,33 @@ $eventSettings = get_event_settings();
 const form = document.getElementById('regForm');
 const submitBtn = document.getElementById('submitBtn');
 const formMsg = document.getElementById('formMsg');
+const floatingCta = document.getElementById('floatingCta');
+const daftarSection = document.getElementById('daftar');
+
+if (floatingCta && daftarSection) {
+  const setFloatingCtaVisibility = () => {
+    const rect = daftarSection.getBoundingClientRect();
+    const isNearRegistration = rect.top <= window.innerHeight * 0.78 && rect.bottom > 0;
+    floatingCta.classList.toggle('is-hidden', isNearRegistration);
+    floatingCta.setAttribute('aria-hidden', isNearRegistration ? 'true' : 'false');
+  };
+
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      floatingCta.classList.toggle('is-hidden', entries[0].isIntersecting);
+      floatingCta.setAttribute('aria-hidden', entries[0].isIntersecting ? 'true' : 'false');
+    }, {
+      root: null,
+      threshold: 0,
+      rootMargin: '0px 0px -22% 0px',
+    });
+    observer.observe(daftarSection);
+  } else {
+    setFloatingCtaVisibility();
+    window.addEventListener('scroll', setFloatingCtaVisibility, { passive: true });
+    window.addEventListener('resize', setFloatingCtaVisibility);
+  }
+}
 
 form.addEventListener('submit', async function (e) {
   e.preventDefault();
@@ -463,6 +544,8 @@ form.addEventListener('submit', async function (e) {
     const result = await res.json();
 
     if (result.success) {
+      if (typeof fbq === 'function') fbq('track', 'Lead');
+      if (typeof gtag === 'function') gtag('event', 'generate_lead');
       formMsg.classList.add('success');
       formMsg.textContent = '✅ Pendaftaran kamu berhasil! Kamu akan diarahkan ke WhatsApp sebentar lagi...';
       formMsg.style.display = 'block';

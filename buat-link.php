@@ -1,4 +1,14 @@
-<?php require_once __DIR__ . '/config.php'; ?>
+<?php
+require_once __DIR__ . '/config.php';
+
+$eventSlug = clean($_GET['event'] ?? DEFAULT_EVENT_SLUG);
+$event = get_event_by_slug($eventSlug);
+if (!$event || $event['status'] !== 'active') {
+    $eventSlug = DEFAULT_EVENT_SLUG;
+    $event = get_event_by_slug($eventSlug);
+}
+$eventName = ($event && $eventSlug !== DEFAULT_EVENT_SLUG) ? $event['name'] : null;
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -60,15 +70,34 @@
   }
   .msg { display: none; font-size: 13.5px; margin-top: 14px; padding: 10px; border-radius: 8px; }
   .msg.error { background: rgba(217,116,58,0.12); color: #E8956B; display: block; }
+  .copy-existing-link {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 10px 12px;
+    background: rgba(201,168,76,0.12);
+    border: 1px solid rgba(201,168,76,0.45);
+    border-radius: 8px;
+    color: var(--gold-soft);
+    font: inherit;
+    font-size: 12.5px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    text-align: center;
+  }
+  .copy-existing-link:hover { border-color: var(--gold); }
+  .copy-hint { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
 </style>
 </head>
 <body>
 <div class="box">
   <img src="assets/logo.png" alt="rahasiaemas.id" class="logo">
-  <h1>Buat Link Undanganmu</h1>
+  <h1>Buat Link Undanganmu<?= $eventName ? ' — ' . htmlspecialchars($eventName) : '' ?></h1>
   <p class="sub">Isi nama, WhatsApp, dan kode link pilihanmu. Bagikan ke teman — dan setiap orang yang daftar lewat link ini akan langsung terhubung ke WhatsApp kamu.</p>
 
   <form id="genForm">
+    <input type="hidden" name="event" value="<?= htmlspecialchars($eventSlug) ?>">
     <div class="field">
       <label>Nama Kamu</label>
       <input type="text" name="name" placeholder="Nama lengkap kamu" required minlength="3">
@@ -116,6 +145,7 @@ form.addEventListener('submit', async function (e) {
     name: form.name.value.trim(),
     whatsapp: form.whatsapp.value.trim(),
     ref_code: form.ref_code.value.trim(),
+    event: form.event.value,
   };
 
   try {
@@ -132,6 +162,8 @@ form.addEventListener('submit', async function (e) {
       waShareBtn.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
       resultBox.style.display = 'block';
       form.style.display = 'none';
+    } else if (result.existing_link) {
+      showExistingLinkMessage(result.message, result.existing_link);
     } else {
       errMsg.textContent = '⚠️ ' + (result.message || 'Terjadi kesalahan.');
       errMsg.style.display = 'block';
@@ -147,11 +179,59 @@ form.addEventListener('submit', async function (e) {
 
 copyBtn.addEventListener('click', function () {
   linkOutput.select();
-  navigator.clipboard.writeText(linkOutput.value).then(() => {
+  copyText(linkOutput.value).then(() => {
     copyBtn.textContent = 'Tersalin!';
     setTimeout(() => copyBtn.textContent = 'Salin', 1500);
   });
 });
+
+function showExistingLinkMessage(message, link) {
+  errMsg.textContent = '';
+  errMsg.className = 'msg error';
+
+  const prefix = document.createElement('span');
+  prefix.textContent = '⚠️ ' + (message || 'Nomor WhatsApp ini sudah punya kode link.');
+
+  const linkButton = document.createElement('button');
+  linkButton.type = 'button';
+  linkButton.className = 'copy-existing-link';
+  linkButton.textContent = link;
+  linkButton.setAttribute('aria-label', 'Salin link undangan yang sudah terdaftar');
+
+  const hint = document.createElement('span');
+  hint.className = 'copy-hint';
+  hint.textContent = 'Tap link di atas untuk menyalin.';
+
+  linkButton.addEventListener('click', function () {
+    copyText(link).then(() => {
+      const originalText = linkButton.textContent;
+      linkButton.textContent = 'Tersalin: ' + link;
+      setTimeout(() => {
+        linkButton.textContent = originalText;
+      }, 1600);
+    });
+  });
+
+  errMsg.append(prefix, linkButton, hint);
+  errMsg.style.display = 'block';
+}
+
+function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text);
+  }
+
+  const tempInput = document.createElement('input');
+  tempInput.value = text;
+  tempInput.setAttribute('readonly', '');
+  tempInput.style.position = 'fixed';
+  tempInput.style.opacity = '0';
+  document.body.appendChild(tempInput);
+  tempInput.select();
+  document.execCommand('copy');
+  tempInput.remove();
+  return Promise.resolve();
+}
 </script>
 </body>
 </html>
