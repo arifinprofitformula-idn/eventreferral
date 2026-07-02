@@ -3,6 +3,8 @@ require_once __DIR__ . '/../config.php';
 
 $eventSlug = isset($_GET['event']) ? clean($_GET['event']) : '';
 $eventNotFound = false;
+$leaderboardPerPage = 20;
+$currentPage = max(1, (int)($_GET['page'] ?? 1));
 
 $pdo = get_db();
 
@@ -38,7 +40,6 @@ if ($eventSlug !== '') {
         WHERE r.event_slug = ?
         GROUP BY r.id
         ORDER BY total DESC, r.created_at ASC
-        LIMIT 50
     ');
     $stmt->execute([$eventSlug]);
 } else {
@@ -57,10 +58,28 @@ if ($eventSlug !== '') {
         ) fl ON fl.event_slug = r.event_slug AND fl.ref_code = r.ref_code
         GROUP BY r.name
         ORDER BY total DESC
-        LIMIT 50
     ');
 }
 $leaderboard = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+if ($eventSlug !== '') {
+    $totalReferrersStmt = $pdo->prepare('SELECT COUNT(*) FROM referrers WHERE event_slug = ?');
+    $totalReferrersStmt->execute([$eventSlug]);
+    $totalReferrers = (int)$totalReferrersStmt->fetchColumn();
+} else {
+    $totalReferrers = (int)$pdo->query('
+        SELECT COUNT(*)
+        FROM referrers r
+        INNER JOIN events e ON e.slug = r.event_slug
+        WHERE e.status = "active"
+    ')->fetchColumn();
+}
+
+$totalLeaderboardRows = count($leaderboard);
+$totalPages = max(1, (int)ceil($totalLeaderboardRows / $leaderboardPerPage));
+$currentPage = min($currentPage, $totalPages);
+$leaderboardOffset = ($currentPage - 1) * $leaderboardPerPage;
+$leaderboardPage = array_slice($leaderboard, $leaderboardOffset, $leaderboardPerPage);
 
 $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : ($selectedEvent ? $selectedEvent['name'] : 'Semua Acara');
 
@@ -71,7 +90,6 @@ if ($eventNotFound) {
 $rewards = $selectedEvent ? get_event_rewards($eventSlug) : [];
 $rewardImage = $selectedEvent['reward_image'] ?? null;
 $topThree = array_slice($leaderboard, 0, 3);
-$totalReferrers = count($leaderboard);
 $logoPath = '/assets/logo.png';
 $eventUrl = $selectedEvent ? ($eventSlug === DEFAULT_EVENT_SLUG ? '/' : EVENTS_URL_BASE . '/' . rawurlencode($eventSlug) . '/') : '/';
 $referralUrl = $selectedEvent ? '/buat-link.php?event=' . urlencode($eventSlug) : '/buat-link.php';
@@ -98,6 +116,19 @@ function display_initials(string $name): string
     }
 
     return $initials !== '' ? $initials : 'RE';
+}
+
+function challenge_page_url(int $page, string $eventSlug): string
+{
+    $params = [];
+    if ($eventSlug !== '') {
+        $params['event'] = $eventSlug;
+    }
+    if ($page > 1) {
+        $params['page'] = $page;
+    }
+
+    return '/challenge/' . (!empty($params) ? '?' . http_build_query($params) : '');
 }
 ?>
 <!DOCTYPE html>
@@ -647,6 +678,46 @@ function display_initials(string $name): string
     background: linear-gradient(135deg, var(--gold), var(--gold-soft));
     border: 0;
   }
+  .leaderboard-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-top: 0;
+    border-radius: 0 0 18px 18px;
+    background: rgba(8,8,7,0.30);
+    color: var(--muted);
+    font-size: 12px;
+    padding: 12px 14px;
+  }
+  .pager-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pager-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    min-height: 34px;
+    color: var(--text);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(214,165,54,0.18);
+    border-radius: 10px;
+    font-weight: 800;
+    text-decoration: none;
+  }
+  .pager-btn.active {
+    color: #111;
+    background: linear-gradient(135deg, var(--gold), var(--gold-soft));
+    border-color: transparent;
+  }
+  .pager-btn.disabled {
+    opacity: .42;
+    pointer-events: none;
+  }
   .join {
     position: sticky;
     top: 18px;
@@ -791,6 +862,14 @@ function display_initials(string $name): string
       grid-column: 2;
       justify-self: start;
     }
+    .leaderboard-pager {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .pager-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
 </style>
 </head>
@@ -909,13 +988,14 @@ function display_initials(string $name): string
             <span>Pengundang</span>
             <span>Pendaftar Unik</span>
           </div>
-          <?php foreach ($leaderboard as $i => $row): ?>
+          <?php foreach ($leaderboardPage as $i => $row): ?>
             <?php
               $total = (int)$row['total'];
-              $rankClass = $i < 3 ? 'rank-' . ($i + 1) : '';
+              $globalRank = $leaderboardOffset + $i + 1;
+              $rankClass = $globalRank <= 3 ? 'rank-' . $globalRank : '';
             ?>
             <article class="rank-card <?= $rankClass ?>">
-              <span class="rank-badge"><?= $i + 1 ?></span>
+              <span class="rank-badge"><?= $globalRank ?></span>
               <div>
                 <div class="rank-name"><?= htmlspecialchars($row['name']) ?></div>
               </div>
@@ -923,6 +1003,22 @@ function display_initials(string $name): string
             </article>
           <?php endforeach; ?>
         </div>
+
+        <?php if ($totalLeaderboardRows > 0): ?>
+          <div class="leaderboard-pager">
+            <span>
+              Menampilkan <?= (int)($leaderboardOffset + 1) ?>-<?= (int)min($leaderboardOffset + $leaderboardPerPage, $totalLeaderboardRows) ?>
+              dari <?= (int)$totalLeaderboardRows ?> pengundang
+            </span>
+            <?php if ($totalPages > 1): ?>
+              <div class="pager-actions" aria-label="Navigasi leaderboard">
+                <a class="pager-btn <?= $currentPage <= 1 ? 'disabled' : '' ?>" href="<?= htmlspecialchars(challenge_page_url(max(1, $currentPage - 1), $eventSlug)) ?>" aria-label="Halaman sebelumnya">‹</a>
+                <span class="pager-btn active"><?= (int)$currentPage ?></span>
+                <a class="pager-btn <?= $currentPage >= $totalPages ? 'disabled' : '' ?>" href="<?= htmlspecialchars(challenge_page_url(min($totalPages, $currentPage + 1), $eventSlug)) ?>" aria-label="Halaman berikutnya">›</a>
+              </div>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
       <?php endif; ?>
 
       <p class="last-note">

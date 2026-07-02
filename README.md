@@ -1,6 +1,7 @@
 # rahasiaemas.id — Panduan Instalasi di Shared Hosting
 
 Sistem ini terdiri dari 3 bagian:
+
 1. **Landing page acara** (`index.php`) — bisa dibuka lewat `rahasiaemas.id/?ref=KODE`
 2. **Buat link undangan** (`buat-link.php`) — dipakai siapapun untuk generate link pribadi
 3. **Dashboard admin** (`admin/`) — khusus Coach Arifin, dilindungi login username+password
@@ -64,6 +65,7 @@ define('DB_PASS', 'password_database_anda');
 ```
 
 Ganti juga:
+
 - `ADMIN_USERNAME` → username login dashboard (WAJIB diganti dari default `admin`).
 - `ADMIN_PASSWORD_HASH` → buka `admin/generate-password-hash.php` di browser,
   masukkan password pilihan Anda, salin hasil hash-nya ke sini, lalu **hapus
@@ -79,6 +81,7 @@ Ganti juga:
 - **Dashboard admin:** `https://rahasiaemas.id/admin/` (masukkan username & password)
 
 Cara uji alur lengkap:
+
 1. Buka `buat-link.php`, isi nama, WA, dan kode link pilihan → dapat link,
    misal `https://rahasiaemas.id/?ref=budiemas`.
 2. Buka link tersebut → landing page muncul dengan tulisan
@@ -97,13 +100,13 @@ tidak perlu edit file atau HTML.
 
 ## Troubleshooting
 
-| Masalah | Kemungkinan Penyebab |
-|---|---|
-| Halaman putih / error 500 | Cek kembali isian `config.php`, khususnya `DB_NAME`, `DB_USER`, `DB_PASS` |
-| "Koneksi database gagal" | Pastikan user database sudah di-attach ke database dengan ALL PRIVILEGES |
-| Form submit tidak jalan | Pastikan hosting mendukung PHP 7.4 ke atas dan folder `api/` ikut ter-upload |
-| Redirect WhatsApp tidak muncul | Cek format nomor WA pengundang di tabel `referrers`, harus diawali `62` |
-| Tidak bisa login admin | Cek `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` di `config.php`, cocokkan dengan yang diketik |
+| Masalah                                   | Kemungkinan Penyebab                                                                                                           |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Halaman putih / error 500                 | Cek kembali isian `config.php`, khususnya `DB_NAME`, `DB_USER`, `DB_PASS`                                                      |
+| "Koneksi database gagal"                  | Pastikan user database sudah di-attach ke database dengan ALL PRIVILEGES                                                       |
+| Form submit tidak jalan                   | Pastikan hosting mendukung PHP 7.4 ke atas dan folder `api/` ikut ter-upload                                                   |
+| Redirect WhatsApp tidak muncul            | Cek format nomor WA pengundang di tabel `referrers`, harus diawali `62`                                                        |
+| Tidak bisa login admin                    | Cek `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` di `config.php`, cocokkan dengan yang diketik                                       |
 | Login diblokir "Terlalu banyak percobaan" | Tunggu `LOGIN_LOCKOUT_MINUTES` (default 15 menit), atau hapus baris terkait IP Anda di tabel `login_attempts` lewat phpMyAdmin |
 
 ## Keamanan Tambahan (Opsional tapi Disarankan)
@@ -120,6 +123,7 @@ kode aplikasi, `install.sql`, asset publik, `.htaccess`, README, dan
 `config.example.php`.
 
 Jangan commit file/folder berikut:
+
 - `config.php` karena berisi kredensial database dan hash password admin.
 - `.env*`, kecuali `.env.example`.
 - `.agents/` dan `.codex/` karena hanya untuk workspace lokal.
@@ -142,4 +146,12 @@ domain root                 = diarahkan ke repositories/rahasiaemas.id
 Panduan lengkap ada di `DEPLOYMENT.md`, termasuk contoh symlink `config.php`,
 folder event upload `e/`, folder reward image, cron deploy, dan script
 `deploy/deploy.sh`.
+
 # eventreferral
+
+Perintah untuk update project:
+
+```bash
+cd /home/bisnisem/repositories/rahasiaemas.id
+bash deploy/deploy.sh
+```
