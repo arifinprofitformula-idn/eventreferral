@@ -61,7 +61,7 @@ sistem demi keamanan — tidak akan ikut terupload.
 Tambahkan baris ini sebelum `</body>` di `index.html`:
 
 ```html
-<script src="/assets/rahasiaemas-sdk.js" defer></script>
+<script src="/assets/event-sdk.js" defer></script>
 ```
 
 _(Kalau lupa, sistem akan otomatis menyisipkannya saat upload — tapi lebih aman kalau ditambahkan manual.)_

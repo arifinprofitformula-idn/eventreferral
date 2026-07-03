@@ -123,11 +123,11 @@ function inject_sdk_script($indexHtmlPath) {
     $html = file_get_contents($indexHtmlPath);
     if ($html === false) return false;
 
-    if (strpos($html, 'rahasiaemas-sdk.js') !== false) {
+    if (strpos($html, 'event-sdk.js') !== false || strpos($html, 'rahasiaemas-sdk.js') !== false) {
         return true; // sudah ada, tidak perlu diubah
     }
 
-    $scriptTag = '<script src="/assets/rahasiaemas-sdk.js" defer></script>' . "\n</body>";
+    $scriptTag = '<script src="/assets/event-sdk.js" defer></script>' . "\n</body>";
 
     if (stripos($html, '</body>') !== false) {
         $html = preg_replace('/<\/body>/i', $scriptTag, $html, 1);
@@ -235,4 +235,63 @@ function delete_reward_image($imagePath) {
     if (is_file($fullPath)) {
         unlink($fullPath);
     }
+}
+
+/**
+ * Simpan logo brand yang diunggah lewat admin/setup-brand.php.
+ * - Validasi ekstensi (png/jpg/jpeg/webp/svg) dan ukuran maks (MAX_LOGO_SIZE).
+ * - File raster divalidasi dengan getimagesize() (memastikan benar-benar gambar).
+ * - File SVG divalidasi sebagai XML valid dan ditolak jika mengandung
+ *   <script>, event handler (on*=), atau javascript: — mencegah stored XSS
+ *   kalau file SVG-nya suatu saat dibuka langsung lewat URL (bukan lewat <img>).
+ *
+ * @return string|null Path URL logo (BRAND_LOGOS_URL_BASE/{slug}/logo.{ext}), atau null jika gagal.
+ */
+function safe_upload_logo($tmpPath, $originalName, $brandSlug) {
+    $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+    if (!in_array($ext, ALLOWED_LOGO_EXT, true)) {
+        return null;
+    }
+
+    if (!is_file($tmpPath) || filesize($tmpPath) > MAX_LOGO_SIZE) {
+        return null;
+    }
+
+    if ($ext === 'svg') {
+        $content = file_get_contents($tmpPath);
+        if ($content === false) {
+            return null;
+        }
+        libxml_use_internal_errors(true);
+        $isValidXml = simplexml_load_string($content) !== false;
+        libxml_clear_errors();
+        if (!$isValidXml) {
+            return null;
+        }
+        if (preg_match('/<script|on\w+\s*=|javascript:/i', $content)) {
+            return null;
+        }
+    } elseif (@getimagesize($tmpPath) === false) {
+        return null;
+    }
+
+    $destDir = BRAND_LOGOS_DIR . '/' . $brandSlug;
+    if (!is_dir($destDir)) {
+        mkdir($destDir, 0755, true);
+    }
+
+    // Hapus logo lama untuk brand ini walau ekstensinya berbeda.
+    foreach (ALLOWED_LOGO_EXT as $oldExt) {
+        $oldPath = $destDir . '/logo.' . $oldExt;
+        if (is_file($oldPath)) {
+            unlink($oldPath);
+        }
+    }
+
+    $destPath = $destDir . '/logo.' . $ext;
+    if (!move_uploaded_file($tmpPath, $destPath)) {
+        return null;
+    }
+
+    return BRAND_LOGOS_URL_BASE . '/' . $brandSlug . '/logo.' . $ext;
 }

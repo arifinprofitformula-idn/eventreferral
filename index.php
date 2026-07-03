@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/config.php';
 
+$brand = require_brand_or_404(get_current_brand());
+$brandId = (int)$brand['id'];
+
 $refCode = isset($_GET['ref']) ? clean($_GET['ref']) : DEFAULT_REF_CODE;
 $referrerName = null;
 $pdo = null;
@@ -8,8 +11,8 @@ $pdo = null;
 try {
     $pdo = get_db(false);
     if ($pdo) {
-        $stmt = $pdo->prepare('SELECT name FROM referrers WHERE ref_code = ?');
-        $stmt->execute([$refCode]);
+        $stmt = $pdo->prepare('SELECT name FROM referrers WHERE brand_id = ? AND ref_code = ?');
+        $stmt->execute([$brandId, $refCode]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row && $refCode !== DEFAULT_REF_CODE) {
             $referrerName = $row['name'];
@@ -30,8 +33,8 @@ $eventSettings = default_event_settings();
 $trackingEvent = null;
 if ($pdo) {
     try {
-        $stmt = $pdo->prepare('SELECT event_day, event_time, event_location, event_speaker, event_capacity, meta_pixel_id, ga_measurement_id FROM events WHERE slug = ?');
-        $stmt->execute([DEFAULT_EVENT_SLUG]);
+        $stmt = $pdo->prepare('SELECT event_day, event_time, event_location, event_speaker, event_capacity, meta_pixel_id, ga_measurement_id FROM events WHERE brand_id = ? AND slug = ?');
+        $stmt->execute([$brandId, $brand['default_event_slug']]);
         $trackingEvent = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($trackingEvent) {
             $eventSettings = array_merge($eventSettings, array_filter([
@@ -46,23 +49,27 @@ if ($pdo) {
         $trackingEvent = null;
     }
 }
+
+$logoPath = $brand['logo_path'] ? $brand['logo_path'] : 'assets/logo.png';
+$disclaimerText = $brand['disclaimer_text'] ?: 'Acara ini bersifat edukatif. Kepemilikan emas dan perak adalah strategi diversifikasi aset jangka panjang. Bukan ajakan spekulasi, bukan jaminan keuntungan.';
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>rahasiaemas.id — Kerja Keras Tiap Hari, Tapi Uangnya Kemana?</title>
+<title><?= htmlspecialchars($brand['name']) ?> — Kerja Keras Tiap Hari, Tapi Uangnya Kemana?</title>
 <meta name="description" content="Jumat Malam — Webinar Gratis Edukasi Logam Mulia. Pahami cara kerja emas dan perak sebagai penyimpan nilai.">
-<link rel="icon" href="assets/logo.png">
+<link rel="icon" href="<?= htmlspecialchars($logoPath) ?>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style><?= get_theme_css_vars($brand) ?></style>
 <style>
   :root {
-    --charcoal: #1A1A1A;
+    --charcoal: var(--brand-charcoal);
     --charcoal-soft: #242424;
-    --gold: #C9A84C;
-    --gold-soft: #E8D5A3;
+    --gold: var(--brand-primary);
+    --gold-soft: var(--brand-soft);
     --white: #FAFAFA;
     --muted: #9C9992;
     --danger: #D9743A;
@@ -357,7 +364,7 @@ gtag('config', '<?= htmlspecialchars($trackingEvent['ga_measurement_id']) ?>');
 
 <!-- ================= HERO ================= -->
 <section class="hero">
-  <img src="assets/logo.png" alt="rahasiaemas.id" class="hero-logo">
+  <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($brand['name']) ?>" class="hero-logo">
   <?php if ($referrerName): ?>
     <div class="invited-by">Kamu diundang oleh <strong><?= htmlspecialchars($referrerName) ?></strong></div>
   <?php endif; ?>
@@ -470,9 +477,9 @@ gtag('config', '<?= htmlspecialchars($trackingEvent['ga_measurement_id']) ?>');
 <!-- ================= FOOTER ================= -->
 <footer>
   <div class="wrap">
-    <div class="brand">rahasiaemas.id</div>
-    <p class="disclaimer">Acara ini bersifat edukatif. Kepemilikan emas dan perak adalah strategi diversifikasi aset jangka panjang. Bukan ajakan spekulasi, bukan jaminan keuntungan.</p>
-    <p class="copyright">© <?= date('Y') ?> rahasiaemas.id</p>
+    <div class="brand"><?= htmlspecialchars($brand['name']) ?></div>
+    <p class="disclaimer"><?= htmlspecialchars($disclaimerText) ?></p>
+    <p class="copyright">© <?= date('Y') ?> <?= htmlspecialchars($brand['name']) ?></p>
   </div>
 </footer>
 

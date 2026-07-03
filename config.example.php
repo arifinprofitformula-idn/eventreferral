@@ -25,6 +25,11 @@ define('ADMIN_PASSWORD_HASH', '$2y$12$iUeNUsTjuTdSG8uekn4OguWiD9GsNGxrSQQP/5PoIT
 define('LOGIN_MAX_ATTEMPTS', 5); // maksimal percobaan login gagal sebelum dikunci sementara
 define('LOGIN_LOCKOUT_MINUTES', 15); // lama penguncian (menit) setelah melebihi batas percobaan
 
+// Kunci rahasia untuk mengakses admin/setup-brand.php (menambah brand baru).
+// HANYA Coach yang boleh tahu nilai ini — BUKAN sama dengan PIN/password admin brand manapun.
+// GANTI dengan string acak panjang milik Anda sendiri (generate: php -r "echo bin2hex(random_bytes(24));").
+define('MASTER_SETUP_KEY', 'ganti-dengan-kunci-rahasia-panjang-milik-coach-saja');
+
 // Detail acara awal/fallback.
 define('EVENT_DAY', 'Jumat, 25 Juli 2026');
 define('EVENT_TIME', '19.30 WIB');
@@ -38,11 +43,17 @@ define('EVENTS_DIR', __DIR__ . '/e');
 define('EVENTS_URL_BASE', '/e');
 define('MAX_ZIP_SIZE', 15 * 1024 * 1024); // 15 MB
 define('ALLOWED_ASSET_EXT', ['html','htm','css','js','json','txt','png','jpg','jpeg','gif','webp','svg','ico','woff','woff2','ttf','eot','mp4','webm']);
-define('RESERVED_SLUGS', ['default','admin','api','assets','challenge','e','includes','config','index','install','migrate','buat-link','login','logout','dashboard','events','export','readme','changelog','template-event-starter','www','static','cdn','ftp','mail']);
+define('RESERVED_SLUGS', ['default','admin','api','assets','challenge','e','includes','config','index','install','migrate','buat-link','login','logout','dashboard','events','export','readme','changelog','template-event-starter','www','static','cdn','ftp','mail','uploads','brands','setup-brand']);
 define('REWARD_IMAGES_DIR', __DIR__ . '/assets/rewards');
 define('REWARD_IMAGES_URL_BASE', '/assets/rewards');
 define('MAX_REWARD_IMAGE_SIZE', 5 * 1024 * 1024); // 5 MB
 define('ALLOWED_REWARD_IMAGE_EXT', ['png','jpg','jpeg','webp','gif']);
+
+// ==== MULTI-BRAND (v7) ====
+define('BRAND_LOGOS_DIR', __DIR__ . '/uploads/brands');
+define('BRAND_LOGOS_URL_BASE', '/uploads/brands');
+define('MAX_LOGO_SIZE', 2 * 1024 * 1024); // 2 MB
+define('ALLOWED_LOGO_EXT', ['png','jpg','jpeg','webp','svg']);
 
 // ==== JANGAN DIUBAH DI BAWAH INI ====
 date_default_timezone_set('Asia/Jakarta');
@@ -111,3 +122,5 @@ function normalize_whatsapp($raw) {
 }
 
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/brand.php';
+require_once __DIR__ . '/includes/theme.php';
