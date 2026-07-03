@@ -2,22 +2,22 @@
 require_once __DIR__ . '/../config.php';
 start_secure_session();
 
-if (empty($_SESSION['admin_authenticated'])) {
-    header('Location: login.php');
-    exit;
-}
+$brand = require_admin_for_brand(get_current_brand());
 
 $pdo = get_db();
-$leads = $pdo->query('
+$stmt = $pdo->prepare('
     SELECT l.name, l.email, l.whatsapp, l.kota, l.ref_code, r.name AS referrer_name, e.name AS event_name, l.created_at
     FROM leads l
-    LEFT JOIN referrers r ON r.event_slug = l.event_slug AND r.ref_code = l.ref_code
-    LEFT JOIN events e ON e.slug = l.event_slug
+    LEFT JOIN referrers r ON r.event_slug = l.event_slug AND r.ref_code = l.ref_code AND r.brand_id = l.brand_id
+    LEFT JOIN events e ON e.slug = l.event_slug AND e.brand_id = l.brand_id
+    WHERE l.brand_id = ?
     ORDER BY l.created_at DESC
-')->fetchAll(PDO::FETCH_ASSOC);
+');
+$stmt->execute([(int)$brand['id']]);
+$leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 header('Content-Type: text/csv; charset=utf-8');
-header('Content-Disposition: attachment; filename=pendaftar_rahasiaemas_' . date('Y-m-d') . '.csv');
+header('Content-Disposition: attachment; filename=pendaftar_' . $brand['slug'] . '_' . date('Y-m-d') . '.csv');
 
 $out = fopen('php://output', 'w');
 fputs($out, "\xEF\xBB\xBF"); // BOM agar Excel baca UTF-8 dengan benar

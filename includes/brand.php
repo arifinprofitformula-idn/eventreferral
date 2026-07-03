@@ -71,3 +71,35 @@ function require_brand_or_404(?array $brand): array {
     <?php
     exit;
 }
+
+/**
+ * Panggil di awal setiap halaman admin (setelah get_current_brand()).
+ * Memastikan sesi admin yang login SAH untuk brand yang sedang diakses —
+ * mencegah sesi admin brand A dipakai untuk membuka /admin/ di domain brand B
+ * walau path URL admin-nya sama persis di semua domain.
+ */
+function require_admin_for_brand(?array $brand): array {
+    $brand = require_brand_or_404($brand);
+
+    if (empty($_SESSION['admin_brand_id']) || (int)$_SESSION['admin_brand_id'] !== (int)$brand['id']) {
+        header('Location: login.php');
+        exit;
+    }
+
+    return $brand;
+}
+
+/**
+ * Pastikan sebuah event (hasil get_event_by_slug()) memang milik brand yang
+ * sedang login. Event dengan slug valid tapi brand_id berbeda dianggap tidak
+ * ditemukan — mencegah admin brand A membuka/mengubah event milik brand B
+ * lewat tebakan slug.
+ */
+function require_event_owned_by_brand($event, array $brand): array {
+    if (!$event || (int)$event['brand_id'] !== (int)$brand['id']) {
+        http_response_code(404);
+        exit('Event tidak ditemukan.');
+    }
+
+    return $event;
+}

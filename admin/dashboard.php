@@ -2,32 +2,37 @@
 require_once __DIR__ . '/../config.php';
 start_secure_session();
 
-if (empty($_SESSION['admin_authenticated'])) {
-    header('Location: login.php');
-    exit;
-}
+$brand = require_admin_for_brand(get_current_brand());
+$brandId = (int)$brand['id'];
 
 $pdo = get_db();
 
 // Total pendaftar
-$totalLeads = $pdo->query('SELECT COUNT(*) FROM leads')->fetchColumn();
+$stmt = $pdo->prepare('SELECT COUNT(*) FROM leads WHERE brand_id = ?');
+$stmt->execute([$brandId]);
+$totalLeads = $stmt->fetchColumn();
 
 // Total pengundang aktif
-$totalReferrers = $pdo->query('SELECT COUNT(*) FROM referrers')->fetchColumn();
+$stmt = $pdo->prepare('SELECT COUNT(*) FROM referrers WHERE brand_id = ?');
+$stmt->execute([$brandId]);
+$totalReferrers = $stmt->fetchColumn();
 
 // Ringkasan pendaftar per event
-$eventSummary = $pdo->query('
+$stmt = $pdo->prepare('
     SELECT e.slug, e.name,
-        (SELECT COUNT(*) FROM leads l WHERE l.event_slug = e.slug) AS total_leads,
-        (SELECT COUNT(*) FROM referrers r WHERE r.event_slug = e.slug) AS total_referrers
+        (SELECT COUNT(*) FROM leads l WHERE l.brand_id = e.brand_id AND l.event_slug = e.slug) AS total_leads,
+        (SELECT COUNT(*) FROM referrers r WHERE r.brand_id = e.brand_id AND r.event_slug = e.slug) AS total_referrers
     FROM events e
+    WHERE e.brand_id = ?
     ORDER BY (e.slug = "default") DESC, e.created_at DESC
-')->fetchAll(PDO::FETCH_ASSOC);
+');
+$stmt->execute([$brandId]);
+$eventSummary = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Leaderboard pengundang
 // Hitungan leaderboard memakai WhatsApp unik per event berdasarkan pendaftaran pertama.
 // Raw leads tetap disimpan apa adanya untuk audit dan follow-up.
-$leaderboard = $pdo->query('
+$stmt = $pdo->prepare('
     SELECT r.name, r.whatsapp, r.ref_code, e.name AS event_name, COUNT(fl.id) AS total
     FROM referrers r
     LEFT JOIN (
@@ -36,30 +41,36 @@ $leaderboard = $pdo->query('
         INNER JOIN (
             SELECT event_slug, whatsapp, MIN(id) AS first_id
             FROM leads
-            WHERE whatsapp IS NOT NULL AND whatsapp <> ""
+            WHERE brand_id = ? AND whatsapp IS NOT NULL AND whatsapp <> ""
             GROUP BY event_slug, whatsapp
         ) first_lead ON first_lead.first_id = l1.id
     ) fl ON fl.event_slug = r.event_slug AND fl.ref_code = r.ref_code
-    LEFT JOIN events e ON e.slug = r.event_slug
+    LEFT JOIN events e ON e.slug = r.event_slug AND e.brand_id = r.brand_id
+    WHERE r.brand_id = ?
     GROUP BY r.id
     ORDER BY total DESC, r.created_at ASC
     LIMIT 20
-')->fetchAll(PDO::FETCH_ASSOC);
+');
+$stmt->execute([$brandId, $brandId]);
+$leaderboard = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Data pendaftar terbaru
-$leads = $pdo->query('
+$stmt = $pdo->prepare('
     SELECT l.name, l.email, l.whatsapp, l.kota, l.ref_code, l.created_at,
            r.name AS referrer_name, e.name AS event_name
     FROM leads l
-    LEFT JOIN referrers r ON r.event_slug = l.event_slug AND r.ref_code = l.ref_code
-    LEFT JOIN events e ON e.slug = l.event_slug
+    LEFT JOIN referrers r ON r.event_slug = l.event_slug AND r.ref_code = l.ref_code AND r.brand_id = l.brand_id
+    LEFT JOIN events e ON e.slug = l.event_slug AND e.brand_id = l.brand_id
+    WHERE l.brand_id = ?
     ORDER BY l.created_at DESC
     LIMIT 500
-')->fetchAll(PDO::FETCH_ASSOC);
+');
+$stmt->execute([$brandId]);
+$leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $totalEvents = count($eventSummary);
 $activeReferrals = count(array_filter($leaderboard, static fn ($row) => (int)$row['total'] > 0));
-$logoPath = '../assets/logo.png';
+$logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.png';
 
 function whatsapp_link(?string $number): ?string
 {

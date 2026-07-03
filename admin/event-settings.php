@@ -2,10 +2,7 @@
 require_once __DIR__ . '/../config.php';
 start_secure_session();
 
-if (empty($_SESSION['admin_authenticated'])) {
-    header('Location: login.php');
-    exit;
-}
+$brand = require_admin_for_brand(get_current_brand());
 
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -13,6 +10,9 @@ if (empty($_SESSION['csrf_token'])) {
 
 $eventSlug = clean($_GET['event'] ?? '');
 $event = $eventSlug !== '' ? get_event_by_slug($eventSlug) : null;
+if ($event && (int)$event['brand_id'] !== (int)$brand['id']) {
+    $event = null; // event milik brand lain — perlakukan seperti tidak ditemukan
+}
 $eventNotFound = !$event;
 $notice = null;
 $noticeType = 'success'; // success | error
@@ -80,8 +80,8 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : $event['name'];
-$logoPath = file_exists(__DIR__ . '/../assets/logo.png') ? '../assets/logo.png' : '/assets/img/logo-rahasiaemas.png';
-$eventUrl = $eventNotFound ? '#' : ($eventSlug === DEFAULT_EVENT_SLUG ? '/' : EVENTS_URL_BASE . '/' . rawurlencode($eventSlug) . '/');
+$logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.png';
+$eventUrl = $eventNotFound ? '#' : ($eventSlug === $brand['default_event_slug'] ? '/' : EVENTS_URL_BASE . '/' . rawurlencode($eventSlug) . '/');
 
 function event_setting_value(array $values, string $key, string $fallback = '-'): string
 {

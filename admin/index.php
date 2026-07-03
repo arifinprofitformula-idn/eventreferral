@@ -2,7 +2,9 @@
 require_once __DIR__ . '/../config.php';
 start_secure_session();
 
-if (!empty($_SESSION['admin_authenticated'])) {
+$brand = require_brand_or_404(get_current_brand());
+
+if (!empty($_SESSION['admin_brand_id']) && (int)$_SESSION['admin_brand_id'] === (int)$brand['id']) {
     header('Location: dashboard.php');
 } else {
     header('Location: login.php');

@@ -2,10 +2,9 @@
 require_once __DIR__ . '/../config.php';
 start_secure_session();
 
-if (empty($_SESSION['admin_authenticated'])) {
-    header('Location: login.php');
-    exit;
-}
+$brand = require_admin_for_brand(get_current_brand());
+$brandId = (int)$brand['id'];
+$defaultEventSlug = $brand['default_event_slug'];
 
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -58,8 +57,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($_SESSION['csrf_token'
                     } else {
                         $slug = $slugOverride !== '' ? $slugOverride : slugify($cfg['slug'] ?? $cfg['name']);
 
+                        $existingEvent = get_event_by_slug($slug);
+
                         if (!is_valid_event_slug($slug)) {
                             $notice = 'Slug "' . htmlspecialchars($slug) . '" tidak valid. Gunakan huruf kecil, angka, dan strip saja (contoh: funtactic-selling), dan bukan kata yang dicadangkan sistem.';
+                            $noticeType = 'error';
+                        } elseif ($existingEvent && (int)$existingEvent['brand_id'] !== $brandId) {
+                            // Slug event unik secara GLOBAL (folder /e/ dibagi semua brand) —
+                            // jangan biarkan brand ini menimpa event milik brand lain.
+                            $notice = 'Slug "' . htmlspecialchars($slug) . '" sudah dipakai oleh brand lain. Gunakan slug lain.';
                             $noticeType = 'error';
                         } else {
                             $targetDir = EVENTS_DIR . '/' . $slug;
@@ -77,10 +83,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($_SESSION['csrf_token'
                                 } else {
                                     inject_sdk_script($targetDir . '/index.html');
 
-                                    // Upsert ke tabel events
+                                    // Upsert ke tabel events (brand_id sudah divalidasi di atas milik brand ini)
                                     $stmt = $pdo->prepare('
-                                        INSERT INTO events (slug, name, status, whatsapp_default, event_day, event_time, event_location, event_speaker, event_capacity)
-                                        VALUES (?, ?, "active", ?, ?, ?, ?, ?, ?)
+                                        INSERT INTO events (brand_id, slug, name, status, whatsapp_default, event_day, event_time, event_location, event_speaker, event_capacity)
+                                        VALUES (?, ?, ?, "active", ?, ?, ?, ?, ?, ?)
                                         ON DUPLICATE KEY UPDATE
                                             name = VALUES(name), status = "active", whatsapp_default = VALUES(whatsapp_default),
                                             event_day = VALUES(event_day), event_time = VALUES(event_time),
@@ -88,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($_SESSION['csrf_token'
                                             event_capacity = VALUES(event_capacity)
                                     ');
                                     $stmt->execute([
+                                        $brandId,
                                         $slug,
                                         clean($cfg['name']),
                                         normalize_whatsapp(clean($cfg['whatsapp'] ?? '')),
@@ -115,12 +122,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($_SESSION['csrf_token'
     // ---- Arsipkan / aktifkan kembali event ----
     if (isset($_POST['toggle_status']) && isset($_POST['slug'])) {
         $slug = clean($_POST['slug']);
-        if ($slug !== DEFAULT_EVENT_SLUG) {
+        if ($slug !== $defaultEventSlug) {
             $ev = get_event_by_slug($slug);
-            if ($ev) {
+            if ($ev && (int)$ev['brand_id'] === $brandId) {
                 $newStatus = $ev['status'] === 'active' ? 'archived' : 'active';
-                $stmt = $pdo->prepare('UPDATE events SET status = ? WHERE slug = ?');
-                $stmt->execute([$newStatus, $slug]);
+                $stmt = $pdo->prepare('UPDATE events SET status = ? WHERE slug = ? AND brand_id = ?');
+                $stmt->execute([$newStatus, $slug, $brandId]);
                 $notice = 'Status event "' . htmlspecialchars($ev['name']) . '" diubah menjadi ' . ($newStatus === 'active' ? 'AKTIF' : 'DIARSIPKAN') . '.';
                 $noticeType = 'success';
             }
@@ -132,20 +139,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($_SESSION['csrf_token'
 }
 
 // ==================== DATA UNTUK TAMPILAN ====================
-$events = $pdo->query('
+$stmt = $pdo->prepare('
     SELECT e.*,
-        (SELECT COUNT(*) FROM leads l WHERE l.event_slug = e.slug) AS total_leads,
-        (SELECT COUNT(*) FROM referrers r WHERE r.event_slug = e.slug) AS total_referrers
+        (SELECT COUNT(*) FROM leads l WHERE l.brand_id = e.brand_id AND l.event_slug = e.slug) AS total_leads,
+        (SELECT COUNT(*) FROM referrers r WHERE r.brand_id = e.brand_id AND r.event_slug = e.slug) AS total_referrers
     FROM events e
-    ORDER BY (e.slug = "default") DESC, e.created_at DESC
-')->fetchAll(PDO::FETCH_ASSOC);
+    WHERE e.brand_id = ?
+    ORDER BY (e.slug = ?) DESC, e.created_at DESC
+');
+$stmt->execute([$brandId, $defaultEventSlug]);
+$events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $totalEvents = count($events);
 $activeEvents = count(array_filter($events, static fn ($event) => ($event['status'] ?? '') === 'active'));
 $totalLeads = array_sum(array_map(static fn ($event) => (int)$event['total_leads'], $events));
 $totalReferrers = array_sum(array_map(static fn ($event) => (int)$event['total_referrers'], $events));
 $maxZipMb = (int)(MAX_ZIP_SIZE / 1024 / 1024);
-$logoPath = '../assets/logo.png';
+$logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.png';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -1123,8 +1133,8 @@ $logoPath = '../assets/logo.png';
       <?php foreach ($events as $ev): ?>
         <?php
           $eventStatus = $ev['status'] === 'active' ? 'active' : 'archived';
-          $eventPath = $ev['slug'] === DEFAULT_EVENT_SLUG ? '/ (root domain)' : '/e/' . $ev['slug'] . '/';
-          $eventUrl = $ev['slug'] === DEFAULT_EVENT_SLUG ? '/' : EVENTS_URL_BASE . '/' . rawurlencode($ev['slug']) . '/';
+          $eventPath = $ev['slug'] === $defaultEventSlug ? '/ (root domain)' : '/e/' . $ev['slug'] . '/';
+          $eventUrl = $ev['slug'] === $defaultEventSlug ? '/' : EVENTS_URL_BASE . '/' . rawurlencode($ev['slug']) . '/';
         ?>
         <article class="event-card <?= $eventStatus === 'archived' ? 'archived' : '' ?>" data-status="<?= htmlspecialchars($eventStatus) ?>" data-search="<?= htmlspecialchars(strtolower($ev['name'] . ' ' . $ev['slug'] . ' ' . $eventStatus)) ?>">
           <div class="event-main">
@@ -1156,7 +1166,7 @@ $logoPath = '../assets/logo.png';
               <a class="event-action" href="/challenge/?event=<?= urlencode($ev['slug']) ?>" target="_blank" rel="noopener">Challenge</a>
               <a class="event-action" href="rewards.php?event=<?= urlencode($ev['slug']) ?>">Atur Hadiah</a>
               <a class="event-action" href="tracking.php?event=<?= urlencode($ev['slug']) ?>">Tracking</a>
-              <?php if ($ev['slug'] !== DEFAULT_EVENT_SLUG): ?>
+              <?php if ($ev['slug'] !== $defaultEventSlug): ?>
                 <form class="inline-form" method="POST">
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                   <input type="hidden" name="toggle_status" value="1">

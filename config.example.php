@@ -25,6 +25,11 @@ define('ADMIN_PASSWORD_HASH', '$2y$12$iUeNUsTjuTdSG8uekn4OguWiD9GsNGxrSQQP/5PoIT
 define('LOGIN_MAX_ATTEMPTS', 5); // maksimal percobaan login gagal sebelum dikunci sementara
 define('LOGIN_LOCKOUT_MINUTES', 15); // lama penguncian (menit) setelah melebihi batas percobaan
 
+// Kunci rahasia untuk mengakses admin/setup-brand.php (menambah brand baru).
+// HANYA Coach yang boleh tahu nilai ini — BUKAN sama dengan PIN/password admin brand manapun.
+// GANTI dengan string acak panjang milik Anda sendiri (generate: php -r "echo bin2hex(random_bytes(24));").
+define('MASTER_SETUP_KEY', 'ganti-dengan-kunci-rahasia-panjang-milik-coach-saja');
+
 // Detail acara awal/fallback.
 define('EVENT_DAY', 'Jumat, 25 Juli 2026');
 define('EVENT_TIME', '19.30 WIB');

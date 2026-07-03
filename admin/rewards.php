@@ -2,10 +2,7 @@
 require_once __DIR__ . '/../config.php';
 start_secure_session();
 
-if (empty($_SESSION['admin_authenticated'])) {
-    header('Location: login.php');
-    exit;
-}
+$brand = require_admin_for_brand(get_current_brand());
 
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -15,6 +12,9 @@ $pdo = get_db();
 
 $eventSlug = clean($_GET['event'] ?? '');
 $event = $eventSlug !== '' ? get_event_by_slug($eventSlug) : null;
+if ($event && (int)$event['brand_id'] !== (int)$brand['id']) {
+    $event = null; // event milik brand lain — perlakukan seperti tidak ditemukan
+}
 $eventNotFound = !$event;
 $notice = null;
 $noticeType = 'success'; // success | error
@@ -49,8 +49,8 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
         // ---- Hapus gambar jika diminta ----
         if (isset($_POST['remove_image']) && !empty($event['reward_image'])) {
             delete_reward_image($event['reward_image']);
-            $stmt = $pdo->prepare('UPDATE events SET reward_image = NULL WHERE slug = ?');
-            $stmt->execute([$eventSlug]);
+            $stmt = $pdo->prepare('UPDATE events SET reward_image = NULL WHERE slug = ? AND brand_id = ?');
+            $stmt->execute([$eventSlug, (int)$brand['id']]);
             $event['reward_image'] = null;
         }
 
@@ -66,8 +66,8 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $notice = 'Gagal upload gambar. Pastikan file adalah gambar dengan format yang diizinkan.';
                     $noticeType = 'error';
                 } else {
-                    $stmt = $pdo->prepare('UPDATE events SET reward_image = ? WHERE slug = ?');
-                    $stmt->execute([$imagePath, $eventSlug]);
+                    $stmt = $pdo->prepare('UPDATE events SET reward_image = ? WHERE slug = ? AND brand_id = ?');
+                    $stmt->execute([$imagePath, $eventSlug, (int)$brand['id']]);
                     $event['reward_image'] = $imagePath;
                 }
             }
@@ -93,7 +93,7 @@ if (empty($activeRanks)) {
 $activeRankMap = array_fill_keys($activeRanks, true);
 $visibleRewards = array_filter($rewardByRank, static fn ($value) => trim((string)$value) !== '');
 $maxRewardImageMb = (int)(MAX_REWARD_IMAGE_SIZE / 1024 / 1024);
-$logoPath = file_exists(__DIR__ . '/../assets/logo.png') ? '../assets/logo.png' : '/assets/img/logo-rahasiaemas.png';
+$logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.png';
 $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : $event['name'];
 $challengeUrl = $eventNotFound ? '#' : '/challenge/?event=' . urlencode($eventSlug);
 
