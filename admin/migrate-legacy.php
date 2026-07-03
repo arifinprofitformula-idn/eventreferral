@@ -14,8 +14,53 @@
 require_once __DIR__ . '/../config.php';
 start_secure_session();
 
-if (empty($_SESSION['admin_authenticated'])) {
-    header('Location: login.php');
+if (empty($_SESSION['admin_authenticated']) && empty($_SESSION['legacy_migration_authenticated'])) {
+    $loginError = null;
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $username = $_POST['username'] ?? '';
+        $password = $_POST['password'] ?? '';
+
+        if (hash_equals(ADMIN_USERNAME, $username) && password_verify($password, ADMIN_PASSWORD_HASH)) {
+            session_regenerate_id(true);
+            $_SESSION['legacy_migration_authenticated'] = true;
+            header('Location: migrate-legacy.php');
+            exit;
+        }
+
+        $loginError = 'Username atau password salah.';
+    }
+    ?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Login Migrasi Legacy</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #1A1A1A; color: #FAFAFA; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .box { width: 100%; max-width: 360px; background: #242424; border-radius: 12px; padding: 28px; }
+  h1 { color: #C9A84C; font-size: 20px; margin: 0 0 18px; }
+  input, button { width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 12px; border-radius: 8px; font-size: 15px; }
+  input { background: #1A1A1A; border: 1px solid rgba(255,255,255,0.18); color: #FAFAFA; }
+  button { background: #C9A84C; color: #1A1A1A; border: 0; font-weight: 700; cursor: pointer; }
+  .error { color: #E8956B; font-size: 14px; }
+  .note { color: #B8B4AA; font-size: 13px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>Login Migrasi Legacy</h1>
+  <p class="note">Gunakan username/password admin lama dari <code>config.php</code>. Login ini tidak bergantung pada tabel brand.</p>
+  <?php if ($loginError): ?><p class="error"><?= htmlspecialchars($loginError) ?></p><?php endif; ?>
+  <form method="POST">
+    <input type="text" name="username" placeholder="Username admin" required autofocus>
+    <input type="password" name="password" placeholder="Password admin" required>
+    <button type="submit">Masuk & Jalankan Migrasi</button>
+  </form>
+</div>
+</body>
+</html>
+    <?php
     exit;
 }
 
