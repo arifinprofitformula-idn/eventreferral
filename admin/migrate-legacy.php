@@ -27,7 +27,8 @@ try {
     $existing = $pdo->query("SELECT id FROM brands WHERE slug = 'rahasiaemas'")->fetch(PDO::FETCH_ASSOC);
 
     if ($existing) {
-        $messages[] = 'Brand "rahasiaemas" sudah ada (id=' . (int)$existing['id'] . '). Migrasi sebelumnya sudah berhasil — tidak ada yang dilakukan lagi.';
+        $brandId = (int)$existing['id'];
+        $messages[] = 'Brand "rahasiaemas" sudah ada (id=' . $brandId . '). Melanjutkan recovery/backfill baris lama yang masih kosong.';
     } else {
         $pdo->beginTransaction();
 
@@ -53,15 +54,21 @@ try {
         ]);
         $brandId = (int)$pdo->lastInsertId();
 
-        $pdo->prepare('UPDATE events SET brand_id = ? WHERE brand_id IS NULL')->execute([$brandId]);
-        $pdo->prepare('UPDATE referrers SET brand_id = ? WHERE brand_id IS NULL')->execute([$brandId]);
-        $pdo->prepare('UPDATE leads SET brand_id = ? WHERE brand_id IS NULL')->execute([$brandId]);
-
         $pdo->commit();
 
         $messages[] = 'Brand "rahasiaemas" berhasil dibuat (id=' . $brandId . ').';
-        $messages[] = 'Semua baris lama di events/referrers/leads sudah diisi brand_id=' . $brandId . '.';
     }
+
+    $pdo->beginTransaction();
+    $updatedEvents = $pdo->prepare('UPDATE events SET brand_id = ? WHERE brand_id IS NULL');
+    $updatedEvents->execute([$brandId]);
+    $updatedReferrers = $pdo->prepare('UPDATE referrers SET brand_id = ? WHERE brand_id IS NULL');
+    $updatedReferrers->execute([$brandId]);
+    $updatedLeads = $pdo->prepare('UPDATE leads SET brand_id = ? WHERE brand_id IS NULL');
+    $updatedLeads->execute([$brandId]);
+    $pdo->commit();
+
+    $messages[] = 'Backfill brand_id=' . $brandId . ' selesai: events=' . $updatedEvents->rowCount() . ', referrers=' . $updatedReferrers->rowCount() . ', leads=' . $updatedLeads->rowCount() . '.';
 
     $checkEvents = (int)$pdo->query('SELECT COUNT(*) FROM events WHERE brand_id IS NULL')->fetchColumn();
     $checkReferrers = (int)$pdo->query('SELECT COUNT(*) FROM referrers WHERE brand_id IS NULL')->fetchColumn();
