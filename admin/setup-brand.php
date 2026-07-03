@@ -9,6 +9,7 @@
  */
 
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/bootstrap.php';
 start_secure_session();
 
 $providedKey = $_POST['key'] ?? $_GET['key'] ?? '';

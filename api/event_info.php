@@ -6,6 +6,7 @@
  */
 
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/bootstrap.php';
 header('Content-Type: application/json; charset=utf-8');
 
 $brand = get_current_brand();

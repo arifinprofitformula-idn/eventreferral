@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/bootstrap.php';
 
 $brand = require_brand_or_404(get_current_brand());
 $brandId = (int)$brand['id'];

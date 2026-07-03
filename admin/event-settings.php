@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/bootstrap.php';
 start_secure_session();
 
 $brand = require_admin_for_brand(get_current_brand());
