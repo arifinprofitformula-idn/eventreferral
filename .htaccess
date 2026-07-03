@@ -15,7 +15,7 @@ DirectoryIndex index.php
   RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
 
   # Hanya izinkan route publik/admin yang memang aktif.
-  RewriteRule !^(?:$|index\.php|buat-link\.php|assets/[A-Za-z0-9._/-]+\.(?:png|jpe?g|webp|gif|svg|ico|css|js|woff2?|ttf|eot)|api/(?:submit_lead|create_referrer|event_info)\.php|challenge/?|challenge/index\.php|e/[A-Za-z0-9._/-]+|admin/?|admin/(?:index|login|dashboard|logout|export|events)\.php)$ - [F,L,NC]
+  RewriteRule !^(?:$|index\.php|buat-link\.php|assets/[A-Za-z0-9._/-]+\.(?:png|jpe?g|webp|gif|svg|ico|css|js|woff2?|ttf|eot)|api/(?:submit_lead|create_referrer|event_info)\.php|challenge/?|challenge/index\.php|e/[A-Za-z0-9._/-]+|admin/?|admin/(?:index|login|dashboard|logout|export|events|event-settings|rewards|tracking|setup-brand|generate-password-hash|migrate-legacy)\.php)$ - [F,L,NC]
 </IfModule>
 
 # Blok file konfigurasi, database, dokumentasi, backup, log, dan metadata project.
