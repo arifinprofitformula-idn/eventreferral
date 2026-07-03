@@ -1,22 +1,31 @@
 <?php
 /**
  * api/event_info.php
- * Endpoint publik (read-only) — dipanggil oleh rahasiaemas-sdk.js
+ * Endpoint publik (read-only) — dipanggil oleh assets/event-sdk.js
  * untuk mengambil detail acara + info pengundang (jika ada ?ref=).
  */
 
 require_once __DIR__ . '/../config.php';
 header('Content-Type: application/json; charset=utf-8');
 
-$slug = clean($_GET['event'] ?? DEFAULT_EVENT_SLUG);
+$brand = get_current_brand();
+if (!$brand) {
+    http_response_code(404);
+    echo json_encode(['success' => false, 'message' => 'Event tidak ditemukan atau sudah tidak aktif.']);
+    exit;
+}
+
+$slug = clean($_GET['event'] ?? $brand['default_event_slug']);
 $refCode = clean($_GET['ref'] ?? '');
-if ($slug === '') $slug = DEFAULT_EVENT_SLUG;
+if ($slug === '') $slug = $brand['default_event_slug'];
 
 try {
     $pdo = get_db();
 
-    $stmt = $pdo->prepare("SELECT * FROM events WHERE slug = ? AND status = 'active'");
-    $stmt->execute([$slug]);
+    // Validasi brand_id WAJIB — mencegah domain brand A membaca data event milik brand B
+    // lewat tebakan slug, walau folder /e/ dibagi bersama semua domain (lihat DEPLOYMENT.md).
+    $stmt = $pdo->prepare("SELECT * FROM events WHERE slug = ? AND brand_id = ? AND status = 'active'");
+    $stmt->execute([$slug, $brand['id']]);
     $event = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$event) {
@@ -27,8 +36,8 @@ try {
 
     $referrer = null;
     if ($refCode !== '') {
-        $stmt = $pdo->prepare('SELECT name, whatsapp FROM referrers WHERE event_slug = ? AND ref_code = ?');
-        $stmt->execute([$slug, $refCode]);
+        $stmt = $pdo->prepare('SELECT name, whatsapp FROM referrers WHERE brand_id = ? AND event_slug = ? AND ref_code = ?');
+        $stmt->execute([$brand['id'], $slug, $refCode]);
         $referrer = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 

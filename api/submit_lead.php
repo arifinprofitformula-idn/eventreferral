@@ -14,6 +14,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+$brand = get_current_brand();
+if (!$brand) {
+    http_response_code(404);
+    echo json_encode(['success' => false, 'message' => 'Event tidak ditemukan.']);
+    exit;
+}
+$brandId = (int)$brand['id'];
+
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input) {
     $input = $_POST; // fallback jika bukan JSON
@@ -24,11 +32,11 @@ $email     = clean($input['email'] ?? '');
 $wa        = clean($input['whatsapp'] ?? '');
 $kota      = clean($input['kota'] ?? '');
 $refCode   = clean($input['ref'] ?? DEFAULT_REF_CODE);
-$eventSlug = clean($input['event'] ?? DEFAULT_EVENT_SLUG);
+$eventSlug = clean($input['event'] ?? $brand['default_event_slug']);
 
 $event = get_event_by_slug($eventSlug);
-if (!$event || $event['status'] !== 'active') {
-    $eventSlug = DEFAULT_EVENT_SLUG;
+if (!$event || (int)$event['brand_id'] !== $brandId || $event['status'] !== 'active') {
+    $eventSlug = $brand['default_event_slug'];
     $event = get_event_by_slug($eventSlug);
 }
 
@@ -61,20 +69,20 @@ if ($refCode === '') {
 try {
     $pdo = get_db();
 
-    // Cari data pengundang berdasarkan (event_slug, ref_code); fallback ke whatsapp_default milik event jika tidak ditemukan
-    $stmt = $pdo->prepare('SELECT ref_code, name, whatsapp FROM referrers WHERE event_slug = ? AND ref_code = ?');
-    $stmt->execute([$eventSlug, $refCode]);
+    // Cari data pengundang berdasarkan (brand_id, event_slug, ref_code); fallback ke whatsapp_default milik event jika tidak ditemukan
+    $stmt = $pdo->prepare('SELECT ref_code, name, whatsapp FROM referrers WHERE brand_id = ? AND event_slug = ? AND ref_code = ?');
+    $stmt->execute([$brandId, $eventSlug, $refCode]);
     $referrer = $stmt->fetch(PDO::FETCH_ASSOC);
 
     // Simpan lead
     $stmt = $pdo->prepare(
-        'INSERT INTO leads (name, email, whatsapp, kota, ref_code, event_slug) VALUES (?, ?, ?, ?, ?, ?)'
+        'INSERT INTO leads (brand_id, name, email, whatsapp, kota, ref_code, event_slug) VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
-    $stmt->execute([$name, $email, $waNormalized, $kota, $refCode, $eventSlug]);
+    $stmt->execute([$brandId, $name, $email, $waNormalized, $kota, $refCode, $eventSlug]);
 
     // Susun pesan WhatsApp yang akan dikirim SI PENDAFTAR ke NOMOR PENGUNDANG
     $waMessage = "Halo" . ($referrer ? " {$referrer['name']}" : "") . "! 👋\n"
-        . "Saya sudah daftar acara *" . ($event ? $event['name'] : 'Rahasia Emas') . "*:\n\n"
+        . "Saya sudah daftar acara *" . ($event ? $event['name'] : $brand['name']) . "*:\n\n"
         . "Nama: {$name}\n"
         . "Kota: {$kota}\n\n"
         . "Mohon info selanjutnya ya. Terima kasih! 🙏";

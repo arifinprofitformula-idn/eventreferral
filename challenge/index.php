@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
+$brand = require_brand_or_404(get_current_brand());
+$brandId = (int)$brand['id'];
+
 $eventSlug = isset($_GET['event']) ? clean($_GET['event']) : '';
 $eventNotFound = false;
 $leaderboardPerPage = 20;
@@ -8,13 +11,15 @@ $currentPage = max(1, (int)($_GET['page'] ?? 1));
 
 $pdo = get_db();
 
-// Daftar semua event aktif, untuk dropdown pemilih
-$allEvents = $pdo->query("SELECT slug, name FROM events WHERE status = 'active' ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
+// Daftar semua event aktif milik brand ini, untuk dropdown pemilih
+$stmt = $pdo->prepare("SELECT slug, name FROM events WHERE brand_id = ? AND status = 'active' ORDER BY created_at DESC");
+$stmt->execute([$brandId]);
+$allEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $selectedEvent = null;
 if ($eventSlug !== '') {
     $selectedEvent = get_event_by_slug($eventSlug);
-    if (!$selectedEvent || $selectedEvent['status'] !== 'active') {
+    if (!$selectedEvent || (int)$selectedEvent['brand_id'] !== $brandId || $selectedEvent['status'] !== 'active') {
         $eventNotFound = true;
         $selectedEvent = null;
     }
@@ -33,17 +38,17 @@ if ($eventSlug !== '') {
             INNER JOIN (
                 SELECT event_slug, whatsapp, MIN(id) AS first_id
                 FROM leads
-                WHERE whatsapp IS NOT NULL AND whatsapp <> ""
+                WHERE brand_id = ? AND whatsapp IS NOT NULL AND whatsapp <> ""
                 GROUP BY event_slug, whatsapp
             ) first_lead ON first_lead.first_id = l1.id
         ) fl ON fl.event_slug = r.event_slug AND fl.ref_code = r.ref_code
-        WHERE r.event_slug = ?
+        WHERE r.brand_id = ? AND r.event_slug = ?
         GROUP BY r.id
         ORDER BY total DESC, r.created_at ASC
     ');
-    $stmt->execute([$eventSlug]);
+    $stmt->execute([$brandId, $brandId, $eventSlug]);
 } else {
-    $stmt = $pdo->query('
+    $stmt = $pdo->prepare('
         SELECT r.name, COUNT(fl.id) AS total
         FROM referrers r
         LEFT JOIN (
@@ -52,27 +57,31 @@ if ($eventSlug !== '') {
             INNER JOIN (
                 SELECT event_slug, whatsapp, MIN(id) AS first_id
                 FROM leads
-                WHERE whatsapp IS NOT NULL AND whatsapp <> ""
+                WHERE brand_id = ? AND whatsapp IS NOT NULL AND whatsapp <> ""
                 GROUP BY event_slug, whatsapp
             ) first_lead ON first_lead.first_id = l1.id
         ) fl ON fl.event_slug = r.event_slug AND fl.ref_code = r.ref_code
+        WHERE r.brand_id = ?
         GROUP BY r.name
         ORDER BY total DESC
     ');
+    $stmt->execute([$brandId, $brandId]);
 }
 $leaderboard = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if ($eventSlug !== '') {
-    $totalReferrersStmt = $pdo->prepare('SELECT COUNT(*) FROM referrers WHERE event_slug = ?');
-    $totalReferrersStmt->execute([$eventSlug]);
+    $totalReferrersStmt = $pdo->prepare('SELECT COUNT(*) FROM referrers WHERE brand_id = ? AND event_slug = ?');
+    $totalReferrersStmt->execute([$brandId, $eventSlug]);
     $totalReferrers = (int)$totalReferrersStmt->fetchColumn();
 } else {
-    $totalReferrers = (int)$pdo->query('
+    $totalReferrersStmt = $pdo->prepare('
         SELECT COUNT(*)
         FROM referrers r
-        INNER JOIN events e ON e.slug = r.event_slug
-        WHERE e.status = "active"
-    ')->fetchColumn();
+        INNER JOIN events e ON e.slug = r.event_slug AND e.brand_id = r.brand_id
+        WHERE r.brand_id = ? AND e.status = "active"
+    ');
+    $totalReferrersStmt->execute([$brandId]);
+    $totalReferrers = (int)$totalReferrersStmt->fetchColumn();
 }
 
 $totalLeaderboardRows = count($leaderboard);
@@ -90,16 +99,18 @@ if ($eventNotFound) {
 $rewards = $selectedEvent ? get_event_rewards($eventSlug) : [];
 $rewardImage = $selectedEvent['reward_image'] ?? null;
 $topThree = array_slice($leaderboard, 0, 3);
-$logoPath = '/assets/logo.png';
-$eventUrl = $selectedEvent ? ($eventSlug === DEFAULT_EVENT_SLUG ? '/' : EVENTS_URL_BASE . '/' . rawurlencode($eventSlug) . '/') : '/';
+$logoPath = $brand['logo_path'] ? $brand['logo_path'] : '/assets/logo.png';
+$eventUrl = $selectedEvent ? ($eventSlug === $brand['default_event_slug'] ? '/' : EVENTS_URL_BASE . '/' . rawurlencode($eventSlug) . '/') : '/';
 $referralUrl = $selectedEvent ? '/buat-link.php?event=' . urlencode($eventSlug) : '/buat-link.php';
 
 if ($eventSlug !== '') {
-    $updatedStmt = $pdo->prepare('SELECT MAX(created_at) FROM leads WHERE event_slug = ?');
-    $updatedStmt->execute([$eventSlug]);
+    $updatedStmt = $pdo->prepare('SELECT MAX(created_at) FROM leads WHERE brand_id = ? AND event_slug = ?');
+    $updatedStmt->execute([$brandId, $eventSlug]);
     $lastUpdated = $updatedStmt->fetchColumn();
 } else {
-    $lastUpdated = $pdo->query('SELECT MAX(created_at) FROM leads')->fetchColumn();
+    $updatedStmt = $pdo->prepare('SELECT MAX(created_at) FROM leads WHERE brand_id = ?');
+    $updatedStmt->execute([$brandId]);
+    $lastUpdated = $updatedStmt->fetchColumn();
 }
 
 function display_initials(string $name): string
@@ -136,17 +147,18 @@ function challenge_page_url(int $page, string $eventSlug): string
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Challenge Pengundang Terbanyak — rahasiaemas.id</title>
-<meta name="description" content="Pantau siapa pengundang paling aktif di acara rahasiaemas.id, update secara real-time.">
-<link rel="icon" href="/assets/logo.png">
+<title>Challenge Pengundang Terbanyak — <?= htmlspecialchars($brand['name']) ?></title>
+<meta name="description" content="Pantau siapa pengundang paling aktif di acara <?= htmlspecialchars($brand['name']) ?>, update secara real-time.">
+<link rel="icon" href="<?= htmlspecialchars($logoPath) ?>">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style><?= get_theme_css_vars($brand) ?></style>
 <style>
   :root {
     --bg:#0B0B0A;
     --surface:#171716;
     --surface-elevated:#20201E;
-    --gold:#D6A536;
-    --gold-soft:#F4D27A;
+    --gold:var(--brand-primary);
+    --gold-soft:var(--brand-soft);
     --border-gold:rgba(214,165,54,0.22);
     --text:#F7F3E8;
     --muted:#A8A29A;
@@ -876,8 +888,8 @@ function challenge_page_url(int $page, string $eventSlug): string
 <body>
 <div class="wrap">
   <header class="public-header">
-    <a class="logo" href="/" aria-label="RahasiaEmas.id">
-      <img src="<?= htmlspecialchars($logoPath) ?>" alt="RahasiaEmas.id">
+    <a class="logo" href="/" aria-label="<?= htmlspecialchars($brand['name']) ?>">
+      <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($brand['name']) ?>">
     </a>
     <div class="header-actions">
       <span class="tag">Challenge Pengundang</span>
@@ -1051,7 +1063,7 @@ function challenge_page_url(int $page, string $eventSlug): string
   </div>
 
   <footer>
-    <a href="/">Challenge Pengundang Rahasia Emas — Ajak, Bagikan, Menangkan Hadiahnya!</a>
+    <a href="/">Challenge Pengundang <?= htmlspecialchars($brand['name']) ?> — Ajak, Bagikan, Menangkan Hadiahnya!</a>
   </footer>
 </div>
 </body>

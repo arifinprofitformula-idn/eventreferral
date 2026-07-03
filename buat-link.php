@@ -1,27 +1,32 @@
 <?php
 require_once __DIR__ . '/config.php';
 
-$eventSlug = clean($_GET['event'] ?? DEFAULT_EVENT_SLUG);
+$brand = require_brand_or_404(get_current_brand());
+$brandId = (int)$brand['id'];
+
+$eventSlug = clean($_GET['event'] ?? $brand['default_event_slug']);
 $event = get_event_by_slug($eventSlug);
-if (!$event || $event['status'] !== 'active') {
-    $eventSlug = DEFAULT_EVENT_SLUG;
+if (!$event || (int)$event['brand_id'] !== $brandId || $event['status'] !== 'active') {
+    $eventSlug = $brand['default_event_slug'];
     $event = get_event_by_slug($eventSlug);
 }
-$eventName = ($event && $eventSlug !== DEFAULT_EVENT_SLUG) ? $event['name'] : null;
+$eventName = ($event && $eventSlug !== $brand['default_event_slug']) ? $event['name'] : null;
+$logoPath = $brand['logo_path'] ? $brand['logo_path'] : 'assets/logo.png';
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Buat Link Undanganmu — rahasiaemas.id</title>
-<link rel="icon" href="assets/logo.png">
+<title>Buat Link Undanganmu — <?= htmlspecialchars($brand['name']) ?></title>
+<link rel="icon" href="<?= htmlspecialchars($logoPath) ?>">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style><?= get_theme_css_vars($brand) ?></style>
 <style>
   :root {
-    --charcoal: #1A1A1A;
-    --gold: #C9A84C;
-    --gold-soft: #E8D5A3;
+    --charcoal: var(--brand-charcoal);
+    --gold: var(--brand-primary);
+    --gold-soft: var(--brand-soft);
     --white: #FAFAFA;
     --muted: #9C9992;
   }
@@ -92,7 +97,7 @@ $eventName = ($event && $eventSlug !== DEFAULT_EVENT_SLUG) ? $event['name'] : nu
 </head>
 <body>
 <div class="box">
-  <img src="assets/logo.png" alt="rahasiaemas.id" class="logo">
+  <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($brand['name']) ?>" class="logo">
   <h1>Buat Link Undanganmu<?= $eventName ? ' — ' . htmlspecialchars($eventName) : '' ?></h1>
   <p class="sub">Isi nama, WhatsApp, dan kode link pilihanmu. Bagikan ke teman — dan setiap orang yang daftar lewat link ini akan langsung terhubung ke WhatsApp kamu.</p>
 
@@ -127,6 +132,7 @@ $eventName = ($event && $eventSlug !== DEFAULT_EVENT_SLUG) ? $event['name'] : nu
 </div>
 
 <script>
+const brandName = <?= json_encode($brand['name']) ?>;
 const form = document.getElementById('genForm');
 const genBtn = document.getElementById('genBtn');
 const errMsg = document.getElementById('errMsg');
@@ -158,7 +164,7 @@ form.addEventListener('submit', async function (e) {
 
     if (result.success) {
       linkOutput.value = result.link;
-      const shareText = `Halo! Aku mau undang kamu ke acara edukasi gratis "Rahasia Emas" — Jumat malam ini. Daftar di sini ya: ${result.link}`;
+      const shareText = `Halo! Aku mau undang kamu ke acara edukasi gratis "${brandName}" — Jumat malam ini. Daftar di sini ya: ${result.link}`;
       waShareBtn.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
       resultBox.style.display = 'block';
       form.style.display = 'none';

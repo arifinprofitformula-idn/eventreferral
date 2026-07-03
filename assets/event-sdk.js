@@ -1,13 +1,15 @@
 /**
- * rahasiaemas-sdk.js
+ * event-sdk.js
  * ============================================================
  * SDK ringan yang menghubungkan landing page HTML/CSS statis apapun
- * ke sistem rahasiaemas.id — tanpa perlu PHP di dalam file HTML-nya.
+ * ke sistem ini — tanpa perlu PHP di dalam file HTML-nya. Brand (nama,
+ * logo, tema, domain) dideteksi otomatis di server berdasarkan domain
+ * yang diakses — SDK ini sendiri tidak perlu tahu brand mana yang aktif.
  *
  * CARA PAKAI (untuk siapapun yang membuat landing page baru):
  *
  * 1. Sisipkan tag ini sebelum </body> di index.html Anda:
- *    <script src="/assets/rahasiaemas-sdk.js" defer></script>
+ *    <script src="/assets/event-sdk.js" defer></script>
  *    (Jika lupa, sistem akan menyisipkannya otomatis saat upload ZIP.)
  *
  * 2. Beri form pendaftaran atribut data-rg-form, dengan field:
@@ -46,7 +48,7 @@
     var parts = window.location.pathname.split('/').filter(Boolean);
     var idx = parts.indexOf('e');
     if (idx !== -1 && parts[idx + 1]) return parts[idx + 1];
-    return 'default';
+    return ''; // server pakai default_event_slug brand yang aktif kalau kosong
   }
 
   function getRefCode() {
