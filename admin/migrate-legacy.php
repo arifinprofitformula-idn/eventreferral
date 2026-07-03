@@ -24,11 +24,16 @@ $messages = [];
 $error = null;
 
 try {
-    $existing = $pdo->query("SELECT id FROM brands WHERE slug = 'rahasiaemas'")->fetch(PDO::FETCH_ASSOC);
+    $currentHost = preg_replace('/^www\./', '', strtolower($_SERVER['HTTP_HOST'] ?? 'rahasiaemas.id'));
+    $currentHost = explode(':', $currentHost)[0];
+    $existing = $pdo->query("SELECT id, domain FROM brands WHERE slug = 'rahasiaemas'")->fetch(PDO::FETCH_ASSOC);
 
     if ($existing) {
         $brandId = (int)$existing['id'];
         $messages[] = 'Brand "rahasiaemas" sudah ada (id=' . $brandId . '). Melanjutkan recovery/backfill baris lama yang masih kosong.';
+        if (($existing['domain'] ?? '') !== $currentHost) {
+            $messages[] = 'PERHATIAN — domain brand saat ini "' . ($existing['domain'] ?? '') . '", sedangkan domain yang sedang dibuka "' . $currentHost . '". Jika ini database staging, jalankan: UPDATE brands SET domain = "' . $currentHost . '" WHERE slug = "rahasiaemas";';
+        }
     } else {
         $pdo->beginTransaction();
 
@@ -44,7 +49,7 @@ try {
         ');
         $stmt->execute([
             'rahasiaemas',
-            'rahasiaemas.id',
+            $currentHost,
             SITE_NAME,
             $defaultWhatsapp !== false ? $defaultWhatsapp : null,
             'gold',
