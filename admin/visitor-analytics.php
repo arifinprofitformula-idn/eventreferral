@@ -58,9 +58,11 @@ if ($selectedEvent !== '' && !in_array($selectedEvent, $eventSlugs, true)) {
 
 $rangeSql = (string)$rangeDays;
 $where = "brand_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL {$rangeSql} DAY)";
+$whereVe = "ve.brand_id = ? AND ve.created_at >= DATE_SUB(NOW(), INTERVAL {$rangeSql} DAY)";
 $params = [$brandId];
 if ($selectedEvent !== '') {
     $where .= ' AND event_slug = ?';
+    $whereVe .= ' AND ve.event_slug = ?';
     $params[] = $selectedEvent;
 }
 
@@ -155,8 +157,41 @@ foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
 $deviceTotal = array_sum($deviceRaw);
 $deviceLabels = ['mobile' => 'Mobile', 'tablet' => 'Tablet', 'desktop' => 'Desktop'];
 
-// ==================== GRAFIK HARIAN (14 hari terakhir) ====================
-$chartWhere = 'brand_id = ? AND event_type = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)';
+// ==================== TOP HALAMAN MASUK (BARU) ====================
+$stmt = $pdo->prepare("
+    SELECT page_path, COUNT(DISTINCT session_id) AS total
+    FROM visitor_events
+    WHERE {$where} AND event_type = 'pageview'
+    GROUP BY page_path ORDER BY total DESC LIMIT 8
+");
+$stmt->execute($params);
+$topPages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$topPagesTotal = max(1, array_sum(array_column($topPages, 'total')));
+
+// ==================== PERFORMA PER PENGUNDANG / REFERRAL (BARU) ====================
+$stmt = $pdo->prepare("
+    SELECT
+        ve.ref_code,
+        COALESCE(r.name, ve.ref_code) AS referrer_name,
+        COUNT(DISTINCT CASE WHEN ve.event_type = 'pageview' THEN ve.session_id END) AS visits,
+        SUM(ve.event_type = 'form_submit') AS submits
+    FROM visitor_events ve
+    LEFT JOIN referrers r ON r.brand_id = ve.brand_id AND r.event_slug = ve.event_slug AND r.ref_code = ve.ref_code
+    WHERE {$whereVe} AND ve.ref_code IS NOT NULL AND ve.ref_code != ''
+    GROUP BY ve.ref_code, referrer_name
+    ORDER BY visits DESC LIMIT 12
+");
+$stmt->execute($params);
+$referrerPerf = $stmt->fetchAll(PDO::FETCH_ASSOC);
+foreach ($referrerPerf as &$rp) {
+    $rp['visits'] = (int)$rp['visits'];
+    $rp['submits'] = (int)$rp['submits'];
+    $rp['conv_rate'] = $rp['visits'] > 0 ? pct($rp['submits'], $rp['visits'], 1) : 0;
+}
+unset($rp);
+
+// ==================== GRAFIK HARIAN (ikut filter periode yang dipilih) ====================
+$chartWhere = 'brand_id = ? AND event_type = ? AND created_at >= DATE_SUB(NOW(), INTERVAL ' . $rangeSql . ' DAY)';
 $chartParams = [$brandId, 'pageview'];
 if ($selectedEvent !== '') {
     $chartWhere .= ' AND event_slug = ?';
@@ -174,7 +209,7 @@ foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
     $dailyRaw[$row['tanggal']] = (int)$row['total'];
 }
 $dailySeries = [];
-for ($i = 13; $i >= 0; $i--) {
+for ($i = $rangeDays - 1; $i >= 0; $i--) {
     $date = date('Y-m-d', strtotime("-{$i} days"));
     $dailySeries[] = ['date' => $date, 'total' => $dailyRaw[$date] ?? 0];
 }
@@ -221,6 +256,9 @@ if (empty($sources)) {
 }
 if ($largestDrop !== null && $funnelRaw['pageview'] > 0) {
     $insights[] = ['tone' => 'danger', 'title' => 'Drop-off terbesar', 'text' => 'Terjadi di tahap ' . $largestDrop['label'] . ' sebesar ' . format_pct($largestDrop['drop_pct']) . '.'];
+}
+if (!empty($referrerPerf) && $referrerPerf[0]['visits'] >= 10) {
+    $insights[] = ['tone' => 'gold', 'title' => 'Pengundang teraktif', 'text' => $referrerPerf[0]['referrer_name'] . ' membawa ' . $referrerPerf[0]['visits'] . ' kunjungan dengan conversion ' . format_pct($referrerPerf[0]['conv_rate']) . '.'];
 }
 
 $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.png';
@@ -519,6 +557,14 @@ $landingHref = $selectedEvent !== '' ? '../e/' . rawurlencode($selectedEvent) . 
   .chart-area { fill: url(#chartGradient); }
   .chart-line { fill: none; stroke: var(--gold); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--gold) 38%, transparent)); }
   .chart-dot { fill: var(--gold-soft); stroke: var(--surface); stroke-width: 3; }
+  .chart-tooltip {
+    position: absolute; display: none; background: var(--surface-elevated);
+    border: 1px solid var(--border-gold); border-radius: 10px; padding: 8px 12px;
+    font-size: 12px; color: var(--text); pointer-events: none; z-index: 6;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.35); white-space: nowrap;
+  }
+  .chart-tooltip .tt-date { color: var(--muted); margin-bottom: 3px; }
+  .chart-tooltip .tt-val { color: var(--gold-soft); font-weight: 800; }
   .chart-axis-labels { display: flex; justify-content: space-between; color: var(--muted); font-size: 11.5px; margin-top: 8px; }
   .legend { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; margin-top: 10px; }
   .legend-dot { width: 9px; height: 9px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), var(--gold-soft)); }
@@ -685,6 +731,9 @@ $landingHref = $selectedEvent !== '' ? '../e/' . rawurlencode($selectedEvent) . 
           <a class="btn btn-secondary" href="visitor-analytics.php<?= $filterQuery ? '?' . h($filterQuery) : '' ?>">Refresh</a>
           <button class="btn btn-primary" type="submit">Terapkan Filter</button>
         </div>
+        <div class="filter-buttons">
+          <a class="btn btn-secondary" href="export-analytics.php<?= $filterQuery ? '?' . h($filterQuery) : '' ?>" style="grid-column: 1 / -1;">⬇ Export CSV</a>
+        </div>
         <div class="filter-date">
           <span><?= h(date('d M Y', strtotime("-{$rangeDays} days"))) ?></span>
           <span>-</span>
@@ -736,7 +785,7 @@ $landingHref = $selectedEvent !== '' ? '../e/' . rawurlencode($selectedEvent) . 
           <div class="panel-title">
             <span class="icon-badge" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18M7 15l4-4 3 3 6-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <div>
-              <h2>Tren Pageview 14 Hari</h2>
+              <h2>Tren Pageview <?= h($allowedRanges[$rangeDays]) ?></h2>
               <p class="desc">Grafik kunjungan harian dari landing page event.</p>
             </div>
           </div>
@@ -763,10 +812,12 @@ $landingHref = $selectedEvent !== '' ? '../e/' . rawurlencode($selectedEvent) . 
                 <?php endfor; ?>
                 <path class="chart-area" d="<?= h($areaPath) ?>"></path>
                 <polyline class="chart-line" points="<?= h($polylinePoints) ?>"></polyline>
-                <?php foreach ($areaPoints as $point): ?>
+                <?php foreach ($areaPoints as $i => $point): ?>
                   <circle class="chart-dot" cx="<?= h($point[0]) ?>" cy="<?= h($point[1]) ?>" r="4"></circle>
+                  <circle class="chart-hit" data-date="<?= h(date('d M Y', strtotime($dailySeries[$i]['date']))) ?>" data-total="<?= (int)$dailySeries[$i]['total'] ?>" cx="<?= h($point[0]) ?>" cy="<?= h($point[1]) ?>" r="10" fill="transparent" style="cursor:pointer;"></circle>
                 <?php endforeach; ?>
               </svg>
+              <div id="chartTooltip" class="chart-tooltip"></div>
               <div class="chart-axis-labels">
                 <span><?= h(date('d M', strtotime($dailySeries[0]['date']))) ?></span>
                 <span><?= h(date('d M', strtotime($dailySeries[(int)floor((count($dailySeries) - 1) / 2)]['date']))) ?></span>
@@ -781,7 +832,48 @@ $landingHref = $selectedEvent !== '' ? '../e/' . rawurlencode($selectedEvent) . 
       <section class="panel">
         <div class="panel-head">
           <div class="panel-title">
-            <span class="icon-badge" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 4h18l-7 8v6l-4 2v-8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>
+            <span class="icon-badge" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 4v16h16M8 16l3-4 3 2 4-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <div>
+              <h2>Performa Per Pengundang / Referral Link</h2>
+              <p class="desc">Kunjungan dan konversi dari setiap link referral yang dibagikan.</p>
+            </div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <?php if (empty($referrerPerf)): ?>
+            <div class="empty-state">
+              <strong>Belum ada kunjungan lewat link referral.</strong>
+              <span>Data muncul begitu ada pengunjung yang datang lewat link ?ref= milik pengundang.</span>
+            </div>
+          <?php else: ?>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <tr style="color:var(--muted); text-align:left; border-bottom:1px solid var(--border-soft);">
+                  <th style="padding:9px 8px; font-size:11px; text-transform:uppercase; letter-spacing:.04em;">Pengundang</th>
+                  <th style="padding:9px 8px; font-size:11px; text-transform:uppercase; letter-spacing:.04em;">Kode</th>
+                  <th style="padding:9px 8px; text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:.04em;">Kunjungan</th>
+                  <th style="padding:9px 8px; text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:.04em;">Submit</th>
+                  <th style="padding:9px 8px; text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:.04em;">Conversion</th>
+                </tr>
+                <?php foreach ($referrerPerf as $rp): ?>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <td style="padding:10px 8px; color:var(--text); font-weight:700;"><?= h($rp['referrer_name']) ?></td>
+                    <td style="padding:10px 8px; color:var(--muted); font-family:monospace; font-size:12px;"><?= h($rp['ref_code']) ?></td>
+                    <td style="padding:10px 8px; text-align:right; color:var(--gold-soft); font-weight:800;"><?= h(number_format($rp['visits'], 0, ',', '.')) ?></td>
+                    <td style="padding:10px 8px; text-align:right;"><?= h(number_format($rp['submits'], 0, ',', '.')) ?></td>
+                    <td style="padding:10px 8px; text-align:right;"><?= h(format_pct($rp['conv_rate'])) ?></td>
+                  </tr>
+                <?php endforeach; ?>
+              </table>
+            </div>
+          <?php endif; ?>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">
+            <span class="icon-badge" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v4H4Zm0 6h10v4H4Zm0 6h7v4H4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>
             <div>
               <h2>Funnel Kunjungan</h2>
               <p class="desc">Tahapan dari pageview sampai submit form, termasuk konversi dan drop-off antar tahap.</p>
@@ -864,6 +956,40 @@ $landingHref = $selectedEvent !== '' ? '../e/' . rawurlencode($selectedEvent) . 
       <section class="panel">
         <div class="panel-head">
           <div class="panel-title">
+            <span class="icon-badge" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>
+            <div>
+              <h2>Top Halaman Masuk</h2>
+              <p class="desc">Halaman yang paling banyak dikunjungi.</p>
+            </div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <?php if (empty($topPages)): ?>
+            <div class="empty-state">
+              <strong>Belum ada data halaman.</strong>
+              <span>Muncul setelah ada pageview tercatat.</span>
+            </div>
+          <?php else: ?>
+            <div class="source-list">
+              <?php foreach ($topPages as $tp): ?>
+                <?php $tpPct = pct($tp['total'], $topPagesTotal, 1); ?>
+                <div class="source-row">
+                  <div class="source-top">
+                    <strong title="<?= h($tp['page_path']) ?>" style="overflow:hidden; text-overflow:ellipsis;"><?= h($tp['page_path']) ?></strong>
+                    <span><?= h(number_format($tp['total'], 0, ',', '.')) ?></span>
+                    <em><?= h(format_pct($tpPct)) ?></em>
+                  </div>
+                  <div class="bar-track"><div class="bar-fill" style="width: <?= h(number_format($tpPct, 2, '.', '')) ?>%"></div></div>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">
             <span class="icon-badge" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm5 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
             <div>
               <h2>Breakdown Device</h2>
@@ -922,5 +1048,29 @@ $landingHref = $selectedEvent !== '' ? '../e/' . rawurlencode($selectedEvent) . 
     </aside>
   </div>
 </main>
+<script>
+  // Tooltip interaktif untuk chart tren pageview — vanilla JS, tanpa library
+  (function () {
+    var tooltip = document.getElementById('chartTooltip');
+    var wrap = document.querySelector('.chart-wrap');
+    if (!tooltip || !wrap) return;
+    var svg = wrap.querySelector('svg');
+    document.querySelectorAll('.chart-hit').forEach(function (dot) {
+      dot.addEventListener('mouseenter', function () {
+        var rect = svg.getBoundingClientRect();
+        var wrapRect = wrap.getBoundingClientRect();
+        var scaleX = rect.width / svg.viewBox.baseVal.width;
+        var scaleY = rect.height / svg.viewBox.baseVal.height;
+        var cx = parseFloat(dot.getAttribute('cx')) * scaleX;
+        var cy = parseFloat(dot.getAttribute('cy')) * scaleY;
+        tooltip.innerHTML = '<div class="tt-date">' + dot.dataset.date + '</div><div class="tt-val">' + dot.dataset.total + ' Pageview</div>';
+        tooltip.style.left = Math.max(0, cx - 55) + 'px';
+        tooltip.style.top = Math.max(0, cy - 58) + 'px';
+        tooltip.style.display = 'block';
+      });
+      dot.addEventListener('mouseleave', function () { tooltip.style.display = 'none'; });
+    });
+  })();
+</script>
 </body>
 </html>
