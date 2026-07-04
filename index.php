@@ -9,13 +9,28 @@ $defaultEventSlug = $brand['default_event_slug'] ?? DEFAULT_EVENT_SLUG;
 if ($defaultEventSlug !== '') {
     $defaultEventIndex = EVENTS_DIR . '/' . $defaultEventSlug . '/index.html';
     if (is_file($defaultEventIndex)) {
-        $targetUrl = EVENTS_URL_BASE . '/' . rawurlencode($defaultEventSlug) . '/';
-        $queryString = $_SERVER['QUERY_STRING'] ?? '';
-        if ($queryString !== '') {
-            $targetUrl .= '?' . $queryString;
+        $eventBaseUrl = EVENTS_URL_BASE . '/' . rawurlencode($defaultEventSlug) . '/';
+        $html = file_get_contents($defaultEventIndex);
+        if ($html !== false) {
+            $html = str_replace('rahasiaemas-sdk.js', 'event-sdk.js', $html);
+            $html = preg_replace_callback(
+                '/\b(src|href)=([\'"])(?![a-z][a-z0-9+.-]*:|\/|#|data:|mailto:|tel:)([^\'"]+)\2/i',
+                static function ($matches) use ($eventBaseUrl) {
+                    return $matches[1] . '=' . $matches[2] . $eventBaseUrl . ltrim($matches[3], '/') . $matches[2];
+                },
+                $html
+            );
+            $html = preg_replace_callback(
+                '/url\((["\']?)(?![a-z][a-z0-9+.-]*:|\/|#|data:)([^)"\']+)\1\)/i',
+                static function ($matches) use ($eventBaseUrl) {
+                    return 'url(' . $matches[1] . $eventBaseUrl . ltrim($matches[2], '/') . $matches[1] . ')';
+                },
+                $html
+            );
+
+            echo $html;
+            exit;
         }
-        header('Location: ' . $targetUrl, true, 302);
-        exit;
     }
 }
 

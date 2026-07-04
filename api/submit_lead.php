@@ -10,6 +10,7 @@
  */
 
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/bootstrap.php';
 header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -28,8 +29,16 @@ $email    = clean($input['email'] ?? '');
 $wa       = clean($input['whatsapp'] ?? '');
 $kota     = clean($input['kota'] ?? '');
 $refCode  = clean($input['ref'] ?? '');
-$eventSlug = clean($input['event'] ?? DEFAULT_EVENT_SLUG);
-if ($eventSlug === '') $eventSlug = DEFAULT_EVENT_SLUG;
+
+$brand = get_current_brand();
+if (!$brand) {
+    http_response_code(404);
+    echo json_encode(['success' => false, 'message' => 'Event tidak ditemukan atau sudah tidak aktif.']);
+    exit;
+}
+$brandId = (int)$brand['id'];
+$eventSlug = clean($input['event'] ?? $brand['default_event_slug']);
+if ($eventSlug === '') $eventSlug = $brand['default_event_slug'];
 
 // == EXTRA FIELDS == — terima object "extra" (opsional), batasi supaya tidak disalahgunakan
 $extraFieldsJson = null;
@@ -75,15 +84,20 @@ try {
     $pdo = get_db();
 
     $event = get_event_by_slug($eventSlug);
-    if (!$event || $event['status'] !== 'active') {
-        $eventSlug = DEFAULT_EVENT_SLUG;
+    if (!$event || (int)$event['brand_id'] !== $brandId || $event['status'] !== 'active') {
+        $eventSlug = $brand['default_event_slug'];
         $event = get_event_by_slug($eventSlug);
+    }
+    if (!$event || (int)$event['brand_id'] !== $brandId || $event['status'] !== 'active') {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'Event tidak ditemukan atau sudah tidak aktif.']);
+        exit;
     }
 
     $referrer = null;
     if ($refCode !== '') {
-        $stmt = $pdo->prepare('SELECT ref_code, name, whatsapp FROM referrers WHERE event_slug = ? AND ref_code = ?');
-        $stmt->execute([$eventSlug, $refCode]);
+        $stmt = $pdo->prepare('SELECT ref_code, name, whatsapp FROM referrers WHERE brand_id = ? AND event_slug = ? AND ref_code = ?');
+        $stmt->execute([$brandId, $eventSlug, $refCode]);
         $referrer = $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -92,9 +106,9 @@ try {
 
     // == EXTRA FIELDS == — tambah kolom extra_fields ke INSERT
     $stmt = $pdo->prepare(
-        'INSERT INTO leads (name, email, whatsapp, kota, extra_fields, ref_code, event_slug) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO leads (brand_id, name, email, whatsapp, kota, extra_fields, ref_code, event_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     );
-    $stmt->execute([$name, $email, $waNormalized, $kota, $extraFieldsJson, ($refCode !== '' ? $refCode : null), $eventSlug]);
+    $stmt->execute([$brandId, $name, $email, $waNormalized, $kota, $extraFieldsJson, ($refCode !== '' ? $refCode : null), $eventSlug]);
     // == END EXTRA FIELDS ==
 
     $eventName = $event['name'] ?? 'Rahasia Emas';

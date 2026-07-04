@@ -110,6 +110,20 @@ Elemen-elemen ini otomatis terisi teks dari database — jadi kalau tanggal/jam
 acara berubah, admin cukup upload ulang ZIP dengan `config.json` baru tanpa
 harus mengedit HTML.
 
+### f. Field Tambahan (opsional)
+
+Jika event membutuhkan pertanyaan tambahan di luar 4 field wajib, tambahkan
+atribut `data-rg-extra` pada input/select/textarea. Nilainya akan dikirim ke
+server sebagai data tambahan tanpa perlu membuat SDK baru.
+
+```html
+<select name="minat_utama" data-rg-extra>
+  <option value="">Pilih minat utama</option>
+  <option value="edukasi">Edukasi</option>
+  <option value="investasi">Investasi</option>
+</select>
+```
+
 ---
 
 ## 4. Setelah Upload

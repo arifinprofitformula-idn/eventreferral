@@ -34,7 +34,10 @@
  *    <div data-rg-message style="display:none"></div>
  *    Jika tidak ada, SDK akan pakai alert() sebagai fallback.
  *
- * 6. Tracking Meta Pixel & GA4 otomatis kalau admin sudah mengisi
+ * 6. (Opsional) Untuk field tambahan di luar name/email/whatsapp/kota,
+ *    beri atribut data-rg-extra. Nilainya akan dikirim sebagai object extra.
+ *
+ * 7. Tracking Meta Pixel & GA4 otomatis kalau admin sudah mengisi
  *    ID-nya lewat admin/tracking.php — SDK ini yang inject tag-nya
  *    dan fire PageView + Lead (saat pendaftaran sukses).
  * ============================================================
@@ -127,6 +130,26 @@
     el.style.color = isError ? '#E8956B' : '#7CD79A';
   }
 
+  function collectExtraFields(form) {
+    var extra = {};
+    form.querySelectorAll('[data-rg-extra]').forEach(function (el) {
+      if (!el.name) return;
+      var val;
+      if (el.type === 'checkbox') {
+        if (!el.checked) return;
+        val = el.value || '1';
+      } else if (el.type === 'radio') {
+        if (!el.checked) return;
+        val = el.value || '';
+      } else {
+        val = el.value || '';
+      }
+      val = val.toString().trim();
+      if (val !== '') extra[el.name] = val;
+    });
+    return extra;
+  }
+
   function bindForm() {
     var form = document.querySelector('[data-rg-form]') || document.getElementById('regForm');
     if (!form) return;
@@ -145,6 +168,7 @@
         kota: (fd.get('kota') || '').toString().trim(),
         event: eventSlug,
         ref: refCode,
+        extra: collectExtraFields(form),
       };
 
       if (payload.name.length < 3) return showMessage('Nama lengkap minimal 3 karakter.', true);

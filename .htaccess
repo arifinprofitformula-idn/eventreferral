@@ -14,6 +14,9 @@ DirectoryIndex index.php
   RewriteRule ^(?:\.git|\.agents|\.codex)(?:/|$) - [F,L]
   RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
 
+  # Kompatibilitas event lama: SDK lama diarahkan ke SDK tunggal resmi.
+  RewriteRule ^assets/rahasiaemas-sdk\.js$ assets/event-sdk.js [L,NC]
+
   # Hanya izinkan route publik/admin yang memang aktif.
   RewriteRule !^(?:$|index\.php|buat-link\.php|assets/[A-Za-z0-9._/-]+\.(?:png|jpe?g|webp|gif|svg|ico|css|js|woff2?|ttf|eot)|uploads/brands/[A-Za-z0-9_-]+/[A-Za-z0-9._-]+\.(?:png|jpe?g|webp|gif|svg)|api/(?:submit_lead|create_referrer|event_info)\.php|challenge/?|challenge/index\.php|e/[A-Za-z0-9._/-]+|admin/?|admin/(?:index|login|dashboard|logout|export|events|event-settings|rewards|tracking|setup-brand|documentation|generate-password-hash|migrate-legacy)\.php)$ - [F,L,NC]
 </IfModule>

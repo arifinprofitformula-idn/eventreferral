@@ -239,7 +239,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
         <div class="table-wrap">
           <table>
             <tr><th>Lapisan</th><th>Lokasi</th><th>Fungsi</th></tr>
-            <tr><td class="strong">Landing page acara</td><td><code>index.php</code>, <code>/e/{slug}/</code></td><td>Halaman publik per event, dipersonalisasi lewat <code>?ref=</code> dan SDK <code>assets/rahasiaemas-sdk.js</code>.</td></tr>
+            <tr><td class="strong">Landing page acara</td><td><code>index.php</code>, <code>/e/{slug}/</code></td><td>Halaman publik per event, dipersonalisasi lewat <code>?ref=</code> dan SDK <code>assets/event-sdk.js</code>.</td></tr>
             <tr><td class="strong">Buat link undangan</td><td><code>buat-link.php</code></td><td>Dipakai siapapun untuk generate link referral pribadi per event.</td></tr>
             <tr><td class="strong">Dashboard admin per brand</td><td><code>admin/</code></td><td>Login username+password per brand — kelola event, reward, tracking, export data.</td></tr>
             <tr><td class="strong">Onboarding brand</td><td><code>admin/setup-brand.php</code></td><td>Hanya Coach — dilindungi <code>MASTER_SETUP_KEY</code>, bukan bagian dari dashboard brand manapun.</td></tr>
@@ -272,7 +272,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
             <div class="tl-badge">v2</div>
             <div class="tl-body">
               <strong>Multi-event + challenge publik</strong>
-              <p>Tabel <code>events</code>, folder <code>e/</code> untuk landing page hasil upload ZIP, SDK <code>rahasiaemas-sdk.js</code>, halaman publik <code>/challenge/</code>, endpoint <code>api/event_info.php</code>.</p>
+              <p>Tabel <code>events</code>, folder <code>e/</code> untuk landing page hasil upload ZIP, SDK <code>event-sdk.js</code>, halaman publik <code>/challenge/</code>, endpoint <code>api/event_info.php</code>.</p>
               <div class="tl-tags"><span class="tag">migrate_v2.sql</span><span class="tag">includes/functions.php</span></div>
             </div>
           </div>
