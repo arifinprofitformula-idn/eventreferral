@@ -106,10 +106,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($_SESSION['csrf_token'
                                         clean($cfg['event_capacity'] ?? ''),
                                     ]);
 
+                                    if (!empty($_POST['set_as_default'])) {
+                                        $stmt = $pdo->prepare('UPDATE brands SET default_event_slug = ? WHERE id = ?');
+                                        $stmt->execute([$slug, $brandId]);
+                                        $defaultEventSlug = $slug;
+                                        $brand['default_event_slug'] = $slug;
+                                    }
+
                                     $skippedCount = count($extractResult['skipped']);
                                     $notice = 'Event "' . htmlspecialchars($cfg['name']) . '" berhasil ' . ($existsAlready ? 'diperbarui' : 'dipublikasikan') .
                                         '! (' . $extractResult['extracted'] . ' file diekstrak' .
-                                        ($skippedCount > 0 ? ", {$skippedCount} file dilewati karena tidak diizinkan" : '') . ')';
+                                        ($skippedCount > 0 ? ", {$skippedCount} file dilewati karena tidak diizinkan" : '') . ')' .
+                                        (!empty($_POST['set_as_default']) ? ' Event ini sekarang tampil di root domain.' : '');
                                     $noticeType = 'success';
                                 }
                             }
@@ -117,6 +125,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($_SESSION['csrf_token'
                     }
                 }
             }
+        }
+    }
+
+    // ---- Jadikan event sebagai root domain brand ini ----
+    if (isset($_POST['set_default_event']) && isset($_POST['slug'])) {
+        $slug = clean($_POST['slug']);
+        $ev = get_event_by_slug($slug);
+
+        if (!$ev || (int)$ev['brand_id'] !== $brandId) {
+            $notice = 'Event tidak ditemukan atau bukan milik brand ini.';
+            $noticeType = 'error';
+        } elseif (($ev['status'] ?? '') !== 'active') {
+            $notice = 'Event nonaktif tidak bisa dijadikan event utama. Aktifkan event ini terlebih dahulu.';
+            $noticeType = 'error';
+        } else {
+            $stmt = $pdo->prepare('UPDATE brands SET default_event_slug = ? WHERE id = ?');
+            $stmt->execute([$slug, $brandId]);
+            $defaultEventSlug = $slug;
+            $brand['default_event_slug'] = $slug;
+            $notice = 'Event "' . htmlspecialchars($ev['name']) . '" sekarang menjadi event utama di root domain.';
+            $noticeType = 'success';
         }
     }
 
@@ -744,6 +773,11 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.10);
   }
+  .status-badge.default {
+    color: #111;
+    background: linear-gradient(135deg, var(--gold), var(--gold-soft));
+    border: 1px solid transparent;
+  }
   .event-path, .event-created {
     color: var(--muted);
     font-size: 12.5px;
@@ -1094,6 +1128,16 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
               <span class="switch-slider"></span>
             </label>
           </div>
+          <div class="switch-row">
+            <div>
+              <span class="switch-label">Jadikan event utama domain</span>
+              <span class="helper">Jika aktif, root domain brand ini akan langsung menampilkan event yang diupload.</span>
+            </div>
+            <label class="switch" for="set_as_default">
+              <input type="checkbox" name="set_as_default" id="set_as_default">
+              <span class="switch-slider"></span>
+            </label>
+          </div>
           <div class="info-box">
             <span aria-hidden="true">ⓘ</span>
             <span>Pastikan ZIP memiliki file <strong>index.html</strong> dan <strong>config.json</strong> di root folder.</span>
@@ -1136,8 +1180,9 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
       <?php foreach ($events as $ev): ?>
         <?php
           $eventStatus = $ev['status'] === 'active' ? 'active' : 'archived';
-          $eventPath = $ev['slug'] === $defaultEventSlug ? '/ (root domain)' : '/e/' . $ev['slug'] . '/';
-          $eventUrl = $ev['slug'] === $defaultEventSlug ? '/' : EVENTS_URL_BASE . '/' . rawurlencode($ev['slug']) . '/';
+          $isDefaultEvent = $ev['slug'] === $defaultEventSlug;
+          $eventPath = $isDefaultEvent ? '/ (root domain)' : '/e/' . $ev['slug'] . '/';
+          $eventUrl = $isDefaultEvent ? '/' : EVENTS_URL_BASE . '/' . rawurlencode($ev['slug']) . '/';
         ?>
         <article class="event-card <?= $eventStatus === 'archived' ? 'archived' : '' ?>" data-status="<?= htmlspecialchars($eventStatus) ?>" data-search="<?= htmlspecialchars(strtolower($ev['name'] . ' ' . $ev['slug'] . ' ' . $eventStatus)) ?>">
           <div class="event-main">
@@ -1146,6 +1191,9 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
               <div class="event-name-row">
                 <h3 class="event-name"><?= htmlspecialchars($ev['name']) ?></h3>
                 <span class="status-badge <?= htmlspecialchars($eventStatus) ?>"><?= $eventStatus === 'active' ? 'Aktif' : 'Nonaktif' ?></span>
+                <?php if ($isDefaultEvent): ?>
+                  <span class="status-badge default">Event Utama</span>
+                <?php endif; ?>
               </div>
               <div class="event-path"><?= htmlspecialchars($eventPath) ?></div>
               <?php if (!empty($ev['created_at'])): ?>
@@ -1169,7 +1217,17 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
               <a class="event-action" href="/challenge/?event=<?= urlencode($ev['slug']) ?>" target="_blank" rel="noopener">Challenge</a>
               <a class="event-action" href="rewards.php?event=<?= urlencode($ev['slug']) ?>">Atur Hadiah</a>
               <a class="event-action" href="tracking.php?event=<?= urlencode($ev['slug']) ?>">Tracking</a>
-              <?php if ($ev['slug'] !== $defaultEventSlug): ?>
+              <?php if (!$isDefaultEvent && $eventStatus === 'active'): ?>
+                <form class="inline-form" method="POST">
+                  <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                  <input type="hidden" name="set_default_event" value="1">
+                  <input type="hidden" name="slug" value="<?= htmlspecialchars($ev['slug']) ?>">
+                  <button class="event-action warning" type="submit" onclick="return confirm('Jadikan event ini sebagai event utama di root domain?')">
+                    Jadikan Utama
+                  </button>
+                </form>
+              <?php endif; ?>
+              <?php if (!$isDefaultEvent): ?>
                 <form class="inline-form" method="POST">
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                   <input type="hidden" name="toggle_status" value="1">
