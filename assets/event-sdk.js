@@ -62,6 +62,23 @@
   var eventSlug = getEventSlug();
   var refCode = getRefCode();
 
+  function makeSessionId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      return window.crypto.randomUUID();
+    }
+    if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+      var bytes = new Uint8Array(16);
+      window.crypto.getRandomValues(bytes);
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      var hex = Array.from(bytes, function (b) {
+        return b.toString(16).padStart(2, '0');
+      }).join('');
+      return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
+    }
+    return 'sess-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+  }
+
   // ============================================================
   // VISITOR TRACKING — first-party, dikirim ke api/track.php lewat sendBeacon
   // ============================================================
@@ -70,11 +87,11 @@
   try {
     sessionId = localStorage.getItem(SESSION_KEY);
     if (!sessionId) {
-      sessionId = crypto.randomUUID();
+      sessionId = makeSessionId();
       localStorage.setItem(SESSION_KEY, sessionId);
     }
   } catch (e) {
-    sessionId = crypto.randomUUID(); // localStorage tidak tersedia (mis. private mode) — pakai sesi sekali pakai
+    sessionId = makeSessionId(); // localStorage tidak tersedia (mis. private mode) — pakai sesi sekali pakai
   }
 
   function getUtmParams() {

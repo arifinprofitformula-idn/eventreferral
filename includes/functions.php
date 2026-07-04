@@ -123,14 +123,19 @@ function inject_sdk_script($indexHtmlPath) {
     $html = file_get_contents($indexHtmlPath);
     if ($html === false) return false;
 
-    if (strpos($html, 'rahasiaemas-sdk.js') !== false) {
-        $html = str_replace('rahasiaemas-sdk.js', 'event-sdk.js', $html);
-        file_put_contents($indexHtmlPath, $html);
-        return true;
-    }
-
-    if (strpos($html, 'event-sdk.js') !== false) {
-        return true; // sudah ada, tidak perlu diubah
+    if (strpos($html, 'rahasiaemas-sdk.js') !== false || strpos($html, 'event-sdk.js') !== false) {
+        $replaceCount = 0;
+        $normalizedHtml = preg_replace(
+            '/(<script\b[^>]*\bsrc=["\'])(?:\/?assets\/)?(?:rahasiaemas-sdk|event-sdk)\.js(["\'][^>]*><\/script>)/i',
+            '$1/assets/event-sdk.js$2',
+            $html,
+            -1,
+            $replaceCount
+        );
+        if ($replaceCount > 0 && $normalizedHtml !== null) {
+            file_put_contents($indexHtmlPath, $normalizedHtml);
+            return true;
+        }
     }
 
     $scriptTag = '<script src="/assets/event-sdk.js" defer></script>' . "\n</body>";

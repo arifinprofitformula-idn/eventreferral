@@ -26,7 +26,11 @@ if ($defaultEventSlug !== '' && $defaultEventIsActive) {
         $eventBaseUrl = EVENTS_URL_BASE . '/' . rawurlencode($defaultEventSlug) . '/';
         $html = file_get_contents($defaultEventIndex);
         if ($html !== false) {
-            $html = str_replace('rahasiaemas-sdk.js', 'event-sdk.js', $html);
+            $html = preg_replace(
+                '/(<script\b[^>]*\bsrc=["\'])(?:\/?assets\/)?(?:rahasiaemas-sdk|event-sdk)\.js(["\'][^>]*><\/script>)/i',
+                '$1/assets/event-sdk.js$2',
+                $html
+            );
             $html = preg_replace_callback(
                 '/\b(src|href)=([\'"])(?![a-z][a-z0-9+.-]*:|\/|#|data:|mailto:|tel:)([^\'"]+)\2/i',
                 static function ($matches) use ($eventBaseUrl) {
