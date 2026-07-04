@@ -2,23 +2,57 @@
 /**
  * includes/ai_content.php
  * Wrapper pemanggilan provider AI untuk generate copywriting event.
+ * Mendukung multi-format caption dan generate ulang per gaya copywriting.
  */
 
-function build_marketing_prompt(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink): string
+const AI_CONTENT_STYLES = [
+    'Storytelling Emosional',
+    'Direct & Ambisius',
+    'FOMO Halus',
+    'Edukatif & Kredibel',
+    'Santai & Relatable',
+];
+
+const AI_CONTENT_FORMATS = ['whatsapp_broadcast', 'whatsapp_status', 'instagram_caption', 'hook_pendek'];
+
+function get_format_instruction(string $format): string
 {
-    $brandName    = $brand['name'] ?? $brand['slug'];
-    $themeVibe    = ($brand['theme_preset'] ?? 'gold') === 'silver'
+    $map = [
+        'whatsapp_broadcast' => 'Format target: WhatsApp Broadcast. Buat caption ideal 150-400 karakter, 3-5 paragraf/baris pendek, hangat, mudah discan, emoji secukupnya maksimal 3, dan akhiri CTA jelas.',
+        'whatsapp_status' => 'Format target: WhatsApp Status. SANGAT SINGKAT: maksimal 2 baris pendek total di subheadline+description, langsung ke poin utama dan CTA.',
+        'instagram_caption' => 'Format target: Caption Instagram. Mulai dengan hook kuat di headline, isi cerita pendek di description, akhiri CTA, lalu tambahkan 3-5 hashtag relevan brand di baris terpisah pada akhir description.',
+        'hook_pendek' => 'Format target: Hook Pendek untuk reels/short video. Subheadline dan description boleh string kosong. Headline harus 1 kalimat sangat pendek, maksimal 12 kata, catchy, dan memancing rasa penasaran.',
+    ];
+
+    return $map[$format] ?? $map['whatsapp_broadcast'];
+}
+
+function normalize_ai_format(string $format): string
+{
+    return in_array($format, AI_CONTENT_FORMATS, true) ? $format : 'whatsapp_broadcast';
+}
+
+function normalize_ai_style(string $styleName): string
+{
+    return in_array($styleName, AI_CONTENT_STYLES, true) ? $styleName : '';
+}
+
+function build_marketing_prompt(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink, string $format = 'whatsapp_broadcast'): string
+{
+    $brandName = $brand['name'] ?? $brand['slug'];
+    $themeVibe = ($brand['theme_preset'] ?? 'gold') === 'silver'
         ? 'bersih, modern, accessible, entry point cerdas'
         : 'eksklusif, terpercaya, powerful, high-value';
 
-    $eventDay     = $event['event_day'] ?? '';
-    $eventTime    = $event['event_time'] ?? '';
-    $eventLoc     = $event['event_location'] ?? '';
+    $eventDay = $event['event_day'] ?? '';
+    $eventTime = $event['event_time'] ?? '';
+    $eventLoc = $event['event_location'] ?? '';
     $eventSpeaker = $event['event_speaker'] ?? '';
-
     $context = trim($customContext) !== ''
         ? "Konteks tambahan dari admin: " . trim($customContext)
         : "Tidak ada konteks tambahan khusus.";
+    $format = normalize_ai_format($format);
+    $formatInstruction = get_format_instruction($format);
 
     return <<<PROMPT
 Kamu adalah copywriter profesional untuk brand edukasi finansial "{$brandName}" (vibe: {$themeVibe}).
@@ -35,6 +69,8 @@ Lokasi: {$eventLoc}
 Pembicara: {$eventSpeaker}
 {$context}
 
+{$formatInstruction}
+
 ATURAN KETAT KONTEKS:
 - Seluruh headline, subheadline, dan description WAJIB merujuk langsung ke tema/judul event di atas.
 - Jangan membuat tema baru, jangan generalisasi ke topik finansial lain di luar judul event ini.
@@ -45,30 +81,86 @@ Aturan gaya bahasa:
 - Tidak boleh membuat klaim keuntungan finansial yang berlebihan atau menjanjikan hasil pasti.
 - CTA harus mengarahkan orang untuk MEMBUAT LINK REFERRAL mereka sendiri, contoh gaya: "Buat Link Referral Saya", "Sebarkan Link Sekarang".
 - Jangan gunakan bahasa manipulatif atau tekanan psikologis berlebihan.
-- Description wajib lebih tajam, persuasif, dan actionable: minimal 3 paragraf pendek.
-- Setiap paragraf description maksimal 1-2 kalimat, dipisahkan dengan newline "\n\n" di dalam string JSON.
-- Paragraf 1: kaitkan langsung dengan pain point/aspirasi audiens dari judul event.
-- Paragraf 2: jelaskan kenapa pengundang perlu ikut menyebarkan event ini.
-- Paragraf 3: arahkan ke tindakan membuat link referral tanpa klaim hasil pasti.
+- Headline/hook WAJIB dibungkus markdown bold dengan dua bintang, contoh: **Mulai dari Satu Link Referral**.
+- Jika format bukan hook pendek, gunakan line break "\\n\\n" di description untuk memisah paragraf pendek.
+- Gunakan formatting WhatsApp secukupnya: *tebal* untuk 1 hook utama atau kata kunci penting, jangan berlebihan.
+- Tambahkan Facebook symbols/emoji yang humanis di akhir kalimat description, pilih secukupnya dari: ✨, ✅, 💬, 🙌, 🔥, ⭐, 💡, 🚀.
+- Jangan menaruh URL di description atau cta_text; link akan ditambahkan sistem dengan awalan 👉.
+- Hindari caption panjang, repetitif, dan kalimat pembuka generik seperti "Bayangkan..." jika tidak benar-benar kuat.
 
 Buat TEPAT 5 variasi copywriting dengan gaya berbeda:
 1. Storytelling Emosional
 2. Direct & Ambisius
-3. FOMO Halus (urgensi tanpa tekanan berlebihan)
-4. Edukatif & Kredibel (data/alasan logis)
-5. Santai & Relatable (seperti ngobrol biasa)
+3. FOMO Halus
+4. Edukatif & Kredibel
+5. Santai & Relatable
 
 Balas HANYA dalam format JSON valid (tanpa markdown, tanpa teks lain), dengan struktur persis:
 {
   "variations": [
     {
       "style": "nama gaya",
-      "headline": "...",
+      "headline": "**headline/hook bold**",
       "subheadline": "...",
-      "description": "Minimal 3 paragraf pendek, pisahkan paragraf dengan newline \\n\\n",
+      "description": "caption sesuai format target, gunakan newline \\n\\n jika perlu",
       "cta_text": "..."
     }
   ]
+}
+PROMPT;
+}
+
+function build_single_style_prompt(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink, string $format, string $styleName): string
+{
+    $brandName = $brand['name'] ?? $brand['slug'];
+    $themeVibe = ($brand['theme_preset'] ?? 'gold') === 'silver'
+        ? 'bersih, modern, accessible, entry point cerdas'
+        : 'eksklusif, terpercaya, powerful, high-value';
+
+    $eventDay = $event['event_day'] ?? '';
+    $eventTime = $event['event_time'] ?? '';
+    $eventLoc = $event['event_location'] ?? '';
+    $eventSpeaker = $event['event_speaker'] ?? '';
+    $context = trim($customContext) !== ''
+        ? "Konteks tambahan dari admin: " . trim($customContext)
+        : "Tidak ada konteks tambahan khusus.";
+    $format = normalize_ai_format($format);
+    $formatInstruction = get_format_instruction($format);
+
+    return <<<PROMPT
+Kamu adalah copywriter profesional untuk brand edukasi finansial "{$brandName}" (vibe: {$themeVibe}).
+
+JUDUL EVENT (WAJIB JADI ACUAN UTAMA): "{$eventTitle}"
+Tugasmu: buat SATU variasi materi promosi untuk merekrut pengundang acara di atas, dengan gaya KHUSUS: "{$styleName}".
+
+Detail acara:
+Hari/Tanggal: {$eventDay}
+Waktu: {$eventTime}
+Lokasi: {$eventLoc}
+Pembicara: {$eventSpeaker}
+{$context}
+
+{$formatInstruction}
+
+Aturan:
+- Bahasa Indonesia, santai-profesional, action-oriented, optimis.
+- Jangan membuat klaim keuntungan finansial berlebihan atau menjanjikan hasil pasti.
+- CTA harus mengarah ke pembuatan link referral sendiri.
+- Headline/hook WAJIB dibungkus markdown bold dengan dua bintang, contoh: **Mulai dari Satu Link Referral**.
+- Tambahkan Facebook symbols/emoji yang humanis di akhir kalimat description, pilih secukupnya dari: ✨, ✅, 💬, 🙌, 🔥, ⭐, 💡, 🚀.
+- Jangan menaruh URL di description atau cta_text; link akan ditambahkan sistem dengan awalan 👉.
+- WAJIB relevan dengan judul event.
+- Buat berbeda dari variasi sebelumnya, tetapi tetap sesuai gaya "{$styleName}".
+
+Balas HANYA JSON valid, struktur persis:
+{
+  "variation": {
+    "style": "{$styleName}",
+    "headline": "...",
+    "subheadline": "...",
+    "description": "...",
+    "cta_text": "..."
+  }
 }
 PROMPT;
 }
@@ -100,7 +192,7 @@ function call_groq_api(string $prompt): string
         'messages' => [
             [
                 'role' => 'system',
-                'content' => 'Kamu hanya membalas JSON valid sesuai instruksi user.',
+                'content' => 'Kamu membalas HANYA dalam format JSON valid, tanpa markdown, tanpa teks tambahan.',
             ],
             [
                 'role' => 'user',
@@ -175,8 +267,8 @@ function ai_post_json(string $url, array $payload, array $headers, string $provi
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlNo   = curl_errno($ch);
-    $curlErr  = curl_error($ch);
+    $curlNo = curl_errno($ch);
+    $curlErr = curl_error($ch);
     curl_close($ch);
 
     if ($response === false || $curlErr) {
@@ -221,7 +313,6 @@ function ai_apply_ca_bundle(array &$curlOptions): void
 function ai_provider_error_message(string $providerName, array $data, int $httpCode): string
 {
     $status = (string)($data['error']['status'] ?? '');
-    $code = (string)($data['error']['code'] ?? '');
     $message = (string)($data['error']['message'] ?? ($data['error']['error'] ?? ''));
     $lowerMessage = strtolower($message);
 
@@ -248,11 +339,16 @@ function ai_provider_error_message(string $providerName, array $data, int $httpC
     return 'Layanan AI (' . $providerName . ') menolak permintaan. HTTP ' . $httpCode . '.';
 }
 
-function generate_marketing_copy(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink): array
+function strip_json_fence(string $text): string
 {
-    $prompt = build_marketing_prompt($brand, $event, $eventTitle, $customContext, $inviteLink);
-    $rawText = call_ai_content_provider($prompt);
-    $rawText = trim(preg_replace('/^```json\s*|```$/m', '', $rawText));
+    return trim(preg_replace('/^```json\s*|```$/m', '', $text));
+}
+
+function generate_marketing_copy(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink, string $format = 'whatsapp_broadcast'): array
+{
+    $format = normalize_ai_format($format);
+    $prompt = build_marketing_prompt($brand, $event, $eventTitle, $customContext, $inviteLink, $format);
+    $rawText = strip_json_fence(call_ai_content_provider($prompt));
 
     $parsed = json_decode($rawText, true);
     if (!is_array($parsed) || empty($parsed['variations']) || !is_array($parsed['variations'])) {
@@ -265,11 +361,11 @@ function generate_marketing_copy(array $brand, array $event, string $eventTitle,
             continue;
         }
         $variations[] = [
-            'style'       => (string)($v['style'] ?? 'Variasi'),
-            'headline'    => (string)$v['headline'],
+            'style' => (string)($v['style'] ?? 'Variasi'),
+            'headline' => (string)$v['headline'],
             'subheadline' => (string)($v['subheadline'] ?? ''),
             'description' => (string)($v['description'] ?? ''),
-            'cta_text'    => (string)$v['cta_text'],
+            'cta_text' => (string)$v['cta_text'],
         ];
     }
 
@@ -278,6 +374,32 @@ function generate_marketing_copy(array $brand, array $event, string $eventTitle,
     }
 
     return $variations;
+}
+
+function generate_single_style_copy(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink, string $format, string $styleName): array
+{
+    $format = normalize_ai_format($format);
+    $styleName = normalize_ai_style($styleName);
+    if ($styleName === '') {
+        throw new RuntimeException('Gaya copywriting tidak valid.');
+    }
+
+    $prompt = build_single_style_prompt($brand, $event, $eventTitle, $customContext, $inviteLink, $format, $styleName);
+    $rawText = strip_json_fence(call_ai_content_provider($prompt));
+
+    $parsed = json_decode($rawText, true);
+    $v = $parsed['variation'] ?? null;
+    if (!is_array($v) || empty($v['headline']) || empty($v['cta_text'])) {
+        throw new RuntimeException('Format hasil AI tidak valid. Coba generate ulang.');
+    }
+
+    return [
+        'style' => (string)($v['style'] ?? $styleName),
+        'headline' => (string)$v['headline'],
+        'subheadline' => (string)($v['subheadline'] ?? ''),
+        'description' => (string)($v['description'] ?? ''),
+        'cta_text' => (string)$v['cta_text'],
+    ];
 }
 
 function check_ai_rate_limit(): bool

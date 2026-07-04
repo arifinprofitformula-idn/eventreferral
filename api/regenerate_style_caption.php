@@ -1,7 +1,7 @@
 <?php
 /**
- * api/generate_marketing_content.php
- * Endpoint admin-only untuk generate 5 variasi copywriting via AI.
+ * api/regenerate_style_caption.php
+ * Endpoint admin-only untuk generate ulang 1 gaya copywriting spesifik saja.
  */
 
 require_once __DIR__ . '/../config.php';
@@ -37,7 +37,14 @@ if (!$event || (int)$event['brand_id'] !== (int)$brand['id']) {
 $eventTitle = mb_substr(trim(clean($input['event_title'] ?? '')), 0, 150);
 if ($eventTitle === '') {
     http_response_code(422);
-    echo json_encode(['success' => false, 'message' => 'Judul Event wajib diisi agar copywriting tetap sesuai konteks.']);
+    echo json_encode(['success' => false, 'message' => 'Judul Event wajib diisi.']);
+    exit;
+}
+
+$styleName = normalize_ai_style(clean($input['style'] ?? ''));
+if ($styleName === '') {
+    http_response_code(422);
+    echo json_encode(['success' => false, 'message' => 'Gaya copywriting tidak valid.']);
     exit;
 }
 
@@ -56,14 +63,14 @@ $host = $_SERVER['HTTP_HOST'] ?? $brand['domain'];
 $inviteLink = "{$protocol}://{$host}/buat-link.php?event=" . urlencode($eventSlug);
 
 try {
-    $variations = generate_marketing_copy($brand, $event, $eventTitle, $customContext, $inviteLink, $format);
+    $variation = generate_single_style_copy($brand, $event, $eventTitle, $customContext, $inviteLink, $format, $styleName);
     echo json_encode([
         'success' => true,
         'invite_link' => $inviteLink,
         'format' => $format,
-        'variations' => $variations,
+        'variation' => $variation,
     ]);
 } catch (Throwable $e) {
     http_response_code(502);
-    echo json_encode(['success' => false, 'message' => $e->getMessage() ?: 'Gagal generate konten. Coba lagi.']);
+    echo json_encode(['success' => false, 'message' => $e->getMessage() ?: 'Gagal generate ulang. Coba lagi.']);
 }
