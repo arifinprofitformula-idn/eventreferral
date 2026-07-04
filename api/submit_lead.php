@@ -11,6 +11,7 @@
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/mailketing.php';
 header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -130,6 +131,9 @@ try {
         . "Nama: {$name}\n"
         . "Kota: {$kota}\n\n"
         . "Mohon info selanjutnya ya. Terima kasih! 🙏";
+
+    // Kirim email undangan via Mailketing — gagal di sini TIDAK BOLEH menggagalkan pendaftaran.
+    send_event_invitation_email($brand, $event, $name, $email);
 
     echo json_encode([
         'success' => true,

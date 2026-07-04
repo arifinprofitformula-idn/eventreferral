@@ -18,7 +18,7 @@ DirectoryIndex index.php
   RewriteRule ^assets/rahasiaemas-sdk\.js$ assets/event-sdk.js [L,NC]
 
   # Hanya izinkan route publik/admin yang memang aktif.
-  RewriteRule !^(?:$|index\.php|event\.php|buat-link\.php|assets/[A-Za-z0-9._/-]+\.(?:png|jpe?g|webp|gif|svg|ico|css|js|woff2?|ttf|eot)|uploads/brands/[A-Za-z0-9_-]+/[A-Za-z0-9._-]+\.(?:png|jpe?g|webp|gif|svg)|api/(?:submit_lead|create_referrer|event_info|track|generate_marketing_content|regenerate_style_caption)\.php|challenge/?|challenge/index\.php|e/[A-Za-z0-9._/-]+|admin/?|admin/(?:index|login|dashboard|logout|export|events|event-settings|rewards|tracking|visitor-analytics|marketing-content|setup-brand|documentation|generate-password-hash|migrate-legacy)\.php)$ - [F,L,NC]
+  RewriteRule !^(?:$|index\.php|event\.php|buat-link\.php|assets/[A-Za-z0-9._/-]+\.(?:png|jpe?g|webp|gif|svg|ico|css|js|woff2?|ttf|eot)|uploads/brands/[A-Za-z0-9_-]+/[A-Za-z0-9._-]+\.(?:png|jpe?g|webp|gif|svg)|api/(?:submit_lead|create_referrer|event_info|track|generate_marketing_content|regenerate_style_caption|mailketing_get_lists)\.php|challenge/?|challenge/index\.php|e/[A-Za-z0-9._/-]+|admin/?|admin/(?:index|login|dashboard|logout|export|events|event-settings|email-settings|integrations|rewards|tracking|visitor-analytics|marketing-content|setup-brand|documentation|generate-password-hash|migrate-legacy)\.php)$ - [F,L,NC]
 </IfModule>
 
 # Blok file konfigurasi, database, dokumentasi, backup, log, dan metadata project.

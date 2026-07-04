@@ -835,6 +835,16 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     text-decoration: none;
     white-space: nowrap;
   }
+  .event-action.icon {
+    min-width: 38px;
+    width: 38px;
+    padding: 9px;
+  }
+  .event-action.icon svg {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+  }
   .event-action.primary {
     color: #111;
     background: linear-gradient(135deg, var(--gold), var(--gold-soft));
@@ -989,6 +999,11 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
       width: 100%;
       white-space: normal;
     }
+    .event-action.icon {
+      width: 38px;
+      min-width: 38px;
+      justify-self: start;
+    }
   }
   @media (max-width: 460px) {
     h1 {
@@ -1012,6 +1027,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     <nav class="nav" aria-label="Navigasi admin">
       <a href="dashboard.php">Dashboard</a>
       <a href="events.php" class="active">Kelola Event</a>
+      <a href="integrations.php">Pengaturan Integrasi</a>
       <a href="visitor-analytics.php">Analitik Pengunjung</a>
       <a href="logout.php" class="logout">Keluar</a>
     </nav>
@@ -1214,11 +1230,24 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
               <a class="event-action primary" href="/buat-link.php?event=<?= urlencode($ev['slug']) ?>" target="_blank" rel="noopener">Buat Link</a>
             </div>
             <div class="action-row">
-              <a class="event-action" href="event-settings.php?event=<?= urlencode($ev['slug']) ?>">Detail Acara</a>
-              <a class="event-action" href="/challenge/?event=<?= urlencode($ev['slug']) ?>" target="_blank" rel="noopener">Challenge</a>
-              <a class="event-action" href="rewards.php?event=<?= urlencode($ev['slug']) ?>">Atur Hadiah</a>
-              <a class="event-action" href="tracking.php?event=<?= urlencode($ev['slug']) ?>">Tracking</a>
-              <a class="event-action" href="marketing-content.php?event=<?= urlencode($ev['slug']) ?>">Buat Konten Marketing</a>
+              <a class="event-action icon" href="event-settings.php?event=<?= urlencode($ev['slug']) ?>" title="Detail Acara" aria-label="Detail Acara">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="event-action icon" href="email-settings.php?event=<?= urlencode($ev['slug']) ?>" title="Pengaturan Email" aria-label="Pengaturan Email">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm18 4-10 6L2 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="event-action icon" href="/challenge/?event=<?= urlencode($ev['slug']) ?>" target="_blank" rel="noopener" title="Challenge" aria-label="Challenge">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Zm10 2h3a2 2 0 0 1-2 2h-1M7 6H4a2 2 0 0 0 2 2h1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="event-action icon" href="rewards.php?event=<?= urlencode($ev['slug']) ?>" title="Atur Hadiah" aria-label="Atur Hadiah">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12v10H4V12m18-5H2v5h20V7ZM12 22V7m0 0H8.5A2.5 2.5 0 1 1 11 4.5c0 1.38 1 2.5 1 2.5Zm0 0h3.5A2.5 2.5 0 1 0 13 4.5c0 1.38-1 2.5-1 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="event-action icon" href="tracking.php?event=<?= urlencode($ev['slug']) ?>" title="Tracking" aria-label="Tracking">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3v18h18M7 16v-5m5 5V8m5 8V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="event-action icon" href="marketing-content.php?event=<?= urlencode($ev['slug']) ?>" title="Buat Konten Marketing" aria-label="Buat Konten Marketing">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
               <?php if (!$isDefaultEvent && $eventStatus === 'active'): ?>
                 <form class="inline-form" method="POST">
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
