@@ -65,6 +65,12 @@ try {
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'] ?? $brand['domain'];
 
+    // Link Zoom/akses acara diatur admin di pengaturan konten email (admin/email-settings.php).
+    $stmt = $pdo->prepare('SELECT invitation_link FROM event_email_settings WHERE brand_id = ? AND event_slug = ?');
+    $stmt->execute([$brandId, $eventSlug]);
+    $emailSettings = $stmt->fetch(PDO::FETCH_ASSOC);
+    $invitationLink = $emailSettings['invitation_link'] ?? '';
+
     // Cek apakah nomor WA ini sudah pernah membuat link sebelumnya untuk event ini (brand ini).
     $stmt = $pdo->prepare('SELECT ref_code FROM referrers WHERE brand_id = ? AND event_slug = ? AND whatsapp = ? ORDER BY id ASC LIMIT 1');
     $stmt->execute([$brandId, $eventSlug, $waNormalized]);
@@ -90,7 +96,7 @@ try {
                     'event_speaker' => $event['event_speaker'] ?? null,
                     'flyer_path' => $event['flyer_path'] ?? null,
                 ],
-                'templates' => build_participant_reply_templates($event ?: [], $existingLink),
+                'templates' => build_participant_reply_templates($event ?: [], $existingLink, $invitationLink),
             ]);
             exit;
         }
@@ -124,7 +130,7 @@ try {
             'event_speaker' => $event['event_speaker'] ?? null,
             'flyer_path' => $event['flyer_path'] ?? null,
         ],
-        'templates' => build_participant_reply_templates($event ?: [], $link),
+        'templates' => build_participant_reply_templates($event ?: [], $link, $invitationLink),
     ]);
 } catch (Exception $e) {
     http_response_code(500);

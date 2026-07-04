@@ -5,13 +5,15 @@
  * yang mendaftar lewat link referral mereka.
  */
 
-function build_participant_reply_templates(array $event, string $link): array
+function build_participant_reply_templates(array $event, string $link, string $invitationLink = ''): array
 {
     $eventName = trim((string)($event['name'] ?? ''));
     $eventDay = trim((string)($event['event_day'] ?? ''));
     $eventTime = trim((string)($event['event_time'] ?? ''));
     $eventLocation = trim((string)($event['event_location'] ?? ''));
     $eventSpeaker = trim((string)($event['event_speaker'] ?? ''));
+    $invitationLink = trim($invitationLink);
+    $zoomLineValue = $invitationLink !== '' ? $invitationLink : 'Belum ada link zoom, Tanya admin';
 
     $detailLines = [];
     if ($eventDay !== '') {
@@ -26,6 +28,7 @@ function build_participant_reply_templates(array $event, string $link): array
     if ($eventSpeaker !== '') {
         $detailLines[] = "🎤 Pembicara: {$eventSpeaker}";
     }
+    $detailLines[] = "🔗 Link Zoom Anda : {$zoomLineValue}";
     $details = implode("\n", $detailLines);
 
     $shortDetail = trim(($eventDay !== '' ? $eventDay : '') . ($eventTime !== '' ? ', jam ' . $eventTime : ''));
@@ -40,12 +43,14 @@ function build_participant_reply_templates(array $event, string $link): array
         . "Acara *{$eventName}*"
         . ($shortDetail !== '' ? " bakal berlangsung {$shortDetail}" : '')
         . ($eventLocation !== '' ? " di {$eventLocation}" : '') . ".\n\n"
+        . "Link Zoom Anda : {$zoomLineValue}\n\n"
         . "Jangan lupa datang ya! Info lengkap: {$link}";
 
     $reminder = "Halo [Nama Peserta], reminder nih! ⏰\n\n"
         . "Jangan lupa besok kita ketemu di acara *{$eventName}*"
         . ($eventTime !== '' ? " jam {$eventTime}" : '')
         . ($eventLocation !== '' ? " di {$eventLocation}" : '') . ".\n\n"
+        . "Link Zoom Anda : {$zoomLineValue}\n\n"
         . "Info & lokasi: {$link}";
 
     return [
