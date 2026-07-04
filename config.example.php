@@ -55,6 +55,11 @@ define('BRAND_LOGOS_URL_BASE', '/uploads/brands');
 define('MAX_LOGO_SIZE', 2 * 1024 * 1024); // 2 MB
 define('ALLOWED_LOGO_EXT', ['png','jpg','jpeg','webp','svg']);
 
+// ==== VISITOR TRACKING (v9) ====
+// Salt untuk hash IP pengunjung (visitor_events.ip_hash) — generate sekali,
+// jangan pernah diubah setelah production (php -r "echo bin2hex(random_bytes(24));").
+define('IP_SALT', 'ganti-dengan-string-acak-panjang-milik-anda-sendiri');
+
 // ==== JANGAN DIUBAH DI BAWAH INI ====
 date_default_timezone_set('Asia/Jakarta');
 

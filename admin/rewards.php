@@ -806,6 +806,7 @@ function reward_preview_class(int $rank): string
     <nav class="nav" aria-label="Navigasi admin">
       <a href="dashboard.php">Dashboard</a>
       <a class="active" href="events.php">Kelola Event</a>
+      <a href="visitor-analytics.php">Analitik Pengunjung</a>
       <a class="logout" href="logout.php">Keluar</a>
     </nav>
   </div>

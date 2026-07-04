@@ -699,6 +699,7 @@ function whatsapp_link(?string $number): ?string
     <nav class="nav" aria-label="Navigasi admin">
       <a class="active" href="dashboard.php">Dashboard</a>
       <a href="events.php">Kelola Event</a>
+      <a href="visitor-analytics.php">Analitik Pengunjung</a>
       <a class="logout" href="logout.php">Keluar</a>
     </nav>
   </div>

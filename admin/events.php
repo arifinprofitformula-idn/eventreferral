@@ -1012,6 +1012,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     <nav class="nav" aria-label="Navigasi admin">
       <a href="dashboard.php">Dashboard</a>
       <a href="events.php" class="active">Kelola Event</a>
+      <a href="visitor-analytics.php">Analitik Pengunjung</a>
       <a href="logout.php" class="logout">Keluar</a>
     </nav>
   </div>

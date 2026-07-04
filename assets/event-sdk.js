@@ -62,6 +62,83 @@
   var eventSlug = getEventSlug();
   var refCode = getRefCode();
 
+  // ============================================================
+  // VISITOR TRACKING — first-party, dikirim ke api/track.php lewat sendBeacon
+  // ============================================================
+  var SESSION_KEY = 'rg_session_id';
+  var sessionId = null;
+  try {
+    sessionId = localStorage.getItem(SESSION_KEY);
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      localStorage.setItem(SESSION_KEY, sessionId);
+    }
+  } catch (e) {
+    sessionId = crypto.randomUUID(); // localStorage tidak tersedia (mis. private mode) — pakai sesi sekali pakai
+  }
+
+  function getUtmParams() {
+    var params = new URLSearchParams(window.location.search);
+    return {
+      utm_source: params.get('utm_source') || '',
+      utm_medium: params.get('utm_medium') || '',
+      utm_campaign: params.get('utm_campaign') || '',
+    };
+  }
+
+  function getDeviceType() {
+    var w = window.innerWidth;
+    if (w < 640) return 'mobile';
+    if (w < 1024) return 'tablet';
+    return 'desktop';
+  }
+
+  function rgTrack(eventType) {
+    var utm = getUtmParams();
+    var payload = JSON.stringify({
+      event_type: eventType,
+      session_id: sessionId,
+      page_path: window.location.pathname,
+      referrer_url: document.referrer || '',
+      event_slug: eventSlug,
+      ref_code: refCode,
+      device_type: getDeviceType(),
+      utm_source: utm.utm_source,
+      utm_medium: utm.utm_medium,
+      utm_campaign: utm.utm_campaign,
+    });
+
+    // sendBeacon: fire-and-forget, tidak blokir navigasi/render sama sekali
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(API_BASE + 'track.php', new Blob([payload], { type: 'application/json' }));
+    } else {
+      fetch(API_BASE + 'track.php', { method: 'POST', body: payload, keepalive: true });
+    }
+  }
+
+  function bindVisitorTracking() {
+    rgTrack('pageview');
+
+    var fired50 = false, fired90 = false;
+    window.addEventListener('scroll', function () {
+      var scrollable = document.body.scrollHeight - window.innerHeight;
+      var scrollPct = scrollable > 0 ? ((window.scrollY / scrollable) * 100) : 100;
+      if (scrollPct >= 50 && !fired50) { fired50 = true; rgTrack('scroll_50'); }
+      if (scrollPct >= 90 && !fired90) { fired90 = true; rgTrack('scroll_90'); }
+    }, { passive: true });
+
+    var formStarted = false;
+    document.addEventListener('focusin', function (e) {
+      var form = document.querySelector('[data-rg-form]') || document.getElementById('regForm');
+      if (form && form.contains(e.target) && !formStarted) {
+        formStarted = true;
+        rgTrack('form_start');
+      }
+    });
+  }
+
+  window.__rgTrack = rgTrack;
+
   function applyEventData(event) {
     if (!event) return;
     var els = document.querySelectorAll('[data-rg-field]');
@@ -188,11 +265,13 @@
           if (result.success) {
             if (window.fbq) fbq('track', 'Lead');
             if (window.gtag) gtag('event', 'generate_lead');
+            rgTrack('form_submit');
             showMessage('✅ Pendaftaran berhasil! Mengarahkan ke WhatsApp...', false);
             form.reset();
             if (result.redirect_whatsapp) {
               var waUrl = 'https://wa.me/' + result.redirect_whatsapp +
                 '?text=' + encodeURIComponent(result.whatsapp_text || '');
+              rgTrack('whatsapp_redirect');
               setTimeout(function () { window.location.href = waUrl; }, 1400);
             } else if (submitBtn) {
               submitBtn.disabled = false;
@@ -224,6 +303,7 @@
       });
 
     bindForm();
+    bindVisitorTracking();
   }
 
   if (document.readyState === 'loading') {
