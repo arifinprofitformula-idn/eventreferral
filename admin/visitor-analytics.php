@@ -435,6 +435,10 @@ $landingHref = $selectedEvent !== '' ? '../e/' . rawurlencode($selectedEvent) . 
     outline: none;
     padding: 0 13px;
   }
+  .select-field option {
+    color: #111;
+    background: #fff;
+  }
   .select-field:focus { border-color: color-mix(in srgb, var(--gold-soft) 42%, transparent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 10%, transparent); }
   .filter-buttons { display: grid; grid-column: 1 / -1; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
   .btn {
@@ -454,7 +458,7 @@ $landingHref = $selectedEvent !== '' ? '../e/' . rawurlencode($selectedEvent) . 
     white-space: nowrap;
   }
   .btn:hover { transform: translateY(-1px); }
-  .btn-primary { color: #111; background: linear-gradient(135deg, #D6A536, #F4D27A); box-shadow: 0 12px 26px color-mix(in srgb, var(--gold) 24%, transparent); }
+  .btn-primary { color: #111; background: linear-gradient(135deg, var(--gold), var(--gold-soft)); box-shadow: 0 12px 26px color-mix(in srgb, var(--gold) 24%, transparent); }
   .btn-secondary { color: var(--text); background: rgba(255,255,255,0.04); border-color: color-mix(in srgb, var(--gold) 22%, transparent); }
   .filter-date { grid-column: 1 / -1; color: var(--muted); display: flex; justify-content: flex-end; gap: 8px; font-size: 12px; margin-top: 4px; }
   .kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
