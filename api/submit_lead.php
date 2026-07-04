@@ -104,11 +104,24 @@ try {
     $targetName = $referrer ? $referrer['name'] : null;
     $targetWa = $referrer ? $referrer['whatsapp'] : ($event['whatsapp_default'] ?? '');
 
-    // == EXTRA FIELDS == — tambah kolom extra_fields ke INSERT
-    $stmt = $pdo->prepare(
-        'INSERT INTO leads (brand_id, name, email, whatsapp, kota, extra_fields, ref_code, event_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-    );
-    $stmt->execute([$brandId, $name, $email, $waNormalized, $kota, $extraFieldsJson, ($refCode !== '' ? $refCode : null), $eventSlug]);
+    // == EXTRA FIELDS == — tetap kompatibel jika migrasi kolom extra_fields belum dijalankan.
+    static $hasExtraFieldsColumn = null;
+    if ($hasExtraFieldsColumn === null) {
+        $columnStmt = $pdo->query("SHOW COLUMNS FROM leads LIKE 'extra_fields'");
+        $hasExtraFieldsColumn = (bool)$columnStmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    if ($hasExtraFieldsColumn) {
+        $stmt = $pdo->prepare(
+            'INSERT INTO leads (brand_id, name, email, whatsapp, kota, extra_fields, ref_code, event_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([$brandId, $name, $email, $waNormalized, $kota, $extraFieldsJson, ($refCode !== '' ? $refCode : null), $eventSlug]);
+    } else {
+        $stmt = $pdo->prepare(
+            'INSERT INTO leads (brand_id, name, email, whatsapp, kota, ref_code, event_slug) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([$brandId, $name, $email, $waNormalized, $kota, ($refCode !== '' ? $refCode : null), $eventSlug]);
+    }
     // == END EXTRA FIELDS ==
 
     $eventName = $event['name'] ?? 'Rahasia Emas';
