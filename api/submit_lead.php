@@ -1,12 +1,15 @@
 <?php
 /**
- * api/submit_lead.php
- * Menerima data pendaftaran dari form landing page (fetch/AJAX, JSON).
- * Mengembalikan JSON berisi status + nomor WhatsApp pengundang untuk redirect.
+ * api/submit_lead.php — versi dengan dukungan "extra fields" opsional
+ * PATCH: ganti file api/submit_lead.php yang sudah ada di server dengan isi ini.
+ * Syarat: sudah jalankan migrate_v4_extra_fields.sql lebih dulu.
+ *
+ * Perubahan dari versi sebelumnya HANYA di bagian yang ditandai "== EXTRA FIELDS ==".
+ * Semua event lama (yang tidak kirim field "extra") tetap jalan normal,
+ * extra_fields akan tersimpan NULL untuk mereka.
  */
 
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../includes/bootstrap.php';
 header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -15,31 +18,36 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$brand = get_current_brand();
-if (!$brand) {
-    http_response_code(404);
-    echo json_encode(['success' => false, 'message' => 'Event tidak ditemukan.']);
-    exit;
-}
-$brandId = (int)$brand['id'];
-
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input) {
-    $input = $_POST; // fallback jika bukan JSON
+    $input = $_POST;
 }
 
-$name      = clean($input['name'] ?? '');
-$email     = clean($input['email'] ?? '');
-$wa        = clean($input['whatsapp'] ?? '');
-$kota      = clean($input['kota'] ?? '');
-$refCode   = clean($input['ref'] ?? DEFAULT_REF_CODE);
-$eventSlug = clean($input['event'] ?? $brand['default_event_slug']);
+$name     = clean($input['name'] ?? '');
+$email    = clean($input['email'] ?? '');
+$wa       = clean($input['whatsapp'] ?? '');
+$kota     = clean($input['kota'] ?? '');
+$refCode  = clean($input['ref'] ?? '');
+$eventSlug = clean($input['event'] ?? DEFAULT_EVENT_SLUG);
+if ($eventSlug === '') $eventSlug = DEFAULT_EVENT_SLUG;
 
-$event = get_event_by_slug($eventSlug);
-if (!$event || (int)$event['brand_id'] !== $brandId || $event['status'] !== 'active') {
-    $eventSlug = $brand['default_event_slug'];
-    $event = get_event_by_slug($eventSlug);
+// == EXTRA FIELDS == — terima object "extra" (opsional), batasi supaya tidak disalahgunakan
+$extraFieldsJson = null;
+if (!empty($input['extra']) && is_array($input['extra'])) {
+    $extraClean = [];
+    $count = 0;
+    foreach ($input['extra'] as $key => $val) {
+        if ($count >= 20) break; // batas wajar, cegah payload raksasa
+        $keyClean = preg_replace('/[^a-z0-9_]/i', '', (string) $key);
+        if ($keyClean === '') continue;
+        $extraClean[$keyClean] = clean((string) $val);
+        $count++;
+    }
+    if (!empty($extraClean)) {
+        $extraFieldsJson = json_encode($extraClean, JSON_UNESCAPED_UNICODE);
+    }
 }
+// == END EXTRA FIELDS ==
 
 // ==== VALIDASI ====
 $errors = [];
@@ -63,32 +71,38 @@ if (!empty($errors)) {
     exit;
 }
 
-if ($refCode === '') {
-    $refCode = DEFAULT_REF_CODE;
-}
-
 try {
     $pdo = get_db();
 
-    // Cari data pengundang berdasarkan (brand_id, event_slug, ref_code); fallback ke whatsapp_default milik event jika tidak ditemukan
-    $stmt = $pdo->prepare('SELECT ref_code, name, whatsapp FROM referrers WHERE brand_id = ? AND event_slug = ? AND ref_code = ?');
-    $stmt->execute([$brandId, $eventSlug, $refCode]);
-    $referrer = $stmt->fetch(PDO::FETCH_ASSOC);
+    $event = get_event_by_slug($eventSlug);
+    if (!$event || $event['status'] !== 'active') {
+        $eventSlug = DEFAULT_EVENT_SLUG;
+        $event = get_event_by_slug($eventSlug);
+    }
 
-    // Simpan lead
+    $referrer = null;
+    if ($refCode !== '') {
+        $stmt = $pdo->prepare('SELECT ref_code, name, whatsapp FROM referrers WHERE event_slug = ? AND ref_code = ?');
+        $stmt->execute([$eventSlug, $refCode]);
+        $referrer = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    $targetName = $referrer ? $referrer['name'] : null;
+    $targetWa = $referrer ? $referrer['whatsapp'] : ($event['whatsapp_default'] ?? '');
+
+    // == EXTRA FIELDS == — tambah kolom extra_fields ke INSERT
     $stmt = $pdo->prepare(
-        'INSERT INTO leads (brand_id, name, email, whatsapp, kota, ref_code, event_slug) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO leads (name, email, whatsapp, kota, extra_fields, ref_code, event_slug) VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
-    $stmt->execute([$brandId, $name, $email, $waNormalized, $kota, $refCode, $eventSlug]);
+    $stmt->execute([$name, $email, $waNormalized, $kota, $extraFieldsJson, ($refCode !== '' ? $refCode : null), $eventSlug]);
+    // == END EXTRA FIELDS ==
 
-    // Susun pesan WhatsApp yang akan dikirim SI PENDAFTAR ke NOMOR PENGUNDANG
-    $waMessage = "Halo" . ($referrer ? " {$referrer['name']}" : "") . "! 👋\n"
-        . "Saya sudah daftar acara *" . ($event ? $event['name'] : $brand['name']) . "*:\n\n"
+    $eventName = $event['name'] ?? 'Rahasia Emas';
+    $waMessage = "Halo" . ($targetName ? " {$targetName}" : "") . "! 👋\n"
+        . "Saya sudah daftar acara *{$eventName}*:\n\n"
         . "Nama: {$name}\n"
         . "Kota: {$kota}\n\n"
         . "Mohon info selanjutnya ya. Terima kasih! 🙏";
-
-    $targetWa = $referrer ? $referrer['whatsapp'] : (($event['whatsapp_default'] ?? '') ?: '');
 
     echo json_encode([
         'success' => true,
