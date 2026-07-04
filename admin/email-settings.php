@@ -158,9 +158,10 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     --bg-soft: #10100F;
     --surface: #171716;
     --surface-elevated: #20201E;
-    --border-gold: rgba(214,165,54,0.18);
-    --gold: #D6A536;
-    --gold-soft: #F4D27A;
+    --gold: var(--brand-primary);
+    --gold-soft: var(--brand-soft);
+    --charcoal: var(--brand-charcoal);
+    --border-gold: color-mix(in srgb, var(--gold) 18%, transparent);
     --text: #F7F3E8;
     --muted: #A8A29A;
     --success: #22C55E;
@@ -174,8 +175,8 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     min-height: 100vh;
     margin: 0;
     background:
-      radial-gradient(circle at 84% 8%, rgba(214,165,54,0.22), transparent 28vw),
-      radial-gradient(circle at 8% 86%, rgba(244,210,122,0.09), transparent 34vw),
+      radial-gradient(circle at 84% 8%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 28vw),
+      radial-gradient(circle at 8% 86%, color-mix(in srgb, var(--gold-soft) 9%, transparent), transparent 34vw),
       linear-gradient(135deg, var(--bg) 0%, var(--bg-soft) 52%, #070706 100%);
     color: var(--text);
     font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -197,7 +198,7 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     top: 0;
     z-index: 30;
     background: rgba(16,16,15,0.84);
-    border-bottom: 1px solid rgba(214,165,54,0.14);
+    border-bottom: 1px solid color-mix(in srgb, var(--gold) 14%, transparent);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
@@ -233,9 +234,9 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
   .nav a:hover { color: var(--text); background: rgba(255,255,255,0.04); transform: translateY(-1px); }
   .nav a.active {
     color: var(--gold-soft);
-    background: rgba(214,165,54,0.10);
+    background: color-mix(in srgb, var(--gold) 10%, transparent);
     border-color: var(--border-gold);
-    box-shadow: inset 0 -2px 0 rgba(244,210,122,0.38);
+    box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--gold-soft) 38%, transparent);
   }
   .nav .logout { border-color: rgba(255,255,255,0.10); background: rgba(255,255,255,0.035); }
   .studio-wrap { position: relative; padding-top: 28px; padding-bottom: 120px; }
@@ -252,8 +253,8 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     border: 1px solid var(--border-gold);
     border-radius: 28px;
     background:
-      radial-gradient(circle at 84% 28%, rgba(244,210,122,0.28), transparent 24%),
-      linear-gradient(135deg, rgba(32,32,30,0.96), rgba(23,23,22,0.94) 58%, rgba(92,63,10,0.30));
+      radial-gradient(circle at 84% 28%, color-mix(in srgb, var(--gold-soft) 28%, transparent), transparent 24%),
+      linear-gradient(135deg, rgba(32,32,30,0.96), rgba(23,23,22,0.94) 58%, color-mix(in srgb, var(--gold) 18%, transparent));
     box-shadow: 0 24px 70px rgba(0,0,0,0.34);
   }
   .hero::after {
@@ -261,7 +262,7 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     position: absolute;
     right: 58px;
     bottom: 22px;
-    color: rgba(244,210,122,0.12);
+    color: color-mix(in srgb, var(--gold-soft) 12%, transparent);
     font-size: 190px;
     font-weight: 900;
     line-height: 1;
@@ -276,7 +277,7 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     gap: 8px;
     width: fit-content;
     color: var(--gold-soft);
-    background: rgba(214,165,54,0.11);
+    background: color-mix(in srgb, var(--gold) 11%, transparent);
     border: 1px solid var(--border-gold);
     border-radius: 999px;
     font-size: 11px;
@@ -298,7 +299,7 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     color: #16130b;
     background: linear-gradient(135deg, var(--gold), var(--gold-soft));
     border-radius: 42px;
-    box-shadow: 0 18px 50px rgba(214,165,54,0.24);
+    box-shadow: 0 18px 50px color-mix(in srgb, var(--gold) 24%, transparent);
     transform: rotate(-7deg);
   }
   .hero-visual svg { width: 86px; height: 86px; }
@@ -320,8 +321,8 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, opacity 180ms ease;
   }
   .btn:hover { transform: translateY(-1px); }
-  .btn-primary { color: #111; background: linear-gradient(135deg, var(--gold), var(--gold-soft)); box-shadow: 0 12px 26px rgba(214,165,54,0.22); }
-  .btn-secondary { color: var(--text); background: rgba(255,255,255,0.04); border-color: rgba(214,165,54,0.22); }
+  .btn-primary { color: #111; background: linear-gradient(135deg, var(--gold), var(--gold-soft)); box-shadow: 0 12px 26px color-mix(in srgb, var(--gold) 22%, transparent); }
+  .btn-secondary { color: var(--text); background: rgba(255,255,255,0.04); border-color: color-mix(in srgb, var(--gold) 22%, transparent); }
   .btn-compact { min-height: 40px; padding: 9px 14px; font-size: 12.5px; }
   .btn[disabled] { cursor: not-allowed; opacity: .68; transform: none; }
   .notice {
@@ -381,14 +382,14 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
   }
   textarea { min-height: 220px; resize: vertical; line-height: 1.65; }
   input:focus, textarea:focus, select:focus {
-    border-color: rgba(244,210,122,0.54);
-    box-shadow: 0 0 0 4px rgba(214,165,54,0.10);
+    border-color: color-mix(in srgb, var(--gold-soft) 54%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 10%, transparent);
   }
   select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--gold-soft) 50%), linear-gradient(135deg, var(--gold-soft) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%; background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; }
   .field-error { color: #FCA5A5; font-size: 12px; margin-top: 7px; }
   .sub-card {
     background: rgba(255,255,255,0.025);
-    border: 1px solid rgba(214,165,54,0.14);
+    border: 1px solid color-mix(in srgb, var(--gold) 14%, transparent);
     border-radius: 20px;
     padding: 20px;
     margin-top: 14px;
@@ -396,8 +397,8 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
   .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .chip {
     color: var(--gold-soft);
-    background: rgba(214,165,54,0.09);
-    border: 1px solid rgba(214,165,54,0.30);
+    background: color-mix(in srgb, var(--gold) 9%, transparent);
+    border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
     border-radius: 999px;
     cursor: pointer;
     font: 700 12px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -443,9 +444,9 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     min-height: 72px;
     padding: 20px 28px;
     background:
-      radial-gradient(circle at 80% 0%, rgba(214,165,54,0.20), transparent 36%),
+      radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--gold) 20%, transparent), transparent 36%),
       #141414;
-    border-bottom: 1px solid rgba(214,165,54,0.18);
+    border-bottom: 1px solid color-mix(in srgb, var(--gold) 18%, transparent);
   }
   .email-header img { display: block; max-height: 42px; max-width: 190px; object-fit: contain; }
   .email-brand-name { color: #fff; font-size: 20px; font-weight: 850; }
@@ -456,7 +457,7 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
   .email-cta { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; padding: 0 24px 24px; }
   .email-button { display: inline-flex; align-items: center; gap: 7px; border-radius: 12px; font-size: 13px; font-weight: 850; padding: 12px 18px; text-decoration: none; }
   .email-button.primary { color: #111; background: linear-gradient(135deg, var(--gold), var(--gold-soft)); }
-  .email-button.secondary { color: var(--text); background: rgba(255,255,255,0.04); border: 1px solid rgba(214,165,54,0.24); }
+  .email-button.secondary { color: var(--text); background: rgba(255,255,255,0.04); border: 1px solid color-mix(in srgb, var(--gold) 24%, transparent); }
   .email-footer { background: #141414; padding: 16px 24px; color: #8f887a; font-size: 11px; line-height: 1.55; }
   .status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
   .status-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.08); border-radius: 15px; padding: 12px; }
@@ -464,7 +465,7 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
   .badge-status { border-radius: 999px; font-size: 11px; font-weight: 850; padding: 6px 8px; }
   .badge-status.good { color: #BBF7D0; background: rgba(34,197,94,0.14); border: 1px solid rgba(34,197,94,0.24); }
   .badge-status.warn { color: #FDE68A; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.24); }
-  .badge-status.neutral { color: var(--gold-soft); background: rgba(214,165,54,0.10); border: 1px solid rgba(214,165,54,0.20); }
+  .badge-status.neutral { color: var(--gold-soft); background: color-mix(in srgb, var(--gold) 10%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 20%, transparent); }
   .integration-note { color: var(--muted); font-size: 12px; line-height: 1.55; margin: 12px 0 0; }
   .checklist { display: grid; gap: 10px; margin-top: 14px; }
   .check { display: flex; gap: 10px; align-items: flex-start; color: #d9d1c0; font-size: 12.5px; line-height: 1.45; }
