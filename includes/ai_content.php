@@ -1,7 +1,7 @@
 <?php
 /**
  * includes/ai_content.php
- * Wrapper pemanggilan Gemini API untuk generate copywriting event.
+ * Wrapper pemanggilan provider AI untuk generate copywriting event.
  */
 
 function build_marketing_prompt(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink): string
@@ -45,6 +45,11 @@ Aturan gaya bahasa:
 - Tidak boleh membuat klaim keuntungan finansial yang berlebihan atau menjanjikan hasil pasti.
 - CTA harus mengarahkan orang untuk MEMBUAT LINK REFERRAL mereka sendiri, contoh gaya: "Buat Link Referral Saya", "Sebarkan Link Sekarang".
 - Jangan gunakan bahasa manipulatif atau tekanan psikologis berlebihan.
+- Description wajib lebih tajam, persuasif, dan actionable: minimal 3 paragraf pendek.
+- Setiap paragraf description maksimal 1-2 kalimat, dipisahkan dengan newline "\n\n" di dalam string JSON.
+- Paragraf 1: kaitkan langsung dengan pain point/aspirasi audiens dari judul event.
+- Paragraf 2: jelaskan kenapa pengundang perlu ikut menyebarkan event ini.
+- Paragraf 3: arahkan ke tindakan membuat link referral tanpa klaim hasil pasti.
 
 Buat TEPAT 5 variasi copywriting dengan gaya berbeda:
 1. Storytelling Emosional
@@ -60,12 +65,68 @@ Balas HANYA dalam format JSON valid (tanpa markdown, tanpa teks lain), dengan st
       "style": "nama gaya",
       "headline": "...",
       "subheadline": "...",
-      "description": "2-3 kalimat pendek",
+      "description": "Minimal 3 paragraf pendek, pisahkan paragraf dengan newline \\n\\n",
       "cta_text": "..."
     }
   ]
 }
 PROMPT;
+}
+
+function call_ai_content_provider(string $prompt): string
+{
+    $provider = strtolower((string)(defined('AI_CONTENT_PROVIDER') ? AI_CONTENT_PROVIDER : 'groq'));
+
+    if ($provider === 'gemini') {
+        return call_gemini_api($prompt);
+    }
+
+    if ($provider === 'groq' || $provider === '') {
+        return call_groq_api($prompt);
+    }
+
+    throw new RuntimeException('AI_CONTENT_PROVIDER tidak dikenal. Gunakan "groq" atau "gemini".');
+}
+
+function call_groq_api(string $prompt): string
+{
+    if (!defined('GROQ_API_KEY') || GROQ_API_KEY === '') {
+        throw new RuntimeException('GROQ_API_KEY belum diisi di config.php.');
+    }
+
+    $model = defined('GROQ_MODEL') && GROQ_MODEL !== '' ? GROQ_MODEL : 'llama-3.3-70b-versatile';
+    $payload = [
+        'model' => $model,
+        'messages' => [
+            [
+                'role' => 'system',
+                'content' => 'Kamu hanya membalas JSON valid sesuai instruksi user.',
+            ],
+            [
+                'role' => 'user',
+                'content' => $prompt,
+            ],
+        ],
+        'temperature' => 0.9,
+        'response_format' => ['type' => 'json_object'],
+    ];
+
+    $data = ai_post_json(
+        'https://api.groq.com/openai/v1/chat/completions',
+        $payload,
+        [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . GROQ_API_KEY,
+        ],
+        'Groq'
+    );
+
+    $text = $data['choices'][0]['message']['content'] ?? '';
+    if ($text === '') {
+        throw new RuntimeException('Respons AI kosong.');
+    }
+
+    return $text;
 }
 
 function call_gemini_api(string $prompt): string
@@ -74,7 +135,8 @@ function call_gemini_api(string $prompt): string
         throw new RuntimeException('GEMINI_API_KEY belum diisi di config.php.');
     }
 
-    $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . GEMINI_MODEL . ':generateContent?key=' . GEMINI_API_KEY;
+    $model = defined('GEMINI_MODEL') && GEMINI_MODEL !== '' ? GEMINI_MODEL : 'gemini-2.5-flash';
+    $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . GEMINI_API_KEY;
 
     $payload = [
         'contents' => [[ 'parts' => [[ 'text' => $prompt ]] ]],
@@ -84,18 +146,33 @@ function call_gemini_api(string $prompt): string
         ],
     ];
 
+    $data = ai_post_json($url, $payload, ['Content-Type: application/json'], 'Gemini');
+
+    $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
+    if ($text === '') {
+        throw new RuntimeException('Respons AI kosong.');
+    }
+
+    return $text;
+}
+
+function ai_post_json(string $url, array $payload, array $headers, string $providerName): array
+{
+    if (!function_exists('curl_init')) {
+        throw new RuntimeException('Ekstensi PHP cURL belum aktif.');
+    }
+
     $ch = curl_init($url);
     $curlOptions = [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_HTTPHEADER => $headers,
         CURLOPT_POSTFIELDS => json_encode($payload),
         CURLOPT_TIMEOUT => 25,
     ];
-    if (defined('GEMINI_CA_CERT_PATH') && GEMINI_CA_CERT_PATH !== '' && is_file(GEMINI_CA_CERT_PATH)) {
-        $curlOptions[CURLOPT_CAINFO] = GEMINI_CA_CERT_PATH;
-    }
+    ai_apply_ca_bundle($curlOptions);
     curl_setopt_array($ch, $curlOptions);
+
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlNo   = curl_errno($ch);
@@ -104,58 +181,77 @@ function call_gemini_api(string $prompt): string
 
     if ($response === false || $curlErr) {
         if ($curlNo === 60) {
-            throw new RuntimeException('SSL certificate PHP/cURL belum dikonfigurasi. Isi GEMINI_CA_CERT_PATH atau curl.cainfo di php.ini.');
+            throw new RuntimeException('SSL certificate PHP/cURL belum dikonfigurasi. Isi curl.cainfo di php.ini atau pasang CA bundle server.');
         }
-        throw new RuntimeException('Gagal terhubung ke layanan AI (Gemini).');
+        throw new RuntimeException('Gagal terhubung ke layanan AI (' . $providerName . ').');
     }
 
     $data = json_decode($response, true);
-    if ($httpCode === 429) {
-        throw new RuntimeException(gemini_error_message($data, 'Kuota gratis Gemini API sedang penuh. Coba lagi beberapa saat lagi.'));
-    }
-    if ($httpCode !== 200) {
-        throw new RuntimeException(gemini_error_message($data, 'Layanan AI (Gemini) menolak permintaan. Cek API key di config.php.'));
+    if (!is_array($data)) {
+        throw new RuntimeException('Respons ' . $providerName . ' tidak valid.');
     }
 
-    $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
-    if ($text === '') {
-        throw new RuntimeException('Respons AI kosong.');
+    if ($httpCode < 200 || $httpCode >= 300) {
+        throw new RuntimeException(ai_provider_error_message($providerName, $data, $httpCode));
     }
-    return $text;
+
+    return $data;
 }
 
-function gemini_error_message(?array $data, string $fallback): string
+function ai_apply_ca_bundle(array &$curlOptions): void
+{
+    if ((string)ini_get('curl.cainfo') !== '') {
+        return;
+    }
+
+    $candidates = [
+        __DIR__ . '/../storage/cacert.pem',
+        'C:\\laragon\\etc\\ssl\\cacert.pem',
+        'C:\\laragon\\bin\\postgresql\\postgresql\\pgAdmin 4\\python\\Lib\\site-packages\\certifi\\cacert.pem',
+    ];
+
+    foreach ($candidates as $path) {
+        if (is_file($path)) {
+            $curlOptions[CURLOPT_CAINFO] = $path;
+            return;
+        }
+    }
+}
+
+function ai_provider_error_message(string $providerName, array $data, int $httpCode): string
 {
     $status = (string)($data['error']['status'] ?? '');
-    $message = (string)($data['error']['message'] ?? '');
+    $code = (string)($data['error']['code'] ?? '');
+    $message = (string)($data['error']['message'] ?? ($data['error']['error'] ?? ''));
+    $lowerMessage = strtolower($message);
 
-    if ($status === 'RESOURCE_EXHAUSTED') {
-        return 'Kuota Gemini API habis atau rate limit tercapai. Coba lagi nanti, aktifkan billing, atau gunakan API key/project lain.';
+    if ($httpCode === 401 || $status === 'UNAUTHENTICATED' || str_contains($lowerMessage, 'invalid api key')) {
+        return 'API key ' . $providerName . ' tidak valid atau tidak terbaca. Cek config.php.';
     }
-    if ($status === 'PERMISSION_DENIED') {
-        return 'Akses Gemini API ditolak. Cek apakah API key valid, tidak dibatasi domain/IP yang salah, dan Gemini API aktif di project Google.';
+    if ($httpCode === 403 || $status === 'PERMISSION_DENIED') {
+        return 'Akses ' . $providerName . ' ditolak. Cek izin API key, pembatasan domain/IP, dan akses model.';
     }
-    if ($status === 'UNAUTHENTICATED') {
-        return 'API key Gemini tidak valid atau tidak terbaca. Cek kembali GEMINI_API_KEY di config.php.';
+    if ($httpCode === 404 || $status === 'NOT_FOUND') {
+        return 'Model ' . $providerName . ' tidak ditemukan atau belum tersedia. Cek konfigurasi model di config.php.';
     }
-    if ($status === 'INVALID_ARGUMENT') {
-        return 'Request ke Gemini tidak valid. Cek nama model GEMINI_MODEL dan format payload.';
+    if ($httpCode === 429 || $status === 'RESOURCE_EXHAUSTED' || str_contains($lowerMessage, 'rate limit')) {
+        return 'Kuota atau rate limit ' . $providerName . ' tercapai. Coba lagi nanti atau gunakan API key/project lain.';
     }
-    if ($status === 'NOT_FOUND') {
-        return 'Model Gemini tidak ditemukan atau belum tersedia untuk API key ini. Cek GEMINI_MODEL di config.php.';
+    if ($httpCode === 400 || $status === 'INVALID_ARGUMENT') {
+        return 'Request ke ' . $providerName . ' tidak valid. Cek model dan format payload.';
     }
 
     if ($message !== '') {
-        return 'Gemini API: ' . $message;
+        return $providerName . ' API: ' . $message;
     }
 
-    return $fallback;
+    return 'Layanan AI (' . $providerName . ') menolak permintaan. HTTP ' . $httpCode . '.';
 }
 
 function generate_marketing_copy(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink): array
 {
     $prompt = build_marketing_prompt($brand, $event, $eventTitle, $customContext, $inviteLink);
-    $rawText = call_gemini_api($prompt);
+    $rawText = call_ai_content_provider($prompt);
     $rawText = trim(preg_replace('/^```json\s*|```$/m', '', $rawText));
 
     $parsed = json_decode($rawText, true);

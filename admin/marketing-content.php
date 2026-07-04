@@ -71,7 +71,7 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
   .mkt-style-badge { align-self: flex-start; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; background: rgba(201,168,76,0.15); color: var(--brand-primary,#C9A84C); padding: 4px 10px; border-radius: 999px; }
   .mkt-card h3 { margin: 0; font-size: 17px; color: #fff; line-height: 1.35; }
   .mkt-card .sub { font-size: 13px; color: var(--text-muted,#B8B2A4); margin:0; }
-  .mkt-card .desc { font-size: 13px; color: #ddd; margin: 0; line-height: 1.5; }
+  .mkt-card .desc { font-size: 13px; color: #ddd; margin: 0; line-height: 1.55; white-space: pre-line; }
   .mkt-card .cta { font-size: 13px; font-weight: 700; color: var(--brand-primary,#C9A84C); }
   .mkt-card-actions { display:flex; gap:8px; margin-top: 6px; }
   .mkt-copy-btn { font-size: 12px; padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; }
