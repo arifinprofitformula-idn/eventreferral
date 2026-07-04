@@ -465,6 +465,7 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
   .badge-status.good { color: #BBF7D0; background: rgba(34,197,94,0.14); border: 1px solid rgba(34,197,94,0.24); }
   .badge-status.warn { color: #FDE68A; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.24); }
   .badge-status.neutral { color: var(--gold-soft); background: rgba(214,165,54,0.10); border: 1px solid rgba(214,165,54,0.20); }
+  .integration-note { color: var(--muted); font-size: 12px; line-height: 1.55; margin: 12px 0 0; }
   .checklist { display: grid; gap: 10px; margin-top: 14px; }
   .check { display: flex; gap: 10px; align-items: flex-start; color: #d9d1c0; font-size: 12.5px; line-height: 1.45; }
   .check::before { content: ""; width: 9px; height: 9px; flex: 0 0 9px; margin-top: 5px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 4px rgba(34,197,94,0.10); }
@@ -736,7 +737,9 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
               <div class="status-item"><span>Link invitation</span><strong class="badge-status" id="statusLink"></strong></div>
               <div class="status-item"><span>CTA Button</span><strong class="badge-status" id="statusCta"></strong></div>
               <div class="status-item"><span>Mailing list</span><strong class="badge-status" id="statusList"></strong></div>
+              <div class="status-item"><span>Integrasi Mailketing</span><strong class="badge-status neutral" id="statusMailketing">Mengecek</strong></div>
             </div>
+            <p class="integration-note" id="mailketingState">Status koneksi Mailketing akan dicek otomatis.</p>
           </section>
 
           <section class="panel">
@@ -786,6 +789,8 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
   const statusLink = document.getElementById('statusLink');
   const statusCta = document.getElementById('statusCta');
   const statusList = document.getElementById('statusList');
+  const statusMailketing = document.getElementById('statusMailketing');
+  const mailketingState = document.getElementById('mailketingState');
   const toast = document.getElementById('toast');
 
   if (!form || !subjectInput || !bodyInput || !ctaInput || !previewSubject || !previewBody || !previewCta || !listSelect || !refreshBtn) {
@@ -803,6 +808,8 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     '{{invitation_link}}': 'https://zoom.us/j/xxxxxxxx',
   };
 
+  const mailketingEndpoint = '/api/mailketing_get_lists.php';
+
   function setBadge(el, text, type) {
     if (!el) return;
     el.textContent = text;
@@ -817,6 +824,102 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     showToast.timer = window.setTimeout(function () {
       toast.classList.remove('show');
     }, 1800);
+  }
+
+  function setMailketingStatus(connected, message, listCount) {
+    if (connected) {
+      setBadge(statusMailketing, 'Terhubung', 'good');
+      if (mailketingState) {
+        mailketingState.textContent = 'Integrasi Mailketing aktif. ' + (Number.isFinite(listCount) ? listCount + ' list tersedia.' : 'Daftar list bisa dimuat.');
+      }
+      return;
+    }
+
+    setBadge(statusMailketing, 'Belum terhubung', 'warn');
+    if (mailketingState) {
+      mailketingState.textContent = message || 'Belum berhasil terhubung ke Mailketing.';
+    }
+  }
+
+  function summarizeNonJson(text) {
+    const cleanText = (text || '')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return cleanText.slice(0, 220) || 'Server mengirim respons kosong/non-JSON.';
+  }
+
+  async function readJsonResponse(res) {
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (err) {
+      throw new Error('Endpoint Mailketing tidak mengembalikan JSON (HTTP ' + res.status + '). ' + summarizeNonJson(text));
+    }
+  }
+
+  function populateMailketingLists(lists) {
+    const currentValue = listSelect.value;
+    listSelect.replaceChildren();
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.textContent = lists.length ? 'Tidak menambahkan ke list' : 'Belum ada list tersedia';
+    listSelect.appendChild(emptyOpt);
+
+    lists.forEach(function (item) {
+      const opt = document.createElement('option');
+      opt.value = item.list_id ?? item.id ?? '';
+      opt.textContent = (item.list_name ?? item.name ?? 'List') + ' (#' + opt.value + ')';
+      if (opt.value === currentValue) opt.selected = true;
+      listSelect.appendChild(opt);
+    });
+  }
+
+  async function loadMailketingLists(options) {
+    const opts = options || {};
+    if (!opts.silent) {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = 'Memuat...';
+    }
+
+    try {
+      const res = await fetch(mailketingEndpoint, {
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' }
+      });
+      const result = await readJsonResponse(res);
+      if (!res.ok && !result.message) {
+        throw new Error('Endpoint Mailketing gagal. HTTP ' + res.status + '.');
+      }
+
+      if (result.success && Array.isArray(result.lists)) {
+        populateMailketingLists(result.lists);
+        setMailketingStatus(true, result.message, result.list_count ?? result.lists.length);
+        if (!opts.silent) {
+          showToast(result.lists.length ? 'Daftar list diperbarui' : 'Belum ada list tersedia');
+        }
+        updatePreview();
+        return;
+      }
+
+      setMailketingStatus(false, result.message || 'Gagal memuat daftar list Mailketing.');
+      if (!opts.silent) {
+        alert(result.message || 'Gagal memuat daftar list.');
+      }
+    } catch (err) {
+      setMailketingStatus(false, err.message || 'Gagal terhubung ke server.');
+      if (!opts.silent) {
+        alert(err.message || 'Gagal terhubung ke server.');
+      }
+    } finally {
+      if (!opts.silent) {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = 'Muat Ulang Daftar List';
+      }
+    }
   }
 
   function applyPlaceholders(text) {
@@ -878,45 +981,10 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     });
   }
 
-  refreshBtn.addEventListener('click', async function () {
-    refreshBtn.disabled = true;
-    refreshBtn.textContent = 'Memuat...';
-    try {
-      const res = await fetch('../api/mailketing_get_lists.php', {
-        credentials: 'same-origin',
-        headers: { 'Accept': 'application/json' }
-      });
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        throw new Error('Respons server bukan JSON. Kemungkinan sesi admin berakhir atau endpoint diblokir.');
-      }
-      const result = await res.json();
-      if (result.success && Array.isArray(result.lists)) {
-        const currentValue = listSelect.value;
-        listSelect.replaceChildren();
-        const emptyOpt = document.createElement('option');
-        emptyOpt.value = '';
-        emptyOpt.textContent = result.lists.length ? 'Tidak menambahkan ke list' : 'Belum ada list tersedia';
-        listSelect.appendChild(emptyOpt);
-        result.lists.forEach(function (item) {
-          const opt = document.createElement('option');
-          opt.value = item.list_id ?? item.id ?? '';
-          opt.textContent = (item.list_name ?? item.name ?? 'List') + ' (#' + opt.value + ')';
-          if (opt.value === currentValue) opt.selected = true;
-          listSelect.appendChild(opt);
-        });
-        showToast(result.lists.length ? 'Daftar list diperbarui' : 'Belum ada list tersedia');
-        updatePreview();
-      } else {
-        alert(result.message || 'Gagal memuat daftar list.');
-      }
-    } catch (err) {
-      alert(err.message || 'Gagal terhubung ke server.');
-    } finally {
-      refreshBtn.disabled = false;
-      refreshBtn.textContent = 'Muat Ulang Daftar List';
-    }
+  refreshBtn.addEventListener('click', function () {
+    loadMailketingLists();
   });
+  loadMailketingLists({ silent: true });
 
   form.addEventListener('submit', function (event) {
     const submitter = event.submitter;
