@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             session_regenerate_id(true);
             $_SESSION['admin_brand_id'] = (int)$brand['id'];
-            header('Location: dashboard.php');
+            header('Location: /admin/dashboard.php');
             exit;
         } else {
             $stmt = $pdo->prepare('INSERT INTO login_attempts (ip) VALUES (?)');
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if (!empty($_SESSION['admin_brand_id']) && (int)$_SESSION['admin_brand_id'] === (int)$brand['id']) {
-    header('Location: dashboard.php');
+    header('Location: /admin/dashboard.php');
     exit;
 }
 

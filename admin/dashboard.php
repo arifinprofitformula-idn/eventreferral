@@ -1,48 +1,60 @@
 <?php
 require_once __DIR__ . '/../config.php';
-session_start();
+require_once __DIR__ . '/../includes/bootstrap.php';
+start_secure_session();
 
-if (empty($_SESSION['admin_authenticated'])) {
-    header('Location: login.php');
-    exit;
-}
+$brand = require_admin_for_brand(get_current_brand());
+$brandId = (int)$brand['id'];
 
 $pdo = get_db();
 
 // Total pendaftar
-$totalLeads = $pdo->query('SELECT COUNT(*) FROM leads')->fetchColumn();
+$stmt = $pdo->prepare('SELECT COUNT(*) FROM leads WHERE brand_id = ?');
+$stmt->execute([$brandId]);
+$totalLeads = $stmt->fetchColumn();
 
 // Total pengundang aktif
-$totalReferrers = $pdo->query('SELECT COUNT(*) FROM referrers')->fetchColumn();
+$stmt = $pdo->prepare('SELECT COUNT(*) FROM referrers WHERE brand_id = ?');
+$stmt->execute([$brandId]);
+$totalReferrers = $stmt->fetchColumn();
 
 // Ringkasan per event
-$perEvent = $pdo->query('
+$stmt = $pdo->prepare('
     SELECT e.slug, e.name, e.status, COUNT(l.id) AS total_leads
     FROM events e
-    LEFT JOIN leads l ON l.event_slug = e.slug
+    LEFT JOIN leads l ON l.brand_id = e.brand_id AND l.event_slug = e.slug
+    WHERE e.brand_id = ?
     GROUP BY e.id
     ORDER BY total_leads DESC
-')->fetchAll(PDO::FETCH_ASSOC);
+');
+$stmt->execute([$brandId]);
+$perEvent = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Leaderboard pengundang (gabungan semua event — cocokkan event_slug agar tidak salah hitung)
-$leaderboard = $pdo->query('
+// Leaderboard pengundang (per brand dan per event agar tidak salah hitung)
+$stmt = $pdo->prepare('
     SELECT r.name, r.whatsapp, r.ref_code, r.event_slug, COUNT(l.id) AS total
     FROM referrers r
-    LEFT JOIN leads l ON l.event_slug = r.event_slug AND l.ref_code = r.ref_code
+    LEFT JOIN leads l ON l.brand_id = r.brand_id AND l.event_slug = r.event_slug AND l.ref_code = r.ref_code
+    WHERE r.brand_id = ?
     GROUP BY r.id
     ORDER BY total DESC, r.created_at ASC
     LIMIT 20
-')->fetchAll(PDO::FETCH_ASSOC);
+');
+$stmt->execute([$brandId]);
+$leaderboard = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Data pendaftar terbaru
-$leads = $pdo->query('
+$stmt = $pdo->prepare('
     SELECT l.name, l.email, l.whatsapp, l.kota, l.ref_code, l.event_slug, l.extra_fields, l.created_at,
            r.name AS referrer_name
     FROM leads l
-    LEFT JOIN referrers r ON r.event_slug = l.event_slug AND r.ref_code = l.ref_code
+    LEFT JOIN referrers r ON r.brand_id = l.brand_id AND r.event_slug = l.event_slug AND r.ref_code = l.ref_code
+    WHERE l.brand_id = ?
     ORDER BY l.created_at DESC
     LIMIT 500
-')->fetchAll(PDO::FETCH_ASSOC);
+');
+$stmt->execute([$brandId]);
+$leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /** Ubah JSON extra_fields jadi teks ringkas yang enak dibaca di tabel admin */
 function format_extra_fields(?string $json): string {
@@ -63,7 +75,7 @@ function format_extra_fields(?string $json): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Admin — rahasiaemas.id</title>
+<title>Dashboard Admin — <?= htmlspecialchars($brand['name']) ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root { --charcoal:#1A1A1A; --charcoal-soft:#242424; --gold:#C9A84C; --gold-soft:#E8D5A3; --white:#FAFAFA; --muted:#9C9992; }
@@ -94,7 +106,7 @@ function format_extra_fields(?string $json): string {
 <body>
 <div class="wrap">
   <header>
-    <h1>📊 Dashboard rahasiaemas.id</h1>
+    <h1>📊 Dashboard <?= htmlspecialchars($brand['name']) ?></h1>
     <nav style="display:flex; align-items:center; gap:18px;">
       <a href="dashboard.php" style="color:var(--gold); font-size:13.5px; text-decoration:none;">Dashboard</a>
       <a href="events.php" style="color:var(--muted); font-size:13.5px; text-decoration:none;">Kelola Event</a>

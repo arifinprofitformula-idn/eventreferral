@@ -82,7 +82,7 @@ function require_admin_for_brand(?array $brand): array {
     $brand = require_brand_or_404($brand);
 
     if (empty($_SESSION['admin_brand_id']) || (int)$_SESSION['admin_brand_id'] !== (int)$brand['id']) {
-        header('Location: login.php');
+        header('Location: /admin/login.php');
         exit;
     }
 

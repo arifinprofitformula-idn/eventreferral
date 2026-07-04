@@ -1,19 +1,21 @@
 <?php
 require_once __DIR__ . '/../config.php';
-session_start();
+require_once __DIR__ . '/../includes/bootstrap.php';
+start_secure_session();
 
-if (empty($_SESSION['admin_authenticated'])) {
-    header('Location: login.php');
-    exit;
-}
+$brand = require_admin_for_brand(get_current_brand());
+$brandId = (int)$brand['id'];
 
 $pdo = get_db();
-$leads = $pdo->query('
+$stmt = $pdo->prepare('
     SELECT l.name, l.email, l.whatsapp, l.kota, l.ref_code, l.event_slug, l.extra_fields, r.name AS referrer_name, l.created_at
     FROM leads l
-    LEFT JOIN referrers r ON r.event_slug = l.event_slug AND r.ref_code = l.ref_code
+    LEFT JOIN referrers r ON r.brand_id = l.brand_id AND r.event_slug = l.event_slug AND r.ref_code = l.ref_code
+    WHERE l.brand_id = ?
     ORDER BY l.created_at DESC
-')->fetchAll(PDO::FETCH_ASSOC);
+');
+$stmt->execute([$brandId]);
+$leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /** Ubah JSON extra_fields jadi teks ringkas untuk kolom CSV */
 function format_extra_fields_csv(?string $json): string {
@@ -28,7 +30,7 @@ function format_extra_fields_csv(?string $json): string {
 }
 
 header('Content-Type: text/csv; charset=utf-8');
-header('Content-Disposition: attachment; filename=pendaftar_rahasiaemas_' . date('Y-m-d') . '.csv');
+header('Content-Disposition: attachment; filename=pendaftar_' . $brand['slug'] . '_' . date('Y-m-d') . '.csv');
 
 $out = fopen('php://output', 'w');
 fputs($out, "\xEF\xBB\xBF"); // BOM agar Excel baca UTF-8 dengan benar
