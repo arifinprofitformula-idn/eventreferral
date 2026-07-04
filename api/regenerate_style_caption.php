@@ -49,6 +49,7 @@ if ($styleName === '') {
 }
 
 $format = normalize_ai_format(clean($input['format'] ?? 'whatsapp_broadcast'));
+$ctaTarget = normalize_ai_cta_target(clean($input['cta_target'] ?? 'referral'));
 
 if (!check_ai_rate_limit()) {
     http_response_code(429);
@@ -60,14 +61,17 @@ $customContext = mb_substr(trim(clean($input['context'] ?? '')), 0, 500);
 
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? $brand['domain'];
-$inviteLink = "{$protocol}://{$host}/buat-link.php?event=" . urlencode($eventSlug);
+$inviteLink = $ctaTarget === 'challenge'
+    ? "{$protocol}://{$host}/challenge"
+    : "{$protocol}://{$host}/buat-link.php?event=" . urlencode($eventSlug);
 
 try {
-    $variation = generate_single_style_copy($brand, $event, $eventTitle, $customContext, $inviteLink, $format, $styleName);
+    $variation = generate_single_style_copy($brand, $event, $eventTitle, $customContext, $inviteLink, $format, $styleName, $ctaTarget);
     echo json_encode([
         'success' => true,
         'invite_link' => $inviteLink,
         'format' => $format,
+        'cta_target' => $ctaTarget,
         'variation' => $variation,
     ]);
 } catch (Throwable $e) {

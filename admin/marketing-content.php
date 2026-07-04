@@ -105,6 +105,7 @@ $landingHref = !$eventNotFound ? '../e/' . rawurlencode($eventSlug) . '/' : 'eve
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? $brand['domain'];
 $initialInviteLink = !$eventNotFound ? "{$protocol}://{$host}/buat-link.php?event=" . urlencode($eventSlug) : '';
+$challengeLink = !$eventNotFound ? "{$protocol}://{$host}/challenge" : '';
 $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' . $event['name'];
 ?>
 <!DOCTYPE html>
@@ -742,6 +743,15 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
           </div>
 
           <div class="mkt-field">
+            <label>Tujuan CTA</label>
+            <p class="mkt-helper">Pilih arah ajakan utama: membuat link referral atau mengikuti challenge event utama.</p>
+            <div class="mkt-format-tabs" id="mkt-cta-tabs">
+              <button type="button" class="mkt-format-tab active" data-cta-target="referral">Buat Link Referral<span>CTA memakai link referral event ini</span></button>
+              <button type="button" class="mkt-format-tab" data-cta-target="challenge">Ikuti Challenge<span>CTA memakai halaman /challenge</span></button>
+            </div>
+          </div>
+
+          <div class="mkt-field">
             <label for="mkt-context">
               <span>Konteks Tambahan <span class="mkt-meta">(opsional)</span></span>
               <span class="mkt-counter"><span id="mkt-context-count">0</span>/500</span>
@@ -862,6 +872,7 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
       $eventMeta
   ))) ?>;
   const initialInviteLink = <?= json_encode($initialInviteLink) ?>;
+  const challengeLink = <?= json_encode($challengeLink) ?>;
 
   const titleInput   = document.getElementById('mkt-event-title');
   const titleError   = document.getElementById('mkt-title-error');
@@ -876,10 +887,12 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
   const titleCount   = document.getElementById('mkt-title-count');
   const contextCount = document.getElementById('mkt-context-count');
   const toast        = document.getElementById('mkt-toast');
-  const formatTabs   = document.querySelectorAll('.mkt-format-tab');
+  const formatTabs   = document.querySelectorAll('[data-format]');
+  const ctaTabs      = document.querySelectorAll('[data-cta-target]');
 
   let currentInviteLink = initialInviteLink;
   let currentFormat = 'whatsapp_broadcast';
+  let currentCtaTarget = 'referral';
   let currentVariations = [];
   let toastTimer = null;
 
@@ -890,6 +903,26 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
       });
       tab.classList.add('active');
       currentFormat = tab.dataset.format || 'whatsapp_broadcast';
+    });
+  });
+
+  function getSelectedLink() {
+    return currentCtaTarget === 'challenge' ? challengeLink : initialInviteLink;
+  }
+
+  function syncInviteLinkPreview() {
+    currentInviteLink = getSelectedLink();
+    inviteLinkEl.textContent = currentInviteLink;
+  }
+
+  ctaTabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      ctaTabs.forEach(function (item) {
+        item.classList.remove('active');
+      });
+      tab.classList.add('active');
+      currentCtaTarget = tab.dataset.ctaTarget || 'referral';
+      syncInviteLinkPreview();
     });
   });
 
@@ -1277,6 +1310,7 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
           event_title: eventTitle,
           context: contextInput.value.trim(),
           format: currentFormat,
+          cta_target: currentCtaTarget,
           style: styleName,
           csrf_token: csrfToken,
         }),
@@ -1324,6 +1358,7 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
           event_title: eventTitle,
           context: contextInput.value.trim(),
           format: currentFormat,
+          cta_target: currentCtaTarget,
           csrf_token: csrfToken,
         }),
       });
@@ -1331,6 +1366,7 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
 
       if (result.success) {
         currentFormat = result.format || currentFormat;
+        currentCtaTarget = result.cta_target || currentCtaTarget;
         renderVariations(result.variations, result.invite_link);
       } else {
         renderError(result.message || 'Gagal generate konten. Coba lagi.');
@@ -1382,6 +1418,7 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
   titleInput.addEventListener('input', updateCounters);
   contextInput.addEventListener('input', updateCounters);
   updateCounters();
+  syncInviteLinkPreview();
 })();
 </script>
 <?php endif; ?>

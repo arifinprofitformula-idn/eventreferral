@@ -14,6 +14,7 @@ const AI_CONTENT_STYLES = [
 ];
 
 const AI_CONTENT_FORMATS = ['whatsapp_broadcast', 'whatsapp_status', 'instagram_caption', 'hook_pendek'];
+const AI_CONTENT_CTA_TARGETS = ['referral', 'challenge'];
 
 function get_format_instruction(string $format): string
 {
@@ -37,7 +38,31 @@ function normalize_ai_style(string $styleName): string
     return in_array($styleName, AI_CONTENT_STYLES, true) ? $styleName : '';
 }
 
-function build_marketing_prompt(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink, string $format = 'whatsapp_broadcast'): string
+function normalize_ai_cta_target(string $target): string
+{
+    return in_array($target, AI_CONTENT_CTA_TARGETS, true) ? $target : 'referral';
+}
+
+function get_cta_target_instruction(string $target): string
+{
+    if ($target === 'challenge') {
+        return <<<TEXT
+Tujuan CTA: AJAK ORANG MENGIKUTI CHALLENGE.
+- Fokus copywriting pada ajakan ikut challenge/event utama agar audiens mau membuka halaman challenge.
+- CTA harus mengarah ke tindakan mengikuti challenge, contoh: "Ikuti Challenge Sekarang", "Mulai Challenge Hari Ini", "Gabung Challenge".
+- Jangan mengajak membuat link referral pada variasi ini.
+TEXT;
+    }
+
+    return <<<TEXT
+Tujuan CTA: AJAK ORANG MEMBUAT LINK REFERRAL.
+- Fokus copywriting pada merekrut pengundang, yaitu orang yang akan membuat link referral pribadi lalu mengundang teman-temannya.
+- CTA harus mengarahkan orang untuk membuat link referral sendiri, contoh: "Buat Link Referral Saya", "Sebarkan Link Sekarang".
+- Jangan mengajak mengikuti challenge sebagai peserta langsung pada variasi ini.
+TEXT;
+}
+
+function build_marketing_prompt(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink, string $format = 'whatsapp_broadcast', string $ctaTarget = 'referral'): string
 {
     $brandName = $brand['name'] ?? $brand['slug'];
     $themeVibe = ($brand['theme_preset'] ?? 'gold') === 'silver'
@@ -53,14 +78,15 @@ function build_marketing_prompt(array $brand, array $event, string $eventTitle, 
         : "Tidak ada konteks tambahan khusus.";
     $format = normalize_ai_format($format);
     $formatInstruction = get_format_instruction($format);
+    $ctaTarget = normalize_ai_cta_target($ctaTarget);
+    $ctaTargetInstruction = get_cta_target_instruction($ctaTarget);
 
     return <<<PROMPT
 Kamu adalah copywriter profesional untuk brand edukasi finansial "{$brandName}" (vibe: {$themeVibe}).
 
 JUDUL EVENT (WAJIB JADI ACUAN UTAMA, JANGAN KELUAR DARI TEMA INI): "{$eventTitle}"
 
-Tugasmu: buat materi promosi untuk MEREKRUT PENGUNDANG (bukan peserta langsung) — orang yang akan
-membuat link referral pribadi lalu mengundang teman-temannya ke acara dengan judul di atas.
+Tugasmu: buat materi promosi sesuai tujuan CTA di bawah untuk acara dengan judul di atas.
 
 Detail acara:
 Hari/Tanggal: {$eventDay}
@@ -71,6 +97,8 @@ Pembicara: {$eventSpeaker}
 
 {$formatInstruction}
 
+{$ctaTargetInstruction}
+
 ATURAN KETAT KONTEKS:
 - Seluruh headline, subheadline, dan description WAJIB merujuk langsung ke tema/judul event di atas.
 - Jangan membuat tema baru, jangan generalisasi ke topik finansial lain di luar judul event ini.
@@ -79,7 +107,6 @@ ATURAN KETAT KONTEKS:
 Aturan gaya bahasa:
 - Bahasa Indonesia, santai tapi profesional, action-oriented, optimis.
 - Tidak boleh membuat klaim keuntungan finansial yang berlebihan atau menjanjikan hasil pasti.
-- CTA harus mengarahkan orang untuk MEMBUAT LINK REFERRAL mereka sendiri, contoh gaya: "Buat Link Referral Saya", "Sebarkan Link Sekarang".
 - Jangan gunakan bahasa manipulatif atau tekanan psikologis berlebihan.
 - Headline/hook WAJIB dibungkus markdown bold dengan dua bintang, contoh: **Mulai dari Satu Link Referral**.
 - Jika format bukan hook pendek, gunakan line break "\\n\\n" di description untuk memisah paragraf pendek.
@@ -110,7 +137,7 @@ Balas HANYA dalam format JSON valid (tanpa markdown, tanpa teks lain), dengan st
 PROMPT;
 }
 
-function build_single_style_prompt(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink, string $format, string $styleName): string
+function build_single_style_prompt(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink, string $format, string $styleName, string $ctaTarget = 'referral'): string
 {
     $brandName = $brand['name'] ?? $brand['slug'];
     $themeVibe = ($brand['theme_preset'] ?? 'gold') === 'silver'
@@ -126,12 +153,14 @@ function build_single_style_prompt(array $brand, array $event, string $eventTitl
         : "Tidak ada konteks tambahan khusus.";
     $format = normalize_ai_format($format);
     $formatInstruction = get_format_instruction($format);
+    $ctaTarget = normalize_ai_cta_target($ctaTarget);
+    $ctaTargetInstruction = get_cta_target_instruction($ctaTarget);
 
     return <<<PROMPT
 Kamu adalah copywriter profesional untuk brand edukasi finansial "{$brandName}" (vibe: {$themeVibe}).
 
 JUDUL EVENT (WAJIB JADI ACUAN UTAMA): "{$eventTitle}"
-Tugasmu: buat SATU variasi materi promosi untuk merekrut pengundang acara di atas, dengan gaya KHUSUS: "{$styleName}".
+Tugasmu: buat SATU variasi materi promosi sesuai tujuan CTA di bawah, dengan gaya KHUSUS: "{$styleName}".
 
 Detail acara:
 Hari/Tanggal: {$eventDay}
@@ -142,10 +171,11 @@ Pembicara: {$eventSpeaker}
 
 {$formatInstruction}
 
+{$ctaTargetInstruction}
+
 Aturan:
 - Bahasa Indonesia, santai-profesional, action-oriented, optimis.
 - Jangan membuat klaim keuntungan finansial berlebihan atau menjanjikan hasil pasti.
-- CTA harus mengarah ke pembuatan link referral sendiri.
 - Headline/hook WAJIB dibungkus markdown bold dengan dua bintang, contoh: **Mulai dari Satu Link Referral**.
 - Tambahkan Facebook symbols/emoji yang humanis di akhir kalimat description, pilih secukupnya dari: ✨, ✅, 💬, 🙌, 🔥, ⭐, 💡, 🚀.
 - Jangan menaruh URL di description atau cta_text; link akan ditambahkan sistem dengan awalan 👉.
@@ -344,10 +374,11 @@ function strip_json_fence(string $text): string
     return trim(preg_replace('/^```json\s*|```$/m', '', $text));
 }
 
-function generate_marketing_copy(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink, string $format = 'whatsapp_broadcast'): array
+function generate_marketing_copy(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink, string $format = 'whatsapp_broadcast', string $ctaTarget = 'referral'): array
 {
     $format = normalize_ai_format($format);
-    $prompt = build_marketing_prompt($brand, $event, $eventTitle, $customContext, $inviteLink, $format);
+    $ctaTarget = normalize_ai_cta_target($ctaTarget);
+    $prompt = build_marketing_prompt($brand, $event, $eventTitle, $customContext, $inviteLink, $format, $ctaTarget);
     $rawText = strip_json_fence(call_ai_content_provider($prompt));
 
     $parsed = json_decode($rawText, true);
@@ -376,15 +407,16 @@ function generate_marketing_copy(array $brand, array $event, string $eventTitle,
     return $variations;
 }
 
-function generate_single_style_copy(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink, string $format, string $styleName): array
+function generate_single_style_copy(array $brand, array $event, string $eventTitle, string $customContext, string $inviteLink, string $format, string $styleName, string $ctaTarget = 'referral'): array
 {
     $format = normalize_ai_format($format);
     $styleName = normalize_ai_style($styleName);
+    $ctaTarget = normalize_ai_cta_target($ctaTarget);
     if ($styleName === '') {
         throw new RuntimeException('Gaya copywriting tidak valid.');
     }
 
-    $prompt = build_single_style_prompt($brand, $event, $eventTitle, $customContext, $inviteLink, $format, $styleName);
+    $prompt = build_single_style_prompt($brand, $event, $eventTitle, $customContext, $inviteLink, $format, $styleName, $ctaTarget);
     $rawText = strip_json_fence(call_ai_content_provider($prompt));
 
     $parsed = json_decode($rawText, true);
