@@ -14,11 +14,16 @@ function mailketing_request(string $endpoint, array $params): array
     $params['api_token'] = MAILKETING_API_TOKEN;
 
     $ch = curl_init("https://api.mailketing.co.id/api/v1/{$endpoint}");
+    $verifySsl = !defined('MAILKETING_SSL_VERIFY') || MAILKETING_SSL_VERIFY;
+
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => http_build_query($params),
         CURLOPT_TIMEOUT => 15,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_SSL_VERIFYPEER => $verifySsl,
+        CURLOPT_SSL_VERIFYHOST => $verifySsl ? 2 : 0,
     ]);
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -26,12 +31,17 @@ function mailketing_request(string $endpoint, array $params): array
     curl_close($ch);
 
     if ($response === false || $curlErr) {
-        throw new RuntimeException('Gagal terhubung ke Mailketing.');
+        throw new RuntimeException('Gagal terhubung ke Mailketing: ' . ($curlErr ?: 'respons kosong.'));
     }
 
     $data = json_decode($response, true);
     if (!is_array($data)) {
-        throw new RuntimeException('Respons Mailketing tidak valid.');
+        throw new RuntimeException('Respons Mailketing tidak valid. HTTP ' . $httpCode . '.');
+    }
+
+    if ($httpCode < 200 || $httpCode >= 300) {
+        $message = $data['message'] ?? $data['error'] ?? $data['response'] ?? 'Request Mailketing gagal.';
+        throw new RuntimeException('Mailketing HTTP ' . $httpCode . ': ' . (is_scalar($message) ? $message : 'Request gagal.'));
     }
 
     return $data;
@@ -51,7 +61,17 @@ function mailketing_send_email(string $toEmail, string $subject, string $htmlCon
 function mailketing_get_lists(): array
 {
     $result = mailketing_request('viewlist', []);
-    return $result['data'] ?? $result['response'] ?? $result;
+    $lists = $result['data'] ?? $result['response'] ?? $result['lists'] ?? $result;
+
+    if (isset($lists['data']) && is_array($lists['data'])) {
+        $lists = $lists['data'];
+    }
+
+    if (!is_array($lists)) {
+        throw new RuntimeException('Format daftar list Mailketing tidak dikenali.');
+    }
+
+    return array_values(array_filter($lists, 'is_array'));
 }
 
 function mailketing_add_subscriber(string $email, string $firstName, string $listId): array

@@ -64,6 +64,12 @@ define('ALLOWED_LOGO_EXT', ['png','jpg','jpeg','webp','svg']);
 // jangan pernah diubah setelah production (php -r "echo bin2hex(random_bytes(24));").
 define('IP_SALT', 'ganti-dengan-string-acak-panjang-milik-anda-sendiri');
 
+// ==================== MAILKETING INTEGRATION ====================
+define('MAILKETING_API_TOKEN', 'isi_api_token_mailketing');
+define('MAILKETING_SENDER_NAME', 'RahasiaEmas.id');
+define('MAILKETING_SENDER_EMAIL', 'info@rahasiaemas.id');
+define('MAILKETING_SSL_VERIFY', true); // production: true. Local Laragon bisa false jika PHP belum punya CA certificate.
+
 // ==== JANGAN DIUBAH DI BAWAH INI ====
 date_default_timezone_set('Asia/Jakarta');
 

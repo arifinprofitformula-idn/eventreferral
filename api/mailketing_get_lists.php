@@ -10,12 +10,21 @@ require_once __DIR__ . '/../includes/mailketing.php';
 start_secure_session();
 header('Content-Type: application/json; charset=utf-8');
 
-require_admin_for_brand(get_current_brand());
+$brand = get_current_brand();
+if (!$brand) {
+    echo json_encode(['success' => false, 'message' => 'Brand aktif tidak ditemukan untuk domain ini.']);
+    exit;
+}
+
+if (empty($_SESSION['admin_brand_id']) || (int)$_SESSION['admin_brand_id'] !== (int)$brand['id']) {
+    echo json_encode(['success' => false, 'message' => 'Sesi admin tidak aktif. Silakan login ulang lalu muat ulang daftar list.']);
+    exit;
+}
 
 try {
     $lists = mailketing_get_lists();
     echo json_encode(['success' => true, 'lists' => $lists]);
 } catch (Throwable $e) {
-    http_response_code(502);
-    echo json_encode(['success' => false, 'message' => 'Gagal mengambil daftar list dari Mailketing. Cek API token.']);
+    error_log('[Mailketing] Gagal mengambil daftar list: ' . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

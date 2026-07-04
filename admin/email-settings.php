@@ -882,7 +882,14 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     refreshBtn.disabled = true;
     refreshBtn.textContent = 'Memuat...';
     try {
-      const res = await fetch('../api/mailketing_get_lists.php');
+      const res = await fetch('../api/mailketing_get_lists.php', {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error('Respons server bukan JSON. Kemungkinan sesi admin berakhir atau endpoint diblokir.');
+      }
       const result = await res.json();
       if (result.success && Array.isArray(result.lists)) {
         const currentValue = listSelect.value;
@@ -904,7 +911,7 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
         alert(result.message || 'Gagal memuat daftar list.');
       }
     } catch (err) {
-      alert('Gagal terhubung ke server.');
+      alert(err.message || 'Gagal terhubung ke server.');
     } finally {
       refreshBtn.disabled = false;
       refreshBtn.textContent = 'Muat Ulang Daftar List';
