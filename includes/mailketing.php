@@ -79,13 +79,19 @@ function mailketing_get_lists(): array
     return array_values(array_filter($lists, 'is_array'));
 }
 
-function mailketing_add_subscriber(string $email, string $firstName, string $listId): array
+function mailketing_add_subscriber(string $email, string $firstName, string $listId, ?string $mobile = null): array
 {
-    return mailketing_request('addsubtolist', [
+    $params = [
         'email'      => $email,
         'first_name' => $firstName,
         'list_id'    => $listId,
-    ]);
+    ];
+
+    if ($mobile !== null && trim($mobile) !== '') {
+        $params['mobile'] = preg_replace('/[^0-9]/', '', $mobile);
+    }
+
+    return mailketing_request('addsubtolist', $params);
 }
 
 function mailketing_parse_event_start(array $event): ?DateTimeImmutable
@@ -238,7 +244,7 @@ HTML;
  * Sender identity mengikuti brand aktif (sender_name/sender_email), fallback ke config.php
  * jika brand belum mengisi identitasnya sendiri di admin/integrations.php.
  */
-function send_event_invitation_email(array $brand, array $event, string $leadName, string $leadEmail): void
+function send_event_invitation_email(array $brand, array $event, string $leadName, string $leadEmail, ?string $leadMobile = null): void
 {
     try {
         $pdo = get_db();
@@ -259,7 +265,7 @@ function send_event_invitation_email(array $brand, array $event, string $leadNam
         mailketing_send_email($leadEmail, $subject, $html, $senderName, $senderEmail);
 
         if (!empty($settings['mailketing_list_id'])) {
-            mailketing_add_subscriber($leadEmail, $leadName, $settings['mailketing_list_id']);
+            mailketing_add_subscriber($leadEmail, $leadName, $settings['mailketing_list_id'], $leadMobile);
         }
     } catch (Throwable $e) {
         error_log('[Mailketing] Gagal kirim email undangan: ' . $e->getMessage());

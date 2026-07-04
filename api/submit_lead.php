@@ -133,7 +133,7 @@ try {
         . "Mohon info selanjutnya ya. Terima kasih! 🙏";
 
     // Kirim email undangan via Mailketing — gagal di sini TIDAK BOLEH menggagalkan pendaftaran.
-    send_event_invitation_email($brand, $event, $name, $email);
+    send_event_invitation_email($brand, $event, $name, $email, $waNormalized);
 
     echo json_encode([
         'success' => true,
