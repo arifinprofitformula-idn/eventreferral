@@ -20,6 +20,7 @@ $eventNotFound = !$event;
 $notice = null;
 $noticeType = 'success'; // success | error
 $fieldErrors = [];
+$eventFlyerReady = false;
 
 if (!$eventNotFound && isset($_GET['saved'])) {
     $notice = 'Detail acara berhasil diperbarui.';
@@ -33,6 +34,16 @@ $formValues = $event ?: [
     'event_speaker' => '',
     'event_capacity' => '',
 ];
+
+if (!$eventNotFound && defined('MAX_EVENT_FLYER_SIZE') && defined('ALLOWED_EVENT_FLYER_EXT') && function_exists('save_event_flyer') && function_exists('delete_event_flyer')) {
+    try {
+        $columnStmt = $pdo->query("SHOW COLUMNS FROM events LIKE 'flyer_path'");
+        $eventFlyerReady = (bool)$columnStmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $eventFlyerReady = false;
+        error_log('[Event Settings] Fitur flyer belum siap: ' . $e->getMessage());
+    }
+}
 
 // ==================== HANDLE ACTIONS ====================
 if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -74,7 +85,7 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $event = array_merge($event, $updated);
 
                 // ---- Hapus flyer jika diminta ----
-                if (isset($_POST['remove_flyer']) && !empty($event['flyer_path'])) {
+                if ($eventFlyerReady && isset($_POST['remove_flyer']) && !empty($event['flyer_path'])) {
                     delete_event_flyer($event['flyer_path']);
                     $stmt = $pdo->prepare('UPDATE events SET flyer_path = NULL WHERE slug = ? AND brand_id = ?');
                     $stmt->execute([$eventSlug, (int)$brand['id']]);
@@ -82,7 +93,7 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 // ---- Upload flyer baru jika ada ----
-                if (isset($_FILES['flyer']) && $_FILES['flyer']['error'] === UPLOAD_ERR_OK) {
+                if ($eventFlyerReady && isset($_FILES['flyer']) && $_FILES['flyer']['error'] === UPLOAD_ERR_OK) {
                     $file = $_FILES['flyer'];
                     if ($file['size'] > MAX_EVENT_FLYER_SIZE) {
                         $notice = 'Ukuran flyer terlalu besar. Maksimal ' . (MAX_EVENT_FLYER_SIZE / 1024 / 1024) . ' MB.';
@@ -104,7 +115,7 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     header('Location: event-settings.php?event=' . urlencode($eventSlug) . '&saved=1');
                     exit;
                 }
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 $notice = 'Detail acara belum bisa disimpan. Mohon periksa input dan coba lagi.';
                 $noticeType = 'error';
             }
@@ -826,7 +837,9 @@ function event_field_class(array $errors, string $key): string
               </div>
             </div>
             <div class="flyer-field">
-              <?php if (!empty($event['flyer_path'])): ?>
+              <?php if (!$eventFlyerReady): ?>
+                <p class="helper">Fitur flyer belum aktif di server ini. Jalankan migrasi <code>migrate_v11_event_flyer.sql</code> dan pastikan config/fungsi flyer sudah ter-deploy. Detail acara tetap bisa disimpan.</p>
+              <?php elseif (!empty($event['flyer_path'])): ?>
                 <div class="flyer-current">
                   <img src="<?= htmlspecialchars($event['flyer_path']) ?>" alt="Flyer acara saat ini">
                   <label class="flyer-remove">
@@ -836,8 +849,10 @@ function event_field_class(array $errors, string $key): string
               <?php else: ?>
                 <p class="helper">Belum ada flyer. Upload gambar flyer/poster acara.</p>
               <?php endif; ?>
-              <input type="file" id="flyer" name="flyer" accept=".png,.jpg,.jpeg,.webp">
-              <p class="helper">PNG, JPG, JPEG, WEBP. Maksimal <?= (int)(MAX_EVENT_FLYER_SIZE / 1024 / 1024) ?> MB.</p>
+              <?php if ($eventFlyerReady): ?>
+                <input type="file" id="flyer" name="flyer" accept=".png,.jpg,.jpeg,.webp">
+                <p class="helper">PNG, JPG, JPEG, WEBP. Maksimal <?= (int)(MAX_EVENT_FLYER_SIZE / 1024 / 1024) ?> MB.</p>
+              <?php endif; ?>
             </div>
           </div>
         </div>
