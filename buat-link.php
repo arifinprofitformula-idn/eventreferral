@@ -189,58 +189,6 @@ function ui_icon(string $name): string
     justify-content: center;
     margin-top: 20px;
   }
-  .visual-card {
-    display: none;
-    position: relative;
-    overflow: hidden;
-    border: 1px solid var(--border-gold);
-    border-radius: 24px;
-    background:
-      radial-gradient(circle at 80% 0%, rgba(244,210,122,0.22), transparent 42%),
-      linear-gradient(145deg, rgba(32,32,30,0.96), rgba(23,23,22,0.92));
-    box-shadow: var(--shadow);
-    margin-top: 26px;
-    padding: 22px;
-  }
-  .visual-card::before {
-    content: "";
-    position: absolute;
-    inset: -80px -80px auto auto;
-    width: 170px;
-    height: 170px;
-    border-radius: 50%;
-    background: rgba(214,165,54,0.16);
-    filter: blur(8px);
-  }
-  .visual-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    width: 52px;
-    height: 52px;
-    color: #111;
-    background: linear-gradient(135deg, var(--gold), var(--gold-soft));
-    border-radius: 18px;
-    box-shadow: 0 16px 36px rgba(214,165,54,0.22);
-  }
-  .visual-icon .ico { width: 26px; height: 26px; }
-  .preview-card-title {
-    color: var(--gold-soft);
-    font-weight: 900;
-    margin: 18px 0 8px;
-  }
-  .mock-link {
-    color: var(--text);
-    background: rgba(11,11,10,0.72);
-    border: 1px solid rgba(255,255,255,0.09);
-    border-radius: 14px;
-    font-size: 13px;
-    line-height: 1.5;
-    padding: 13px;
-    overflow-wrap: anywhere;
-  }
-
   .panel {
     border: 1px solid var(--border-gold);
     border-radius: 24px;
@@ -293,16 +241,88 @@ function ui_icon(string $name): string
     line-height: 1.5;
   }
   .form-card {
+    position: relative;
+    overflow: hidden;
     padding: 20px;
+    border-color: rgba(244,210,122,0.34);
+    background:
+      linear-gradient(var(--surface), var(--surface)) padding-box,
+      linear-gradient(145deg, rgba(244,210,122,0.78), rgba(214,165,54,0.14) 42%, rgba(255,255,255,0.10)) border-box;
+    box-shadow:
+      0 28px 90px rgba(0,0,0,0.46),
+      0 0 0 1px rgba(255,255,255,0.035),
+      0 0 48px rgba(214,165,54,0.13);
+    isolation: isolate;
+  }
+  .form-card::before {
+    content: "";
+    position: absolute;
+    inset: -120px -90px auto auto;
+    width: 250px;
+    height: 250px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(244,210,122,0.24), rgba(214,165,54,0.08) 46%, transparent 68%);
+    pointer-events: none;
+    z-index: -1;
+  }
+  .form-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, transparent, rgba(244,210,122,0.18), transparent) 0 0 / 100% 1px no-repeat,
+      radial-gradient(circle at 18% 10%, rgba(255,255,255,0.055), transparent 28%);
+    pointer-events: none;
+    z-index: -1;
   }
   .form-head {
-    margin-bottom: 20px;
+    position: relative;
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(214,165,54,0.16);
+  }
+  .form-head-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    color: #111;
+    background:
+      radial-gradient(circle at 34% 22%, #FFF4BF, transparent 34%),
+      linear-gradient(135deg, var(--gold), var(--gold-soft));
+    border-radius: 18px;
+    box-shadow:
+      0 16px 34px rgba(214,165,54,0.24),
+      inset 0 1px 0 rgba(255,255,255,0.45);
+  }
+  .form-head-icon .ico {
+    width: 25px;
+    height: 25px;
+  }
+  .form-kicker {
+    display: inline-flex;
+    width: fit-content;
+    color: var(--gold-soft);
+    background: rgba(214,165,54,0.10);
+    border: 1px solid rgba(214,165,54,0.22);
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 6px 9px;
+    margin-bottom: 10px;
   }
   .form-head h2 {
     color: var(--gold-soft);
-    font-size: 24px;
+    font-size: 26px;
     line-height: 1.2;
-    margin-bottom: 8px;
+    margin-bottom: 7px;
   }
   .form-head p {
     color: var(--muted);
@@ -310,32 +330,53 @@ function ui_icon(string $name): string
     line-height: 1.55;
   }
   .field {
-    margin-bottom: 16px;
+    position: relative;
+    margin-bottom: 17px;
   }
   .field label {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     color: var(--text);
     font-size: 13px;
     font-weight: 800;
     margin-bottom: 8px;
   }
+  .field label::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 12px rgba(214,165,54,0.58);
+  }
   .field input {
     width: 100%;
-    min-height: 54px;
+    min-height: 58px;
     color: var(--text);
-    background: #111110;
-    border: 1px solid rgba(255,255,255,0.10);
-    border-radius: 14px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)),
+      #111110;
+    border: 1px solid rgba(255,255,255,0.13);
+    border-radius: 16px;
     font-size: 15px;
     outline: none;
-    padding: 0 15px;
+    padding: 0 16px;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.035),
+      0 10px 24px rgba(0,0,0,0.18);
     transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
   }
   .field input::placeholder { color: rgba(168,162,154,0.70); }
   .field input:focus {
-    border-color: rgba(214,165,54,0.76);
-    box-shadow: 0 0 0 4px rgba(214,165,54,0.12);
-    background: #141413;
+    border-color: rgba(244,210,122,0.82);
+    box-shadow:
+      0 0 0 4px rgba(214,165,54,0.13),
+      0 14px 30px rgba(0,0,0,0.24),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+    background:
+      linear-gradient(180deg, rgba(244,210,122,0.055), rgba(255,255,255,0.018)),
+      #141413;
   }
   .hint {
     display: block;
@@ -345,11 +386,25 @@ function ui_icon(string $name): string
     margin-top: 7px;
   }
   .live-preview {
-    border: 1px solid rgba(214,165,54,0.18);
-    border-radius: 18px;
-    background: rgba(11,11,10,0.54);
-    margin: 4px 0 16px;
-    padding: 14px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(214,165,54,0.28);
+    border-radius: 20px;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(244,210,122,0.12), transparent 34%),
+      rgba(11,11,10,0.66);
+    margin: 6px 0 18px;
+    padding: 15px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .live-preview::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--gold-soft), var(--gold));
   }
   .live-preview span {
     display: block;
@@ -362,9 +417,14 @@ function ui_icon(string $name): string
   }
   .preview-link {
     color: var(--text);
-    font-size: 13px;
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    font-size: 13.5px;
+    font-weight: 700;
     line-height: 1.45;
     overflow-wrap: anywhere;
+    padding: 10px 11px;
   }
   .btn {
     display: inline-flex;
@@ -389,8 +449,31 @@ function ui_icon(string $name): string
   .btn .ico { width: 18px; height: 18px; flex: 0 0 auto; }
   .btn-primary {
     color: #111;
-    background: linear-gradient(135deg, var(--gold), var(--gold-soft));
-    box-shadow: 0 16px 34px rgba(214,165,54,0.24);
+    background:
+      linear-gradient(135deg, rgba(255,255,255,0.32), transparent 34%),
+      linear-gradient(135deg, var(--gold), var(--gold-soft));
+    box-shadow:
+      0 18px 38px rgba(214,165,54,0.28),
+      inset 0 1px 0 rgba(255,255,255,0.55);
+  }
+  #genBtn {
+    min-height: 60px;
+    border-radius: 18px;
+    font-size: 15.5px;
+    letter-spacing: .01em;
+    position: relative;
+    overflow: hidden;
+  }
+  #genBtn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
+    transform: translateX(-120%);
+    transition: transform 520ms ease;
+  }
+  #genBtn:hover::after {
+    transform: translateX(120%);
   }
   .btn-secondary {
     color: var(--text);
@@ -398,10 +481,14 @@ function ui_icon(string $name): string
     border-color: rgba(214,165,54,0.22);
   }
   .trust-note {
-    color: var(--muted);
+    color: rgba(247,243,232,0.72);
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
     font-size: 12px;
     line-height: 1.55;
-    margin-top: 13px;
+    margin-top: 14px;
+    padding: 10px 12px;
     text-align: center;
   }
   .msg {
@@ -564,9 +651,8 @@ function ui_icon(string $name): string
     .subtitle { margin-left: 0; }
     .hero-actions { justify-content: flex-start; }
     .hero-actions .btn { width: auto; min-width: 166px; }
-    .visual-card { display: block; }
     .benefits {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .info-stack {
       margin-top: 18px;
@@ -601,6 +687,18 @@ function ui_icon(string $name): string
       border-radius: 13px;
     }
     .form-card { padding: 18px; }
+    .form-head {
+      grid-template-columns: 44px minmax(0, 1fr);
+      gap: 12px;
+    }
+    .form-head-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 15px;
+    }
+    .form-head h2 {
+      font-size: 23px;
+    }
   }
 </style>
 </head>
@@ -624,12 +722,6 @@ function ui_icon(string $name): string
           <a class="btn btn-primary" href="#builder"><?= ui_icon('link') ?><span>Mulai Buat Link</span></a>
           <a class="btn btn-secondary" href="<?= htmlspecialchars($eventUrl) ?>"><?= ui_icon('eye') ?><span>Lihat Event</span></a>
         </div>
-
-        <div class="visual-card" aria-hidden="true">
-          <span class="visual-icon"><?= ui_icon('arrow-up-right') ?></span>
-          <div class="preview-card-title">Preview Link Referral</div>
-          <div class="mock-link"><?= htmlspecialchars($_SERVER['HTTP_HOST'] ?? $brand['domain']) . htmlspecialchars($previewPath) ?>kodekamu</div>
-        </div>
       </div>
 
       <div class="benefits" aria-label="Manfaat link referral">
@@ -645,6 +737,10 @@ function ui_icon(string $name): string
           <span class="icon"><?= ui_icon('trophy') ?></span>
           <div><strong>Bisa naik leaderboard</strong><span>Ajak lebih banyak peserta dan pantau posisi challenge.</span></div>
         </article>
+        <article class="benefit-card">
+          <span class="icon"><?= ui_icon('arrow-up-right') ?></span>
+          <div><strong>Lead Bertambah</strong><span>Anda mendapatkan lebih banyak calon konsumen.</span></div>
+        </article>
       </div>
 
     </section>
@@ -653,8 +749,12 @@ function ui_icon(string $name): string
       <form id="genForm">
         <input type="hidden" name="event" value="<?= htmlspecialchars($eventSlug) ?>">
         <div class="form-head">
-          <h2 id="form-title">Buat Link Referral</h2>
-          <p>Isi data berikut untuk membuat link undangan pribadi.</p>
+          <span class="form-head-icon"><?= ui_icon('link') ?></span>
+          <div>
+            <span class="form-kicker">Referral Link Builder</span>
+            <h2 id="form-title">Buat Link Referral</h2>
+            <p>Isi data berikut untuk membuat link undangan pribadi.</p>
+          </div>
         </div>
 
         <div class="field">
