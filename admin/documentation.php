@@ -1,30 +1,23 @@
 <?php
 /**
  * admin/documentation.php
- * Dokumentasi teknis internal sistem — HANYA Coach yang tahu akses ini.
- * Dilindungi oleh MASTER_SETUP_KEY, sama seperti admin/setup-brand.php,
- * karena isinya memuat struktur server, urutan migrasi, dan catatan
- * keamanan yang tidak untuk konsumsi publik.
- *
- * Akses: admin/documentation.php?key=MASTER_SETUP_KEY
+ * Dokumentasi teknis internal sistem.
+ * Cukup dilindungi login admin brand aktif; tidak perlu MASTER_SETUP_KEY.
  */
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
 start_secure_session();
 
-$providedKey = $_GET['key'] ?? '';
-if (!is_string($providedKey) || $providedKey === '' || !hash_equals(MASTER_SETUP_KEY, $providedKey)) {
-    http_response_code(403);
-    exit('Akses ditolak.');
-}
+$brand = require_admin_for_brand(get_current_brand());
+$brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['name'] ?? 'RE'), 0, 2));
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dokumentasi Sistem — rahasiaemas.id</title>
+<title>Dokumentasi Sistem — <?= htmlspecialchars($brand['name']) ?></title>
 <style>
   :root {
     --bg-0: #0B0B0A;
@@ -198,12 +191,12 @@ if (!is_string($providedKey) || $providedKey === '' || !hash_equals(MASTER_SETUP
 
 <div class="topbar">
   <div class="topbar-brand">
-    <div class="topbar-emblem">RE</div>
+    <div class="topbar-emblem"><?= htmlspecialchars($brandInitials ?: 'RE') ?></div>
     <span class="topbar-label">Dokumentasi Sistem</span>
   </div>
   <span class="badge-secure">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2 4 5v6c0 5 3.4 8.6 8 11 4.6-2.4 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
-    Secure Setup
+    Admin Terverifikasi
   </span>
 </div>
 
@@ -226,7 +219,7 @@ if (!is_string($providedKey) || $providedKey === '' || !hash_equals(MASTER_SETUP
 
     <div class="hero">
       <span class="hero-eyebrow">Dokumentasi Internal</span>
-      <h1>Dokumentasi Sistem rahasiaemas.id</h1>
+      <h1>Dokumentasi Sistem <?= htmlspecialchars($brand['name']) ?></h1>
       <p>Referensi teknis lengkap: arsitektur saat ini, riwayat perubahan sejak pertama dibangun, urutan migrasi database, dan pola deploy production yang dipakai tim.</p>
       <div class="hero-meta">
         <div><strong>v8</strong>Versi skema saat ini</div>
