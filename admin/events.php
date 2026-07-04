@@ -1218,6 +1218,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
               <a class="event-action" href="/challenge/?event=<?= urlencode($ev['slug']) ?>" target="_blank" rel="noopener">Challenge</a>
               <a class="event-action" href="rewards.php?event=<?= urlencode($ev['slug']) ?>">Atur Hadiah</a>
               <a class="event-action" href="tracking.php?event=<?= urlencode($ev['slug']) ?>">Tracking</a>
+              <a class="event-action" href="marketing-content.php?event=<?= urlencode($ev['slug']) ?>">Buat Konten Marketing</a>
               <?php if (!$isDefaultEvent && $eventStatus === 'active'): ?>
                 <form class="inline-form" method="POST">
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
