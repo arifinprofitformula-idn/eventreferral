@@ -44,6 +44,11 @@ function mailketing_request(string $endpoint, array $params): array
         throw new RuntimeException('Mailketing HTTP ' . $httpCode . ': ' . (is_scalar($message) ? $message : 'Request gagal.'));
     }
 
+    if (isset($data['status']) && strtolower((string)$data['status']) !== 'success') {
+        $message = $data['message'] ?? $data['error'] ?? $data['response'] ?? 'Request Mailketing gagal.';
+        throw new RuntimeException('Mailketing: ' . (is_scalar($message) ? $message : 'Request gagal.'));
+    }
+
     return $data;
 }
 

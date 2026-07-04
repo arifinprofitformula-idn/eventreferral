@@ -99,7 +99,7 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $notice = 'Test email berhasil dikirim ke ' . htmlspecialchars($testEmail) . '.';
                 $noticeType = 'success';
             } catch (Throwable $e) {
-                $notice = 'Test email belum berhasil dikirim. Cek API token Mailketing dan sender email.';
+                $notice = 'Test email belum berhasil dikirim: ' . htmlspecialchars($e->getMessage());
                 $noticeType = 'error';
                 error_log('[Mailketing] Gagal kirim test email: ' . $e->getMessage());
             }
@@ -921,6 +921,14 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
   form.addEventListener('submit', function (event) {
     const submitter = event.submitter;
     if (submitter && submitter.tagName === 'BUTTON') {
+      if (submitter.name && !form.querySelector('input[type="hidden"][name="' + submitter.name + '"][data-submit-proxy="1"]')) {
+        const proxy = document.createElement('input');
+        proxy.type = 'hidden';
+        proxy.name = submitter.name;
+        proxy.value = submitter.value;
+        proxy.dataset.submitProxy = '1';
+        form.appendChild(proxy);
+      }
       submitter.disabled = true;
       submitter.textContent = submitter.value === 'test' ? 'Mengirim...' : 'Menyimpan...';
     }
