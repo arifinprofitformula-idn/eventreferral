@@ -11,8 +11,30 @@ if (!$event || (int)$event['brand_id'] !== $brandId || $event['status'] !== 'act
     $eventSlug = $brand['default_event_slug'];
     $event = get_event_by_slug($eventSlug);
 }
-$eventName = ($event && $eventSlug !== $brand['default_event_slug']) ? $event['name'] : null;
+$eventDisplayName = $event['name'] ?? $brand['name'];
 $logoPath = $brand['logo_path'] ? $brand['logo_path'] : 'assets/logo.png';
+$eventUrl = $eventSlug === $brand['default_event_slug'] ? '/' : EVENTS_URL_BASE . '/' . rawurlencode($eventSlug) . '/';
+$challengeUrl = '/challenge/?event=' . urlencode($eventSlug);
+$previewPath = $eventSlug === $brand['default_event_slug'] ? '/?ref=' : EVENTS_URL_BASE . '/' . rawurlencode($eventSlug) . '/?ref=';
+
+/** Ikon SVG monokrom (feather-style) — mengikuti warna teks/box induknya lewat currentColor. */
+function ui_icon(string $name): string
+{
+    $paths = [
+        'link' => '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+        'check' => '<polyline points="20 6 9 17 4 12"/>',
+        'trophy' => '<path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v3a5 5 0 0 1-10 0V4z"/><path d="M7 5H4.5a2 2 0 0 0 0 4H7"/><path d="M17 5h2.5a2 2 0 0 1 0 4H17"/>',
+        'arrow-up-right' => '<line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>',
+        'image' => '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
+        'message' => '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+        'download' => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+        'copy' => '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+        'send' => '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+        'eye' => '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+    ];
+    $path = $paths[$name] ?? '';
+    return '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $path . '</svg>';
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -21,160 +43,684 @@ $logoPath = $brand['logo_path'] ? $brand['logo_path'] : 'assets/logo.png';
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Buat Link Undanganmu — <?= htmlspecialchars($brand['name']) ?></title>
 <link rel="icon" href="<?= htmlspecialchars($logoPath) ?>">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style><?= get_theme_css_vars($brand) ?></style>
 <style>
   :root {
-    --charcoal: var(--brand-charcoal);
-    --gold: var(--brand-primary);
-    --gold-soft: var(--brand-soft);
-    --white: #FAFAFA;
-    --muted: #9C9992;
+    --bg: #0B0B0A;
+    --bg-soft: #10100F;
+    --surface: #171716;
+    --surface-elevated: #20201E;
+    --border-gold: rgba(214,165,54,0.18);
+    --gold: #D6A536;
+    --gold-soft: #F4D27A;
+    --text: #F7F3E8;
+    --muted: #A8A29A;
+    --success: #22C55E;
+    --danger: #EF4444;
+    --warning: #F59E0B;
+    --shadow: 0 24px 80px rgba(0,0,0,0.38);
   }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
   body {
-    background: var(--charcoal);
-    color: var(--white);
-    font-family: 'Poppins', sans-serif;
-    min-height: 100svh;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background:
+      radial-gradient(circle at 18% 0%, rgba(214,165,54,0.20), transparent 34vw),
+      radial-gradient(circle at 88% 92%, rgba(244,210,122,0.12), transparent 36vw),
+      linear-gradient(135deg, var(--bg) 0%, var(--bg-soft) 48%, #070707 100%);
+    color: var(--text);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle at 12% 22%, rgba(244,210,122,0.34) 0 1px, transparent 2px),
+      radial-gradient(circle at 72% 12%, rgba(214,165,54,0.26) 0 1px, transparent 2px),
+      radial-gradient(circle at 88% 54%, rgba(244,210,122,0.22) 0 1px, transparent 2px),
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.014) 1px, transparent 1px);
+    background-size: auto, auto, auto, 56px 56px, 56px 56px;
+    mask-image: radial-gradient(circle at 50% 20%, black, transparent 76%);
+    opacity: .75;
+  }
+  a { color: inherit; }
+  button, input { font: inherit; }
+
+  .page {
+    position: relative;
+    width: min(100%, 1120px);
+    margin: 0 auto;
+    padding: 22px 18px 42px;
+  }
+  .site-header {
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 24px;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 22px;
   }
-  .box { max-width: 440px; width: 100%; text-align: center; }
-  .logo { width: 80px; margin: 0 auto 24px; }
-  h1 { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 26px; margin-bottom: 10px; }
-  p.sub { color: var(--muted); font-size: 14.5px; margin-bottom: 32px; }
-  .field { text-align: left; margin-bottom: 16px; }
-  .field label { display: block; font-size: 13px; color: var(--gold-soft); margin-bottom: 7px; font-weight: 600; }
-  .field input {
-    width: 100%; background: #242424; border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 10px; padding: 14px 16px; color: var(--white); font-size: 15px;
-    font-family: inherit; outline: none;
-  }
-  .field input:focus { border-color: var(--gold); }
-  .hint { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.45; }
-  .btn {
-    width: 100%; background: var(--gold); color: var(--charcoal); font-weight: 700;
-    font-size: 15.5px; padding: 15px; border: none; border-radius: 12px; cursor: pointer; margin-top: 8px;
-  }
-  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-  .result {
-    display: none; margin-top: 28px; background: rgba(201,168,76,0.08);
-    border: 1px solid var(--gold); border-radius: 14px; padding: 20px;
-  }
-  .result p { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
-  .card-title {
-    text-align: left; font-size: 15.5px; font-weight: 700; color: var(--gold);
-    margin-bottom: 4px; display: flex; align-items: center; gap: 6px;
-  }
-  .card-desc { text-align: left; font-size: 12.5px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
-  .link-box {
-    display: flex; gap: 8px; background: var(--charcoal); border-radius: 10px; padding: 10px 12px;
+  .logo {
+    display: inline-flex;
     align-items: center;
+    text-decoration: none;
   }
-  .link-box input { flex: 1; background: transparent; border: none; color: var(--gold-soft); font-size: 13.5px; outline: none; }
-  .copy-btn { background: var(--gold); color: var(--charcoal); border: none; border-radius: 8px; padding: 8px 14px; font-weight: 700; font-size: 12.5px; cursor: pointer; }
-  .share-btn {
-    display: inline-block; margin-top: 14px; color: var(--gold); font-size: 13.5px; font-weight: 600; text-decoration: none;
+  .logo img {
+    display: block;
+    width: clamp(96px, 28vw, 148px);
+    height: auto;
+    filter: drop-shadow(0 12px 24px rgba(0,0,0,0.35));
   }
-  .msg { display: none; font-size: 13.5px; margin-top: 14px; padding: 10px; border-radius: 8px; }
-  .msg.error { background: rgba(217,116,58,0.12); color: #E8956B; display: block; }
+  .event-chip {
+    display: none;
+    max-width: 48%;
+    color: var(--gold-soft);
+    background: rgba(214,165,54,0.10);
+    border: 1px solid var(--border-gold);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 9px 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .hero {
+    text-align: center;
+    padding: 6px 2px 2px;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    color: var(--gold-soft);
+    background: rgba(214,165,54,0.12);
+    border: 1px solid var(--border-gold);
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 900;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 8px 12px;
+  }
+  h1 {
+    color: var(--gold-soft);
+    font-size: clamp(32px, 10vw, 58px);
+    line-height: 1.02;
+    letter-spacing: 0;
+    margin: 16px auto 12px;
+    max-width: 720px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.65;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+  .event-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 800;
+    margin-top: 16px;
+    padding: 9px 12px;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .visual-card {
+    display: none;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border-gold);
+    border-radius: 24px;
+    background:
+      radial-gradient(circle at 80% 0%, rgba(244,210,122,0.22), transparent 42%),
+      linear-gradient(145deg, rgba(32,32,30,0.96), rgba(23,23,22,0.92));
+    box-shadow: var(--shadow);
+    margin-top: 26px;
+    padding: 22px;
+  }
+  .visual-card::before {
+    content: "";
+    position: absolute;
+    inset: -80px -80px auto auto;
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    background: rgba(214,165,54,0.16);
+    filter: blur(8px);
+  }
+  .visual-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 52px;
+    height: 52px;
+    color: #111;
+    background: linear-gradient(135deg, var(--gold), var(--gold-soft));
+    border-radius: 18px;
+    box-shadow: 0 16px 36px rgba(214,165,54,0.22);
+  }
+  .visual-icon .ico { width: 26px; height: 26px; }
+  .preview-card-title {
+    color: var(--gold-soft);
+    font-weight: 900;
+    margin: 18px 0 8px;
+  }
+  .mock-link {
+    color: var(--text);
+    background: rgba(11,11,10,0.72);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 13px;
+    overflow-wrap: anywhere;
+  }
+
+  .panel {
+    border: 1px solid var(--border-gold);
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(32,32,30,0.94), rgba(23,23,22,0.96));
+    box-shadow: 0 18px 54px rgba(0,0,0,0.30);
+  }
+  .info-stack {
+    display: grid;
+    gap: 14px;
+  }
+  .benefits {
+    display: grid;
+    gap: 10px;
+  }
+  .benefit-card {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    border: 1px solid rgba(214,165,54,0.16);
+    border-radius: 18px;
+    background: rgba(255,255,255,0.035);
+    padding: 14px;
+  }
+  .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    color: #111;
+    background: linear-gradient(135deg, var(--gold), var(--gold-soft));
+    border-radius: 14px;
+    font-weight: 900;
+    font-size: 16px;
+    box-shadow: 0 12px 26px rgba(214,165,54,0.16);
+  }
+  .icon .ico { width: 20px; height: 20px; }
+  .benefit-card strong {
+    display: block;
+    color: var(--text);
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .benefit-card div span {
+    display: block;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .form-card {
+    padding: 20px;
+  }
+  .form-head {
+    margin-bottom: 20px;
+  }
+  .form-head h2 {
+    color: var(--gold-soft);
+    font-size: 24px;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  .form-head p {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .field {
+    margin-bottom: 16px;
+  }
+  .field label {
+    display: block;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .field input {
+    width: 100%;
+    min-height: 54px;
+    color: var(--text);
+    background: #111110;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 14px;
+    font-size: 15px;
+    outline: none;
+    padding: 0 15px;
+    transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  }
+  .field input::placeholder { color: rgba(168,162,154,0.70); }
+  .field input:focus {
+    border-color: rgba(214,165,54,0.76);
+    box-shadow: 0 0 0 4px rgba(214,165,54,0.12);
+    background: #141413;
+  }
+  .hint {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 7px;
+  }
+  .live-preview {
+    border: 1px solid rgba(214,165,54,0.18);
+    border-radius: 18px;
+    background: rgba(11,11,10,0.54);
+    margin: 4px 0 16px;
+    padding: 14px;
+  }
+  .live-preview span {
+    display: block;
+    color: var(--gold-soft);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .preview-link {
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 54px;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 900;
+    text-decoration: none;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: .68;
+    transform: none;
+  }
+  .btn .ico { width: 18px; height: 18px; flex: 0 0 auto; }
+  .btn-primary {
+    color: #111;
+    background: linear-gradient(135deg, var(--gold), var(--gold-soft));
+    box-shadow: 0 16px 34px rgba(214,165,54,0.24);
+  }
+  .btn-secondary {
+    color: var(--text);
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(214,165,54,0.22);
+  }
+  .trust-note {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.55;
+    margin-top: 13px;
+    text-align: center;
+  }
+  .msg {
+    display: none;
+    border-radius: 16px;
+    font-size: 13px;
+    line-height: 1.55;
+    margin-top: 14px;
+    padding: 13px 14px;
+  }
+  .msg.error {
+    display: block;
+    color: #FECACA;
+    background: rgba(239,68,68,0.11);
+    border: 1px solid rgba(239,68,68,0.28);
+  }
   .copy-existing-link {
     display: block;
     width: 100%;
-    margin: 10px 0;
-    padding: 10px 12px;
-    background: rgba(201,168,76,0.12);
-    border: 1px solid rgba(201,168,76,0.45);
-    border-radius: 8px;
     color: var(--gold-soft);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(214,165,54,0.24);
+    border-radius: 12px;
+    cursor: pointer;
     font: inherit;
     font-size: 12.5px;
     line-height: 1.45;
+    margin: 10px 0;
     overflow-wrap: anywhere;
-    cursor: pointer;
+    padding: 10px 12px;
     text-align: center;
   }
-  .copy-existing-link:hover { border-color: var(--gold); }
-  .copy-hint { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .copy-hint {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .result {
+    display: none;
+    margin-top: 16px;
+    padding: 18px;
+  }
+  .success-card {
+    border-color: rgba(34,197,94,0.28);
+    background:
+      radial-gradient(circle at 85% 0%, rgba(34,197,94,0.10), transparent 36%),
+      linear-gradient(180deg, rgba(32,32,30,0.96), rgba(23,23,22,0.96));
+  }
+  .card-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--gold-soft);
+    font-size: 18px;
+    font-weight: 900;
+    margin-bottom: 6px;
+  }
+  .status-icon, .card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    font-weight: 900;
+  }
+  .status-icon { color: #051B0C; background: var(--success); }
+  .card-icon { color: #111; background: linear-gradient(135deg, var(--gold), var(--gold-soft)); }
+  .status-icon .ico, .card-icon .ico { width: 17px; height: 17px; }
+  .card-desc {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
   .event-detail {
-    text-align: left; background: rgba(255,255,255,0.04); border-radius: 10px;
-    padding: 14px 16px; margin-bottom: 16px; font-size: 13.5px; line-height: 1.7;
+    display: none;
+    color: var(--muted);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.75;
+    margin-bottom: 14px;
+    padding: 13px;
   }
   .event-detail strong { color: var(--gold-soft); }
-  .templates { text-align: left; }
-  .template-card {
-    background: var(--charcoal); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
-    padding: 12px 14px; margin-bottom: 10px;
+  .link-box {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 12px;
   }
-  .template-card .t-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-  .template-card .t-head span { font-size: 12.5px; font-weight: 700; color: var(--gold); }
-  .template-card pre {
-    white-space: pre-wrap; word-break: break-word; font-family: inherit; font-size: 12.5px;
-    color: var(--white); margin-bottom: 10px; max-height: 140px; overflow-y: auto;
+  .link-box input {
+    width: 100%;
+    min-height: 50px;
+    color: var(--gold-soft);
+    background: #111110;
+    border: 1px solid rgba(214,165,54,0.20);
+    border-radius: 14px;
+    outline: none;
+    padding: 0 13px;
   }
-  .template-card .copy-btn { width: 100%; }
+  .result-actions {
+    display: grid;
+    gap: 10px;
+  }
   .flyer-preview {
-    display: block; width: 100%; max-height: 320px; object-fit: contain;
-    border-radius: 10px; margin-bottom: 14px; background: var(--charcoal);
+    display: block;
+    width: 100%;
+    max-height: 360px;
+    object-fit: contain;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    background: #111110;
+    margin-bottom: 12px;
+  }
+  .templates {
+    text-align: left;
+  }
+  .template-card {
+    background: rgba(11,11,10,0.62);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 16px;
+    padding: 13px;
+    margin-top: 10px;
+  }
+  .template-card .t-head {
+    color: var(--gold-soft);
+    font-size: 12.5px;
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+  .template-card pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12.5px;
+    line-height: 1.55;
+    max-height: 150px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+  }
+
+  @media (min-width: 760px) {
+    .page { padding: 28px 32px 56px; }
+    .event-chip { display: inline-block; }
+    .layout {
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
+      align-items: start;
+      gap: 32px;
+    }
+    .hero {
+      text-align: left;
+      padding-top: 28px;
+    }
+    h1 { margin-left: 0; }
+    .subtitle { margin-left: 0; }
+    .hero-actions { justify-content: flex-start; }
+    .hero-actions .btn { width: auto; min-width: 166px; }
+    .visual-card { display: block; }
+    .benefits {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .info-stack {
+      margin-top: 18px;
+    }
+    .form-card {
+      position: sticky;
+      top: 22px;
+      border-radius: 28px;
+      padding: 24px;
+    }
+    .result-actions {
+      grid-template-columns: 1fr 1fr;
+    }
+    .result-actions .wide {
+      grid-column: span 2;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .page { padding: 16px 14px 34px; }
+    .site-header { padding-bottom: 16px; }
+    .subtitle { font-size: 14px; }
+    .hero-actions { flex-direction: column; }
+    .benefit-card {
+      grid-template-columns: 38px minmax(0, 1fr);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 13px;
+    }
+    .form-card { padding: 18px; }
   }
 </style>
 </head>
 <body>
-<div class="box">
-  <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($brand['name']) ?>" class="logo">
-  <h1>Buat Link Undanganmu<?= $eventName ? ' — ' . htmlspecialchars($eventName) : '' ?></h1>
-  <p class="sub">Isi nama, WhatsApp, dan kode link pilihanmu. Bagikan ke teman — dan setiap orang yang daftar lewat link ini akan langsung terhubung ke WhatsApp kamu.</p>
+<div class="page">
+  <header class="site-header">
+    <a class="logo" href="/" aria-label="<?= htmlspecialchars($brand['name']) ?>">
+      <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($brand['name']) ?>">
+    </a>
+    <span class="event-chip">Event: <?= htmlspecialchars($eventDisplayName) ?></span>
+  </header>
 
-  <form id="genForm">
-    <input type="hidden" name="event" value="<?= htmlspecialchars($eventSlug) ?>">
-    <div class="field">
-      <label>Nama Kamu</label>
-      <input type="text" name="name" placeholder="Nama lengkap kamu" required minlength="3">
-    </div>
-    <div class="field">
-      <label>Nomor WhatsApp Kamu</label>
-      <input type="tel" name="whatsapp" placeholder="08xxxxxxxxxx" required minlength="9">
-    </div>
-    <div class="field">
-      <label>Kode Link yang Diinginkan</label>
-      <input type="text" name="ref_code" placeholder="contoh: budiemas" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_-]+">
-      <small class="hint">Gunakan 3-20 karakter: huruf, angka, strip (-), atau underscore (_).</small>
-    </div>
-    <button type="submit" class="btn" id="genBtn">Buat Link Undangan Saya</button>
-  </form>
+  <main class="layout">
+    <section class="info-stack" aria-labelledby="page-title">
+      <div class="hero">
+        <span class="badge">Link Referral Pengundang</span>
+        <h1 id="page-title">Buat Link Undanganmu</h1>
+        <p class="subtitle">Dapatkan link pribadi untuk mengundang peserta. Setiap orang yang daftar lewat link kamu akan tercatat atas namamu.</p>
+        <div class="event-line">Event: <?= htmlspecialchars($eventDisplayName) ?></div>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#builder"><?= ui_icon('link') ?><span>Mulai Buat Link</span></a>
+          <a class="btn btn-secondary" href="<?= htmlspecialchars($eventUrl) ?>"><?= ui_icon('eye') ?><span>Lihat Event</span></a>
+        </div>
 
-  <div class="msg" id="errMsg"></div>
+        <div class="visual-card" aria-hidden="true">
+          <span class="visual-icon"><?= ui_icon('arrow-up-right') ?></span>
+          <div class="preview-card-title">Preview Link Referral</div>
+          <div class="mock-link"><?= htmlspecialchars($_SERVER['HTTP_HOST'] ?? $brand['domain']) . htmlspecialchars($previewPath) ?>kodekamu</div>
+        </div>
+      </div>
 
-  <div class="result" id="resultBox">
-    <div class="card-title">🔗 Link Referral Kamu</div>
-    <div class="card-desc">Ini link undanganmu — bagikan ke calon peserta agar mereka daftar lewat link ini dan otomatis terhubung ke WhatsApp kamu.</div>
-    <div class="event-detail" id="eventDetail"></div>
-    <div class="link-box">
-      <input type="text" id="linkOutput" readonly>
-      <button class="copy-btn" id="copyBtn">Salin</button>
-    </div>
-    <a href="#" id="waShareBtn" class="share-btn" target="_blank">📲 Bagikan langsung ke WhatsApp →</a>
-  </div>
+      <div class="benefits" aria-label="Manfaat link referral">
+        <article class="benefit-card">
+          <span class="icon"><?= ui_icon('link') ?></span>
+          <div><strong>Link pribadi siap dibagikan</strong><span>Satu link khusus untuk semua promosi event kamu.</span></div>
+        </article>
+        <article class="benefit-card">
+          <span class="icon"><?= ui_icon('check') ?></span>
+          <div><strong>Pendaftar tercatat otomatis</strong><span>Setiap peserta dari link kamu masuk atas namamu.</span></div>
+        </article>
+        <article class="benefit-card">
+          <span class="icon"><?= ui_icon('trophy') ?></span>
+          <div><strong>Bisa naik leaderboard</strong><span>Ajak lebih banyak peserta dan pantau posisi challenge.</span></div>
+        </article>
+      </div>
 
-  <div class="result" id="flyerBox">
-    <div class="card-title">🖼️ Flyer Acara</div>
-    <div class="card-desc">Unduh flyer ini dan kirimkan bersama link referralmu supaya calon peserta lebih yakin untuk mendaftar.</div>
-    <img id="flyerImage" class="flyer-preview" alt="Flyer acara">
-    <a href="#" id="flyerDownloadBtn" class="share-btn" download>⬇️ Unduh Flyer</a>
-  </div>
+    </section>
 
-  <div class="result templates" id="templateBox">
-    <div class="card-title">💬 Template Balasan untuk Peserta</div>
-    <div class="card-desc">Setelah ada yang mendaftar lewat link kamu, salin salah satu template ini, ganti [Nama Peserta], lalu kirim ke mereka via WhatsApp.</div>
-    <div id="templateList"></div>
-  </div>
+    <section class="panel form-card" id="builder" aria-labelledby="form-title">
+      <form id="genForm">
+        <input type="hidden" name="event" value="<?= htmlspecialchars($eventSlug) ?>">
+        <div class="form-head">
+          <h2 id="form-title">Buat Link Referral</h2>
+          <p>Isi data berikut untuk membuat link undangan pribadi.</p>
+        </div>
+
+        <div class="field">
+          <label for="name">Nama Kamu</label>
+          <input id="name" type="text" name="name" placeholder="Nama lengkap kamu" required minlength="3" autocomplete="name">
+          <small class="hint">Gunakan nama yang mudah dikenali peserta.</small>
+        </div>
+
+        <div class="field">
+          <label for="whatsapp">Nomor WhatsApp Kamu</label>
+          <input id="whatsapp" type="tel" name="whatsapp" placeholder="08xxxxxxxxxx" required minlength="9" inputmode="tel" autocomplete="tel">
+          <small class="hint">Gunakan nomor aktif karena pendaftar bisa terhubung ke WhatsApp kamu.</small>
+        </div>
+
+        <div class="field">
+          <label for="ref_code">Kode Link yang Diinginkan</label>
+          <input id="ref_code" type="text" name="ref_code" placeholder="contoh: budiemas" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_-]+" autocomplete="off">
+          <small class="hint">Gunakan 3-20 karakter: huruf, angka, strip (-), atau underscore (_).</small>
+        </div>
+
+        <div class="live-preview" aria-live="polite">
+          <span>Preview Link Kamu</span>
+          <div class="preview-link" id="livePreview"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="genBtn"><?= ui_icon('link') ?> <span class="btn-label">Buat Link Undangan Saya</span></button>
+        <p class="trust-note">Data kamu hanya digunakan untuk mencatat link referral dan menghubungkan pendaftar dari undanganmu.</p>
+      </form>
+
+      <div class="msg" id="errMsg"></div>
+
+      <div class="panel result success-card" id="resultBox">
+        <div class="card-title"><span class="status-icon"><?= ui_icon('check') ?></span> Link Undangan Berhasil Dibuat</div>
+        <div class="card-desc">Bagikan link ini agar peserta yang mendaftar otomatis tercatat sebagai undanganmu.</div>
+        <div class="event-detail" id="eventDetail"></div>
+        <div class="link-box">
+          <input type="text" id="linkOutput" readonly aria-label="Link referral kamu">
+          <button class="btn btn-primary" id="copyBtn" type="button"><?= ui_icon('copy') ?> <span class="btn-label">Salin Link</span></button>
+        </div>
+        <div class="result-actions">
+          <a href="#" id="waShareBtn" class="btn btn-primary" target="_blank" rel="noopener"><?= ui_icon('send') ?><span>Bagikan ke WhatsApp</span></a>
+          <a href="<?= htmlspecialchars($eventUrl) ?>" class="btn btn-secondary"><?= ui_icon('eye') ?><span>Lihat Halaman Event</span></a>
+          <a href="<?= htmlspecialchars($challengeUrl) ?>" class="btn btn-secondary wide"><?= ui_icon('trophy') ?><span>Lihat Challenge</span></a>
+        </div>
+      </div>
+
+      <div class="panel result" id="flyerBox">
+        <div class="card-title"><span class="card-icon"><?= ui_icon('image') ?></span> Flyer Acara</div>
+        <div class="card-desc">Unduh flyer ini dan kirimkan bersama link referralmu supaya calon peserta lebih yakin untuk mendaftar.</div>
+        <img id="flyerImage" class="flyer-preview" alt="Flyer acara">
+        <a href="#" id="flyerDownloadBtn" class="btn btn-secondary" download><?= ui_icon('download') ?><span>Unduh Flyer</span></a>
+      </div>
+
+      <div class="panel result templates" id="templateBox">
+        <div class="card-title"><span class="card-icon"><?= ui_icon('message') ?></span> Template Balasan untuk Peserta</div>
+        <div class="card-desc">Setelah ada yang mendaftar lewat link kamu, salin salah satu template ini, ganti [Nama Peserta], lalu kirim ke mereka via WhatsApp.</div>
+        <div id="templateList"></div>
+      </div>
+    </section>
+  </main>
 </div>
 
 <script>
-const brandName = <?= json_encode($brand['name']) ?>;
+const eventName = <?= json_encode($eventDisplayName) ?>;
+const previewPath = <?= json_encode($previewPath) ?>;
+const previewOrigin = window.location.origin;
 const form = document.getElementById('genForm');
 const genBtn = document.getElementById('genBtn');
 const errMsg = document.getElementById('errMsg');
@@ -188,6 +734,36 @@ const copyBtn = document.getElementById('copyBtn');
 const waShareBtn = document.getElementById('waShareBtn');
 const eventDetail = document.getElementById('eventDetail');
 const templateList = document.getElementById('templateList');
+const refCodeInput = document.getElementById('ref_code');
+const livePreview = document.getElementById('livePreview');
+const genBtnLabel = genBtn.querySelector('.btn-label');
+const copyBtnLabel = copyBtn.querySelector('.btn-label');
+const ICON_COPY = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
+function sanitizeRefPreview(value) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9_-]/g, '')
+    .slice(0, 20);
+}
+
+function updatePreview() {
+  const code = sanitizeRefPreview(refCodeInput.value) || 'kodekamu';
+  livePreview.textContent = previewOrigin + previewPath + code;
+}
+
+refCodeInput.addEventListener('input', function () {
+  const caret = refCodeInput.selectionStart;
+  const cleaned = sanitizeRefPreview(refCodeInput.value);
+  if (refCodeInput.value !== cleaned) {
+    refCodeInput.value = cleaned;
+    refCodeInput.setSelectionRange(Math.min(caret, cleaned.length), Math.min(caret, cleaned.length));
+  }
+  updatePreview();
+});
+updatePreview();
 
 function renderFlyer(event) {
   const flyerPath = event && event.flyer_path;
@@ -217,17 +793,15 @@ function renderEventDetail(event) {
 
 function renderTemplates(templates) {
   templateList.innerHTML = '';
-  if (!templates || !templates.length) return;
+  if (!templates || !templates.length) { templateBox.style.display = 'none'; return; }
 
-  templates.forEach((tpl, idx) => {
+  templates.forEach((tpl) => {
     const card = document.createElement('div');
     card.className = 'template-card';
 
     const head = document.createElement('div');
     head.className = 't-head';
-    const label = document.createElement('span');
-    label.textContent = tpl.label;
-    head.appendChild(label);
+    head.textContent = tpl.label;
     card.appendChild(head);
 
     const pre = document.createElement('pre');
@@ -236,18 +810,20 @@ function renderTemplates(templates) {
 
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'copy-btn';
-    btn.textContent = 'Salin Template';
+    btn.className = 'btn btn-secondary';
+    btn.innerHTML = ICON_COPY + ' <span class="btn-label">Salin Template</span>';
+    const btnLabel = btn.querySelector('.btn-label');
     btn.addEventListener('click', function () {
       copyText(tpl.text).then(() => {
-        btn.textContent = 'Tersalin!';
-        setTimeout(() => btn.textContent = 'Salin Template', 1500);
+        btnLabel.textContent = 'Tersalin!';
+        setTimeout(() => btnLabel.textContent = 'Salin Template', 1500);
       });
     });
     card.appendChild(btn);
 
     templateList.appendChild(card);
   });
+  templateBox.style.display = 'block';
 }
 
 function escapeHtml(str) {
@@ -256,16 +832,34 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function showFriendlyError(message) {
+  errMsg.textContent = message || 'Terjadi kesalahan. Coba lagi.';
+  errMsg.className = 'msg error';
+  errMsg.style.display = 'block';
+}
+
+function showResult(link, event, templates) {
+  linkOutput.value = link;
+  const shareText = `Aku mengundang kamu ikut event ${eventName}. Daftar lewat link ini: ${link}`;
+  waShareBtn.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+  renderEventDetail(event);
+  renderFlyer(event);
+  renderTemplates(templates);
+  resultBox.style.display = 'block';
+  form.style.display = 'none';
+  resultBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 form.addEventListener('submit', async function (e) {
   e.preventDefault();
   errMsg.style.display = 'none';
   genBtn.disabled = true;
-  genBtn.textContent = 'Memproses...';
+  genBtnLabel.textContent = 'Membuat link...';
 
   const data = {
     name: form.name.value.trim(),
     whatsapp: form.whatsapp.value.trim(),
-    ref_code: form.ref_code.value.trim(),
+    ref_code: sanitizeRefPreview(form.ref_code.value),
     event: form.event.value,
   };
 
@@ -278,44 +872,26 @@ form.addEventListener('submit', async function (e) {
     const result = await res.json();
 
     if (result.success) {
-      linkOutput.value = result.link;
-      const shareText = `Halo! Aku mau undang kamu ke acara edukasi gratis "${brandName}" — Jumat malam ini. Daftar di sini ya: ${result.link}`;
-      waShareBtn.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-      renderEventDetail(result.event);
-      renderFlyer(result.event);
-      renderTemplates(result.templates);
-      resultBox.style.display = 'block';
-      templateBox.style.display = 'block';
-      form.style.display = 'none';
+      showResult(result.link, result.event, result.templates);
     } else if (result.existing_link) {
       showExistingLinkMessage(result.message, result.existing_link);
-      linkOutput.value = result.existing_link;
-      const shareText = `Halo! Aku mau undang kamu ke acara edukasi gratis "${brandName}" — Jumat malam ini. Daftar di sini ya: ${result.existing_link}`;
-      waShareBtn.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-      renderEventDetail(result.event);
-      renderFlyer(result.event);
-      renderTemplates(result.templates);
-      resultBox.style.display = 'block';
-      templateBox.style.display = 'block';
-      form.style.display = 'none';
+      showResult(result.existing_link, result.event, result.templates);
     } else {
-      errMsg.textContent = '⚠️ ' + (result.message || 'Terjadi kesalahan.');
-      errMsg.style.display = 'block';
+      showFriendlyError(result.message);
     }
   } catch (err) {
-    errMsg.textContent = '⚠️ Gagal terhubung ke server.';
-    errMsg.style.display = 'block';
+    showFriendlyError('Gagal terhubung ke server. Coba lagi beberapa saat.');
   } finally {
     genBtn.disabled = false;
-    genBtn.textContent = 'Buat Link Undangan Saya';
+    genBtnLabel.textContent = 'Buat Link Undangan Saya';
   }
 });
 
 copyBtn.addEventListener('click', function () {
   linkOutput.select();
   copyText(linkOutput.value).then(() => {
-    copyBtn.textContent = 'Tersalin!';
-    setTimeout(() => copyBtn.textContent = 'Salin', 1500);
+    copyBtnLabel.textContent = 'Tersalin!';
+    setTimeout(() => copyBtnLabel.textContent = 'Salin Link', 1500);
   });
 });
 
@@ -324,7 +900,7 @@ function showExistingLinkMessage(message, link) {
   errMsg.className = 'msg error';
 
   const prefix = document.createElement('span');
-  prefix.textContent = '⚠️ ' + (message || 'Nomor WhatsApp ini sudah punya kode link.');
+  prefix.textContent = message || 'Nomor WhatsApp ini sudah punya kode link.';
 
   const linkButton = document.createElement('button');
   linkButton.type = 'button';
