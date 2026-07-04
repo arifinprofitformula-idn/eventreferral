@@ -640,7 +640,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_brand'])) {
         <div class="card help-card">
           <div class="card-title">Butuh bantuan?</div>
           <p>Pelajari dokumentasi setup brand atau hubungi tim support.</p>
-          <a href="#" class="help-link">
+          <a href="documentation.php?key=<?= urlencode($providedKey) ?>" class="help-link">
             Lihat Dokumentasi
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17 17 7M8 7h9v9"/></svg>
           </a>
