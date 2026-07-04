@@ -27,8 +27,13 @@ Sistem ini terdiri dari 3 bagian:
 2. Klik database yang baru dibuat di sidebar kiri.
 3. Klik tab **Import** di bagian atas.
 4. Pilih file **`install.sql`** (ada di folder ini), lalu klik **Go**.
-5. Pastikan muncul pesan sukses dan 2 tabel baru muncul: `referrers` dan `leads`.
-6. **PENTING:** Buka tabel `referrers`, edit baris `admin`, ganti kolom
+5. Pastikan muncul pesan sukses dan tabel inti muncul: `brands`, `events`,
+   `referrers`, `leads`, dan `login_attempts`.
+6. **PENTING untuk staging:** jika domain yang dites adalah
+   `staging.rahasiaemas.id`, buka tabel `brands`, edit baris `rahasiaemas`,
+   lalu ganti kolom `domain` dari `rahasiaemas.id` menjadi
+   `staging.rahasiaemas.id`.
+7. **PENTING:** Buka tabel `referrers`, edit baris `admin`, ganti kolom
    `whatsapp` dengan nomor WhatsApp Coach Arifin sendiri (format: `628xxxxxxxxxx`,
    tanpa tanda `+`). Nomor ini dipakai kalau ada orang buka rahasiaemas.id
    TANPA kode referral siapapun.
@@ -106,12 +111,12 @@ tidak perlu edit file atau HTML.
 | "Koneksi database gagal"                  | Pastikan user database sudah di-attach ke database dengan ALL PRIVILEGES                                                       |
 | Form submit tidak jalan                   | Pastikan hosting mendukung PHP 7.4 ke atas dan folder `api/` ikut ter-upload                                                   |
 | Redirect WhatsApp tidak muncul            | Cek format nomor WA pengundang di tabel `referrers`, harus diawali `62`                                                        |
-| Tidak bisa login admin                    | Cek `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` di `config.php`, cocokkan dengan yang diketik                                       |
+| Tidak bisa login admin                    | Cek kolom `admin_username` dan `admin_password_hash` di tabel `brands` untuk domain yang sedang dibuka                         |
 | Login diblokir "Terlalu banyak percobaan" | Tunggu `LOGIN_LOCKOUT_MINUTES` (default 15 menit), atau hapus baris terkait IP Anda di tabel `login_attempts` lewat phpMyAdmin |
 
 ## Keamanan Tambahan (Opsional tapi Disarankan)
 
-- Ganti `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` secara berkala lewat `admin/generate-password-hash.php` (hapus file itu lagi setelah dipakai).
+- Ganti password admin brand secara berkala dengan hash dari `admin/generate-password-hash.php`, lalu simpan ke kolom `admin_password_hash` di tabel `brands` (hapus file generator itu lagi setelah dipakai).
 - Aktifkan **SSL/HTTPS gratis** (Let's Encrypt) lewat cPanel agar domain
   otomatis `https://` — biasanya tersedia gratis di menu **SSL/TLS Status**.
 - Backup database secara berkala lewat phpMyAdmin → **Export**.

@@ -76,6 +76,9 @@ try {
     if ($existing) {
         $brandId = (int)$existing['id'];
         $messages[] = 'Brand "rahasiaemas" sudah ada (id=' . $brandId . '). Melanjutkan recovery/backfill baris lama yang masih kosong.';
+        $stmt = $pdo->prepare('UPDATE brands SET admin_username = ?, admin_password_hash = ? WHERE id = ?');
+        $stmt->execute([ADMIN_USERNAME, ADMIN_PASSWORD_HASH, $brandId]);
+        $messages[] = 'Username/password admin brand disamakan ulang dengan ADMIN_USERNAME dan ADMIN_PASSWORD_HASH dari config.php.';
         if (($existing['domain'] ?? '') !== $currentHost) {
             $messages[] = 'PERHATIAN — domain brand saat ini "' . ($existing['domain'] ?? '') . '", sedangkan domain yang sedang dibuka "' . $currentHost . '". Jika ini database staging, jalankan: UPDATE brands SET domain = "' . $currentHost . '" WHERE slug = "rahasiaemas";';
         }
