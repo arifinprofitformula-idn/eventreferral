@@ -100,19 +100,21 @@ function event_field_class(array $errors, string $key): string
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Detail Acara - <?= htmlspecialchars($pageTitle) ?> - RahasiaEmas.id</title>
+<title>Detail Acara - <?= htmlspecialchars($pageTitle) ?> - <?= htmlspecialchars($brand['name']) ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
 <style>
+  <?= get_theme_css_vars($brand) ?>
   :root {
     --bg:#0B0B0A;
     --bg-soft:#10100F;
     --surface:#171716;
     --surface-elevated:#20201E;
-    --border-gold:rgba(214,165,54,0.18);
-    --border-strong:rgba(214,165,54,0.34);
+    --border-gold:color-mix(in srgb, var(--gold) 18%, transparent);
+    --border-strong:color-mix(in srgb, var(--gold) 34%, transparent);
     --border-soft:rgba(255,255,255,0.09);
-    --gold:#D6A536;
-    --gold-soft:#F4D27A;
+    --gold:var(--brand-primary);
+    --gold-soft:var(--brand-soft);
+    --charcoal:var(--brand-charcoal);
     --text:#F7F3E8;
     --muted:#A8A29A;
     --success:#22C55E;
@@ -124,8 +126,8 @@ function event_field_class(array $errors, string $key): string
   body {
     min-height: 100vh;
     background:
-      radial-gradient(circle at 88% 4%, rgba(214,165,54,0.22), transparent 30vw),
-      radial-gradient(circle at 9% 92%, rgba(214,165,54,0.13), transparent 34vw),
+      radial-gradient(circle at 88% 4%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 30vw),
+      radial-gradient(circle at 9% 92%, color-mix(in srgb, var(--gold) 13%, transparent), transparent 34vw),
       linear-gradient(135deg, var(--bg) 0%, var(--bg-soft) 54%, #080807 100%);
     color: var(--text);
     font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -147,7 +149,7 @@ function event_field_class(array $errors, string $key): string
     top: 0;
     z-index: 20;
     background: rgba(16,16,15,0.78);
-    border-bottom: 1px solid rgba(214,165,54,0.14);
+    border-bottom: 1px solid color-mix(in srgb, var(--gold) 14%, transparent);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
@@ -200,8 +202,8 @@ function event_field_class(array $errors, string $key): string
   }
   .nav a:hover, .nav a.active {
     color: var(--gold-soft);
-    background: rgba(214,165,54,0.09);
-    border-color: rgba(214,165,54,0.18);
+    background: color-mix(in srgb, var(--gold) 9%, transparent);
+    border-color: color-mix(in srgb, var(--gold) 18%, transparent);
   }
   .nav a.logout {
     color: var(--text);
@@ -239,9 +241,9 @@ function event_field_class(array $errors, string $key): string
     border: 1px solid var(--border-gold);
     border-radius: 28px;
     background:
-      radial-gradient(circle at 94% 22%, rgba(244,210,122,0.24), transparent 22%),
+      radial-gradient(circle at 94% 22%, color-mix(in srgb, var(--gold-soft) 24%, transparent), transparent 22%),
       linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)),
-      linear-gradient(135deg, rgba(214,165,54,0.12), rgba(23,23,22,0.88));
+      linear-gradient(135deg, color-mix(in srgb, var(--gold) 12%, transparent), rgba(23,23,22,0.88));
     box-shadow: var(--shadow);
   }
   .hero::after {
@@ -251,9 +253,9 @@ function event_field_class(array $errors, string $key): string
     top:-100px;
     width:260px;
     height:260px;
-    border:1px solid rgba(244,210,122,0.18);
+    border:1px solid color-mix(in srgb, var(--gold-soft) 18%, transparent);
     border-radius:50%;
-    box-shadow: 0 0 80px rgba(214,165,54,0.16);
+    box-shadow: 0 0 80px color-mix(in srgb, var(--gold) 16%, transparent);
   }
   .eyebrow {
     display: inline-flex;
@@ -261,8 +263,8 @@ function event_field_class(array $errors, string $key): string
     gap: 9px;
     width: fit-content;
     color: var(--gold-soft);
-    background: rgba(214,165,54,0.12);
-    border: 1px solid rgba(214,165,54,0.24);
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--gold) 24%, transparent);
     border-radius: 999px;
     padding: 8px 12px;
     font-size: 12px;
@@ -278,10 +280,10 @@ function event_field_class(array $errors, string $key): string
     width: 40px;
     height: 40px;
     color: var(--gold-soft);
-    border: 1px solid rgba(214,165,54,0.28);
+    border: 1px solid color-mix(in srgb, var(--gold) 28%, transparent);
     border-radius: 14px;
-    background: rgba(214,165,54,0.12);
-    box-shadow: inset 0 0 22px rgba(214,165,54,0.08);
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
+    box-shadow: inset 0 0 22px color-mix(in srgb, var(--gold) 8%, transparent);
     font-size: 12px;
     font-weight: 900;
   }
@@ -317,7 +319,7 @@ function event_field_class(array $errors, string $key): string
     min-height: 48px;
     padding: 13px 18px;
     border-radius: 13px;
-    border: 1px solid rgba(214,165,54,0.22);
+    border: 1px solid color-mix(in srgb, var(--gold) 22%, transparent);
     background: rgba(255,255,255,0.04);
     color: var(--text);
     font-family: inherit;
@@ -328,13 +330,13 @@ function event_field_class(array $errors, string $key): string
   }
   .btn:hover {
     transform: translateY(-1px);
-    border-color: rgba(244,210,122,0.42);
+    border-color: color-mix(in srgb, var(--gold-soft) 42%, transparent);
   }
   .btn-primary {
     color: #111;
     background: linear-gradient(135deg, var(--gold), var(--gold-soft));
     border-color: transparent;
-    box-shadow: 0 18px 44px rgba(214,165,54,0.22);
+    box-shadow: 0 18px 44px color-mix(in srgb, var(--gold) 22%, transparent);
   }
   .btn-secondary {
     background: rgba(255,255,255,0.035);
@@ -380,7 +382,7 @@ function event_field_class(array $errors, string $key): string
     align-items: flex-start;
     gap: 14px;
     padding: 24px 26px 18px;
-    border-bottom: 1px solid rgba(214,165,54,0.12);
+    border-bottom: 1px solid color-mix(in srgb, var(--gold) 12%, transparent);
   }
   h2 {
     font-family: "Playfair Display", Georgia, serif;
@@ -437,7 +439,7 @@ function event_field_class(array $errors, string $key): string
   }
   .field input:focus {
     border-color: var(--gold);
-    box-shadow: 0 0 0 3px rgba(214,165,54,0.14);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 14%, transparent);
   }
   .field input.is-invalid {
     border-color: rgba(239,68,68,0.74);
@@ -458,7 +460,7 @@ function event_field_class(array $errors, string $key): string
     justify-content: space-between;
     gap: 12px;
     padding: 16px 26px;
-    border-top: 1px solid rgba(214,165,54,0.14);
+    border-top: 1px solid color-mix(in srgb, var(--gold) 14%, transparent);
     background: rgba(16,16,15,0.84);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
@@ -486,7 +488,7 @@ function event_field_class(array $errors, string $key): string
     border-bottom: 1px solid rgba(255,255,255,0.07);
   }
   .preview-item:last-child { border-bottom: 0; }
-  .preview-item:hover { background: rgba(214,165,54,0.05); }
+  .preview-item:hover { background: color-mix(in srgb, var(--gold) 5%, transparent); }
   .preview-label {
     color: var(--gold-soft);
     font-size: 12px;
@@ -506,12 +508,12 @@ function event_field_class(array $errors, string $key): string
     grid-template-columns: 46px minmax(0, 1fr);
     gap: 14px;
     padding: 24px;
-    border: 1px solid rgba(244,210,122,0.34);
+    border: 1px solid color-mix(in srgb, var(--gold-soft) 34%, transparent);
     border-radius: 22px;
     background:
-      radial-gradient(circle at 88% 50%, rgba(214,165,54,0.18), transparent 28%),
-      linear-gradient(135deg, rgba(214,165,54,0.12), rgba(255,255,255,0.025));
-    box-shadow: 0 18px 54px rgba(214,165,54,0.10);
+      radial-gradient(circle at 88% 50%, color-mix(in srgb, var(--gold) 18%, transparent), transparent 28%),
+      linear-gradient(135deg, color-mix(in srgb, var(--gold) 12%, transparent), rgba(255,255,255,0.025));
+    box-shadow: 0 18px 54px color-mix(in srgb, var(--gold) 10%, transparent);
   }
   .auto-box strong {
     display: block;
@@ -625,8 +627,8 @@ function event_field_class(array $errors, string $key): string
 <body>
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="dashboard.php" aria-label="RahasiaEmas.id Admin">
-      <img src="<?= htmlspecialchars($logoPath) ?>" alt="RahasiaEmas.id">
+    <a class="brand" href="dashboard.php" aria-label="<?= htmlspecialchars($brand['name']) ?> Admin">
+      <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($brand['name']) ?>">
     </a>
     <nav class="nav" aria-label="Navigasi admin">
       <a href="dashboard.php">Dashboard</a>

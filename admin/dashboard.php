@@ -88,18 +88,20 @@ function whatsapp_link(?string $number): ?string
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Admin — rahasiaemas.id</title>
+<title>Dashboard Admin — <?= htmlspecialchars($brand['name']) ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  <?= get_theme_css_vars($brand) ?>
   :root {
     --bg: #0B0B0A;
     --bg-soft: #10100F;
     --surface: #171716;
     --surface-elevated: #20201E;
-    --border-gold: rgba(214, 165, 54, 0.18);
+    --border-gold: color-mix(in srgb, var(--gold) 18%, transparent);
     --border-soft: rgba(255, 255, 255, 0.08);
-    --gold: #D6A536;
-    --gold-soft: #F4D27A;
+    --gold: var(--brand-primary);
+    --gold-soft: var(--brand-soft);
+    --charcoal: var(--brand-charcoal);
     --text: #F7F3E8;
     --muted: #A8A29A;
     --success: #22C55E;
@@ -111,8 +113,8 @@ function whatsapp_link(?string $number): ?string
   body {
     min-height: 100vh;
     background:
-      radial-gradient(circle at 86% 8%, rgba(214, 165, 54, 0.22), transparent 30vw),
-      radial-gradient(circle at 8% 88%, rgba(214, 165, 54, 0.13), transparent 34vw),
+      radial-gradient(circle at 86% 8%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 30vw),
+      radial-gradient(circle at 8% 88%, color-mix(in srgb, var(--gold) 13%, transparent), transparent 34vw),
       linear-gradient(135deg, var(--bg) 0%, var(--bg-soft) 48%, #090908 100%);
     color: var(--text);
     font-family: 'Poppins', Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -200,9 +202,9 @@ function whatsapp_link(?string $number): ?string
   .nav a:hover { color: var(--text); background: rgba(255,255,255,0.04); }
   .nav a.active {
     color: var(--gold-soft);
-    background: rgba(214, 165, 54, 0.10);
+    background: color-mix(in srgb, var(--gold) 10%, transparent);
     border-color: var(--border-gold);
-    box-shadow: inset 0 -2px 0 rgba(244, 210, 122, 0.45);
+    box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--gold-soft) 45%, transparent);
   }
   .nav .logout {
     border-color: rgba(255,255,255,0.10);
@@ -221,7 +223,7 @@ function whatsapp_link(?string $number): ?string
     align-items: center;
     gap: 24px;
     background:
-      radial-gradient(circle at 88% 50%, rgba(244, 210, 122, 0.22), transparent 20%),
+      radial-gradient(circle at 88% 50%, color-mix(in srgb, var(--gold-soft) 22%, transparent), transparent 20%),
       linear-gradient(135deg, rgba(32,32,30,0.96), rgba(23,23,22,0.92) 55%, rgba(76,52,12,0.34));
     border: 1px solid var(--border-gold);
     border-radius: 24px;
@@ -236,9 +238,9 @@ function whatsapp_link(?string $number): ?string
     bottom: -160px;
     width: 380px;
     height: 380px;
-    border: 1px solid rgba(244, 210, 122, 0.22);
+    border: 1px solid color-mix(in srgb, var(--gold-soft) 22%, transparent);
     border-radius: 50%;
-    box-shadow: inset 0 0 50px rgba(214, 165, 54, 0.08);
+    box-shadow: inset 0 0 50px color-mix(in srgb, var(--gold) 8%, transparent);
   }
   .hero-copy, .hero-actions { position: relative; z-index: 1; }
   h1 {
@@ -281,7 +283,7 @@ function whatsapp_link(?string $number): ?string
   .btn:hover { transform: translateY(-1px); }
   .btn-gold {
     background: linear-gradient(135deg, var(--gold), var(--gold-soft));
-    box-shadow: 0 12px 26px rgba(214, 165, 54, 0.24);
+    box-shadow: 0 12px 26px color-mix(in srgb, var(--gold) 24%, transparent);
   }
   .btn-secondary {
     color: var(--text);
@@ -308,7 +310,7 @@ function whatsapp_link(?string $number): ?string
     transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
   }
   .stat-card:hover {
-    border-color: rgba(244, 210, 122, 0.34);
+    border-color: color-mix(in srgb, var(--gold-soft) 34%, transparent);
     box-shadow: 0 20px 50px rgba(0,0,0,0.32);
     transform: translateY(-3px);
   }
@@ -325,11 +327,11 @@ function whatsapp_link(?string $number): ?string
     width: 52px;
     height: 52px;
     flex: 0 0 52px;
-    border: 1px solid rgba(244, 210, 122, 0.30);
+    border: 1px solid color-mix(in srgb, var(--gold-soft) 30%, transparent);
     border-radius: 16px;
     color: var(--gold-soft);
-    background: rgba(214, 165, 54, 0.10);
-    box-shadow: inset 0 0 22px rgba(244, 210, 122, 0.08);
+    background: color-mix(in srgb, var(--gold) 10%, transparent);
+    box-shadow: inset 0 0 22px color-mix(in srgb, var(--gold-soft) 8%, transparent);
   }
   .stat-label {
     color: var(--muted);
@@ -357,7 +359,7 @@ function whatsapp_link(?string $number): ?string
     gap: 7px;
     justify-self: start;
     color: var(--gold-soft);
-    background: rgba(214, 165, 54, 0.10);
+    background: color-mix(in srgb, var(--gold) 10%, transparent);
     border-radius: 999px;
     font-size: 12px;
     font-weight: 700;
@@ -458,10 +460,10 @@ function whatsapp_link(?string $number): ?string
     min-width: 210px;
   }
   tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
-  tbody tr:hover td { background: rgba(214, 165, 54, 0.055); }
+  tbody tr:hover td { background: color-mix(in srgb, var(--gold) 6%, transparent); }
   tbody tr.top-rank td {
-    background: linear-gradient(90deg, rgba(214, 165, 54, 0.20), rgba(214, 165, 54, 0.06));
-    border-top-color: rgba(244, 210, 122, 0.20);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 20%, transparent), color-mix(in srgb, var(--gold) 6%, transparent));
+    border-top-color: color-mix(in srgb, var(--gold-soft) 20%, transparent);
   }
   .rank {
     color: var(--gold-soft);
@@ -478,14 +480,14 @@ function whatsapp_link(?string $number): ?string
   .pill {
     color: var(--gold-soft);
     min-width: 34px;
-    background: rgba(214, 165, 54, 0.12);
-    border: 1px solid rgba(214, 165, 54, 0.22);
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--gold) 22%, transparent);
     padding: 8px 10px;
   }
   .code-badge {
     color: var(--gold-soft);
     background: rgba(0,0,0,0.22);
-    border: 1px solid rgba(244, 210, 122, 0.30);
+    border: 1px solid color-mix(in srgb, var(--gold-soft) 30%, transparent);
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     font-size: 12px;
     padding: 8px 10px;
@@ -514,13 +516,13 @@ function whatsapp_link(?string $number): ?string
     padding: 0 14px;
   }
   .search-input:focus {
-    border-color: rgba(244, 210, 122, 0.42);
-    box-shadow: 0 0 0 4px rgba(214, 165, 54, 0.10);
+    border-color: color-mix(in srgb, var(--gold-soft) 42%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 10%, transparent);
   }
   .empty {
     color: var(--muted);
     background: rgba(255,255,255,0.035);
-    border: 1px dashed rgba(244, 210, 122, 0.18);
+    border: 1px dashed color-mix(in srgb, var(--gold-soft) 18%, transparent);
     border-radius: 16px;
     font-size: 14px;
     padding: 28px;
@@ -543,9 +545,9 @@ function whatsapp_link(?string $number): ?string
     justify-content: center;
     width: 56px;
     height: 56px;
-    border: 1px solid rgba(244, 210, 122, 0.28);
+    border: 1px solid color-mix(in srgb, var(--gold-soft) 28%, transparent);
     border-radius: 50%;
-    background: rgba(214, 165, 54, 0.08);
+    background: color-mix(in srgb, var(--gold) 8%, transparent);
   }
   .event-logo img { width: 42px; height: auto; }
   .event-name { font-weight: 800; line-height: 1.4; min-width: 0; overflow-wrap: anywhere; }
@@ -609,7 +611,7 @@ function whatsapp_link(?string $number): ?string
   }
   .lead-date {
     color: var(--gold-soft);
-    background: rgba(214, 165, 54, 0.12);
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
     border-radius: 10px;
     font-size: 12px;
     font-weight: 700;
@@ -690,8 +692,8 @@ function whatsapp_link(?string $number): ?string
 <body>
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="dashboard.php" aria-label="RahasiaEmas.id Dashboard">
-      <img src="<?= htmlspecialchars($logoPath) ?>" alt="RahasiaEmas.id">
+    <a class="brand" href="dashboard.php" aria-label="<?= htmlspecialchars($brand['name']) ?> Dashboard">
+      <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($brand['name']) ?>">
       <span class="brand-title">Dashboard</span>
     </a>
     <nav class="nav" aria-label="Navigasi admin">
@@ -705,7 +707,7 @@ function whatsapp_link(?string $number): ?string
 <main class="wrap">
   <section class="hero" aria-labelledby="dashboard-title">
     <div class="hero-copy">
-      <h1 id="dashboard-title">Dashboard <span>RahasiaEmas.id</span></h1>
+      <h1 id="dashboard-title">Dashboard <span><?= htmlspecialchars($brand['name']) ?></span></h1>
       <p class="subtitle">Pantau performa event, pengundang, dan pendaftar referral secara real-time.</p>
     </div>
     <div class="hero-actions">

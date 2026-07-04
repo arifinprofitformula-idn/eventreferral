@@ -163,19 +163,21 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kelola Event — rahasiaemas.id</title>
+<title>Kelola Event — <?= htmlspecialchars($brand['name']) ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
 <style>
+  <?= get_theme_css_vars($brand) ?>
   :root {
     --bg:#0B0B0A;
     --bg-soft:#10100F;
     --surface:#171716;
     --surface-elevated:#20201E;
-    --border-gold:rgba(214,165,54,0.18);
-    --border-strong:rgba(214,165,54,0.30);
+    --border-gold:color-mix(in srgb, var(--gold) 18%, transparent);
+    --border-strong:color-mix(in srgb, var(--gold) 30%, transparent);
     --border-soft:rgba(255,255,255,0.09);
-    --gold:#D6A536;
-    --gold-soft:#F4D27A;
+    --gold:var(--brand-primary);
+    --gold-soft:var(--brand-soft);
+    --charcoal:var(--brand-charcoal);
     --text:#F7F3E8;
     --muted:#A8A29A;
     --success:#22C55E;
@@ -188,8 +190,8 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
   body {
     min-height: 100vh;
     background:
-      radial-gradient(circle at 88% 6%, rgba(214,165,54,0.24), transparent 28vw),
-      radial-gradient(circle at 8% 88%, rgba(214,165,54,0.13), transparent 34vw),
+      radial-gradient(circle at 88% 6%, color-mix(in srgb, var(--gold) 24%, transparent), transparent 28vw),
+      radial-gradient(circle at 8% 88%, color-mix(in srgb, var(--gold) 13%, transparent), transparent 34vw),
       linear-gradient(135deg, var(--bg) 0%, var(--bg-soft) 52%, #090908 100%);
     color: var(--text);
     font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -211,7 +213,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     top: 0;
     z-index: 20;
     background: rgba(16,16,15,0.78);
-    border-bottom: 1px solid rgba(214,165,54,0.14);
+    border-bottom: 1px solid color-mix(in srgb, var(--gold) 14%, transparent);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
@@ -265,9 +267,9 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
   .nav a:hover { color: var(--text); background: rgba(255,255,255,0.04); }
   .nav a.active {
     color: var(--gold-soft);
-    background: rgba(214,165,54,0.10);
+    background: color-mix(in srgb, var(--gold) 10%, transparent);
     border-color: var(--border-gold);
-    box-shadow: inset 0 -2px 0 rgba(244,210,122,0.45);
+    box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--gold-soft) 45%, transparent);
   }
   .nav .logout {
     border-color: rgba(255,255,255,0.10);
@@ -286,7 +288,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     align-items: center;
     gap: 24px;
     background:
-      radial-gradient(circle at 90% 20%, rgba(244,210,122,0.28), transparent 22%),
+      radial-gradient(circle at 90% 20%, color-mix(in srgb, var(--gold-soft) 28%, transparent), transparent 22%),
       linear-gradient(135deg, rgba(32,32,30,0.96), rgba(23,23,22,0.92) 58%, rgba(76,52,12,0.34));
     border: 1px solid var(--border-gold);
     border-radius: 28px;
@@ -301,9 +303,9 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     bottom: -190px;
     width: 420px;
     height: 420px;
-    border: 1px solid rgba(244,210,122,0.22);
+    border: 1px solid color-mix(in srgb, var(--gold-soft) 22%, transparent);
     border-radius: 50%;
-    box-shadow: inset 0 0 60px rgba(214,165,54,0.08);
+    box-shadow: inset 0 0 60px color-mix(in srgb, var(--gold) 8%, transparent);
   }
   .hero-copy, .hero-actions { position: relative; z-index: 1; }
   .eyebrow {
@@ -311,7 +313,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     align-items: center;
     width: fit-content;
     color: var(--gold-soft);
-    background: rgba(214,165,54,0.12);
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
     border: 1px solid var(--border-gold);
     border-radius: 999px;
     font-size: 12px;
@@ -360,12 +362,12 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
   .btn-gold {
     color: #111;
     background: linear-gradient(135deg, var(--gold), var(--gold-soft));
-    box-shadow: 0 12px 26px rgba(214,165,54,0.24);
+    box-shadow: 0 12px 26px color-mix(in srgb, var(--gold) 24%, transparent);
   }
   .btn-outline, .event-action {
     color: var(--text);
     background: rgba(255,255,255,0.035);
-    border-color: rgba(214,165,54,0.22);
+    border-color: color-mix(in srgb, var(--gold) 22%, transparent);
   }
   .btn-danger {
     color: #fff;
@@ -410,7 +412,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     border-radius: 22px;
     padding: 20px;
   }
-  .summary-card:hover, .event-card:hover { transform: translateY(-2px); border-color: rgba(244,210,122,0.34); }
+  .summary-card:hover, .event-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--gold-soft) 34%, transparent); }
   .icon-badge {
     display: inline-flex;
     align-items: center;
@@ -419,8 +421,8 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     height: 48px;
     flex: 0 0 48px;
     color: var(--gold-soft);
-    background: rgba(214,165,54,0.12);
-    border: 1px solid rgba(244,210,122,0.28);
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--gold-soft) 28%, transparent);
     border-radius: 16px;
   }
   .summary-label {
@@ -515,7 +517,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     display: grid;
     place-items: center;
     min-height: 206px;
-    border: 1px dashed rgba(244,210,122,0.62);
+    border: 1px dashed color-mix(in srgb, var(--gold-soft) 62%, transparent);
     border-radius: 18px;
     background: rgba(11,11,10,0.42);
     cursor: pointer;
@@ -523,7 +525,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     text-align: center;
   }
   .file-drop:hover {
-    background: rgba(214,165,54,0.06);
+    background: color-mix(in srgb, var(--gold) 6%, transparent);
     border-color: var(--gold-soft);
   }
   .file-drop input {
@@ -579,8 +581,8 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     padding: 0 14px;
   }
   .field input[type="text"]:focus, .event-search:focus {
-    border-color: rgba(244,210,122,0.42);
-    box-shadow: 0 0 0 4px rgba(214,165,54,0.10);
+    border-color: color-mix(in srgb, var(--gold-soft) 42%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 10%, transparent);
   }
   .helper strong { color: var(--gold-soft); }
   .switch-row {
@@ -622,8 +624,8 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     transition: transform 180ms ease, background 180ms ease;
   }
   .switch input:checked + .switch-slider {
-    background: rgba(214,165,54,0.34);
-    border-color: rgba(244,210,122,0.48);
+    background: color-mix(in srgb, var(--gold) 34%, transparent);
+    border-color: color-mix(in srgb, var(--gold-soft) 48%, transparent);
   }
   .switch input:checked + .switch-slider::before {
     background: var(--gold-soft);
@@ -634,8 +636,8 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     gap: 12px;
     align-items: flex-start;
     color: var(--gold-soft);
-    background: rgba(214,165,54,0.08);
-    border: 1px solid rgba(244,210,122,0.28);
+    background: color-mix(in srgb, var(--gold) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--gold-soft) 28%, transparent);
     border-radius: 14px;
     font-size: 13px;
     line-height: 1.6;
@@ -702,9 +704,9 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     justify-content: center;
     width: 64px;
     height: 64px;
-    border: 1px solid rgba(244,210,122,0.26);
+    border: 1px solid color-mix(in srgb, var(--gold-soft) 26%, transparent);
     border-radius: 18px;
-    background: rgba(214,165,54,0.08);
+    background: color-mix(in srgb, var(--gold) 8%, transparent);
     overflow: hidden;
   }
   .event-logo img {
@@ -821,7 +823,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     display: grid;
     place-items: center;
     gap: 12px;
-    border: 1px dashed rgba(244,210,122,0.24);
+    border: 1px dashed color-mix(in srgb, var(--gold-soft) 24%, transparent);
     border-radius: 20px;
     background: rgba(255,255,255,0.03);
     padding: 42px 20px;
@@ -970,8 +972,8 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
 <body>
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="dashboard.php" aria-label="RahasiaEmas.id Admin">
-      <img src="<?= htmlspecialchars($logoPath) ?>" alt="RahasiaEmas.id">
+    <a class="brand" href="dashboard.php" aria-label="<?= htmlspecialchars($brand['name']) ?> Admin">
+      <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($brand['name']) ?>">
     </a>
     <nav class="nav" aria-label="Navigasi admin">
       <a href="dashboard.php">Dashboard</a>
@@ -1080,7 +1082,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
           <div class="field">
             <label for="slug_override">Slug URL</label>
             <input id="slug_override" type="text" name="slug_override" placeholder="contoh: rahasia-investasi-emas">
-            <div class="helper">Hasil akhir: <strong>rahasiaemas.id/e/contoh-slug</strong></div>
+            <div class="helper">Hasil akhir: <strong><?= htmlspecialchars($brand['domain']) ?>/e/contoh-slug</strong></div>
           </div>
           <div class="switch-row">
             <div>
@@ -1185,7 +1187,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     <?php endif; ?>
   </section>
 
-  <div class="footer">© <?= date('Y') ?> RahasiaEmas.id — All rights reserved.</div>
+  <div class="footer">© <?= date('Y') ?> <?= htmlspecialchars($brand['name']) ?> — All rights reserved.</div>
 </main>
 <script>
   const zipInput = document.getElementById('eventZip');
