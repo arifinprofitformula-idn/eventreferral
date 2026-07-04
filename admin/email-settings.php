@@ -95,7 +95,7 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $html = build_invitation_email_html($brand, $event, $testSettings, 'Budi Santoso');
                 $senderName = !empty($brand['sender_name']) ? $brand['sender_name'] : MAILKETING_SENDER_NAME;
                 $senderEmail = !empty($brand['sender_email']) ? $brand['sender_email'] : MAILKETING_SENDER_EMAIL;
-                mailketing_send_email($testEmail, '[TEST] ' . $formValues['subject'], $html, $senderName, $senderEmail);
+                mailketing_send_email($testEmail, $formValues['subject'], $html, $senderName, $senderEmail);
                 $notice = 'Test email berhasil dikirim ke ' . htmlspecialchars($testEmail) . '.';
                 $noticeType = 'success';
             } catch (Throwable $e) {
@@ -930,6 +930,18 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     return result;
   }
 
+  function renderPreviewBody(text) {
+    const escaped = applyPlaceholders(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+    return escaped
+      .split(sampleData['{{event_name}}']).join('<strong>' + sampleData['{{event_name}}'] + '</strong>')
+      .split(sampleData['{{event_day}}']).join('<strong>' + sampleData['{{event_day}}'] + '</strong>');
+  }
+
   function updatePreview() {
     const subject = subjectInput.value || '(subjek kosong)';
     const body = bodyInput.value || '';
@@ -939,7 +951,7 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     const autoOn = autoInput && autoInput.checked;
 
     previewSubject.textContent = subject;
-    previewBody.textContent = applyPlaceholders(body);
+    previewBody.innerHTML = renderPreviewBody(body);
     previewCta.textContent = cta;
     if (ctaMiniPreview) ctaMiniPreview.textContent = cta;
     if (subjectCounter) subjectCounter.textContent = subjectInput.value.length + '/200';

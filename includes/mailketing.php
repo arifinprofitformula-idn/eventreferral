@@ -178,11 +178,15 @@ function build_invitation_email_html(array $brand, array $event, array $settings
     $logoPath = !empty($brand['logo_path']) ? $brand['logo_path'] : '/assets/logo.png';
     $logoUrl = 'https://' . $brand['domain'] . $logoPath;
 
+    $eventName = htmlspecialchars($event['name'] ?? '', ENT_QUOTES, 'UTF-8');
+    $eventDay = htmlspecialchars($event['event_day'] ?? '', ENT_QUOTES, 'UTF-8');
+    $boldStyle = 'font-weight:700;color:#ffffff;';
+
     $placeholders = [
         '{{nama}}'            => htmlspecialchars($leadName, ENT_QUOTES, 'UTF-8'),
         '{{name}}'            => htmlspecialchars($leadName, ENT_QUOTES, 'UTF-8'),
-        '{{event_name}}'      => htmlspecialchars($event['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-        '{{event_day}}'       => htmlspecialchars($event['event_day'] ?? '', ENT_QUOTES, 'UTF-8'),
+        '{{event_name}}'      => '<strong style="' . $boldStyle . '">' . $eventName . '</strong>',
+        '{{event_day}}'       => '<strong style="' . $boldStyle . '">' . $eventDay . '</strong>',
         '{{event_time}}'      => htmlspecialchars($event['event_time'] ?? '', ENT_QUOTES, 'UTF-8'),
         '{{event_location}}'  => htmlspecialchars($event['event_location'] ?? '', ENT_QUOTES, 'UTF-8'),
         '{{event_speaker}}'   => htmlspecialchars($event['event_speaker'] ?? '', ENT_QUOTES, 'UTF-8'),
