@@ -4,6 +4,20 @@ require_once __DIR__ . '/includes/bootstrap.php';
 
 $brand = require_brand_or_404(get_current_brand());
 $brandId = (int)$brand['id'];
+$defaultEventSlug = $brand['default_event_slug'] ?? DEFAULT_EVENT_SLUG;
+
+if ($defaultEventSlug !== '') {
+    $defaultEventIndex = EVENTS_DIR . '/' . $defaultEventSlug . '/index.html';
+    if (is_file($defaultEventIndex)) {
+        $targetUrl = EVENTS_URL_BASE . '/' . rawurlencode($defaultEventSlug) . '/';
+        $queryString = $_SERVER['QUERY_STRING'] ?? '';
+        if ($queryString !== '') {
+            $targetUrl .= '?' . $queryString;
+        }
+        header('Location: ' . $targetUrl, true, 302);
+        exit;
+    }
+}
 
 $refCode = isset($_GET['ref']) ? clean($_GET['ref']) : DEFAULT_REF_CODE;
 $referrerName = null;
