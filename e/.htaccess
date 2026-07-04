@@ -24,4 +24,14 @@
 </FilesMatch>
 
 Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Semua request halaman utama event harus melewati handler PHP di root
+    # agar status event di database dapat memblokir event nonaktif.
+    RewriteRule ^([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)$ /e/$1/ [R=302,L]
+    RewriteRule ^([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)(?:/(?:index\.html?)?)?$ /event.php?event=$1 [L,QSA,NC]
+</IfModule>
+
 DirectoryIndex index.html

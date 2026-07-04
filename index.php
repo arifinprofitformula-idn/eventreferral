@@ -5,8 +5,22 @@ require_once __DIR__ . '/includes/bootstrap.php';
 $brand = require_brand_or_404(get_current_brand());
 $brandId = (int)$brand['id'];
 $defaultEventSlug = $brand['default_event_slug'] ?? DEFAULT_EVENT_SLUG;
+$pdo = null;
+$defaultEventIsActive = true;
 
-if ($defaultEventSlug !== '') {
+try {
+    $pdo = get_db(false);
+    if ($pdo && $defaultEventSlug !== '') {
+        $stmt = $pdo->prepare('SELECT status FROM events WHERE brand_id = ? AND slug = ? LIMIT 1');
+        $stmt->execute([$brandId, $defaultEventSlug]);
+        $defaultEventStatus = $stmt->fetchColumn();
+        $defaultEventIsActive = $defaultEventStatus === 'active';
+    }
+} catch (Exception $e) {
+    $pdo = null;
+}
+
+if ($defaultEventSlug !== '' && $defaultEventIsActive) {
     $defaultEventIndex = EVENTS_DIR . '/' . $defaultEventSlug . '/index.html';
     if (is_file($defaultEventIndex)) {
         $eventBaseUrl = EVENTS_URL_BASE . '/' . rawurlencode($defaultEventSlug) . '/';
@@ -36,10 +50,9 @@ if ($defaultEventSlug !== '') {
 
 $refCode = isset($_GET['ref']) ? clean($_GET['ref']) : DEFAULT_REF_CODE;
 $referrerName = null;
-$pdo = null;
 
 try {
-    $pdo = get_db(false);
+    $pdo = $pdo ?: get_db(false);
     if ($pdo) {
         $stmt = $pdo->prepare('SELECT name FROM referrers WHERE brand_id = ? AND ref_code = ?');
         $stmt->execute([$brandId, $refCode]);

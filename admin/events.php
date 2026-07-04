@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($_SESSION['csrf_token'
         }
     }
 
-    // ---- Arsipkan / aktifkan kembali event ----
+    // ---- Nonaktifkan / aktifkan kembali event ----
     if (isset($_POST['toggle_status']) && isset($_POST['slug'])) {
         $slug = clean($_POST['slug']);
         if ($slug !== $defaultEventSlug) {
@@ -158,11 +158,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($_SESSION['csrf_token'
                 $newStatus = $ev['status'] === 'active' ? 'archived' : 'active';
                 $stmt = $pdo->prepare('UPDATE events SET status = ? WHERE slug = ? AND brand_id = ?');
                 $stmt->execute([$newStatus, $slug, $brandId]);
-                $notice = 'Status event "' . htmlspecialchars($ev['name']) . '" diubah menjadi ' . ($newStatus === 'active' ? 'AKTIF' : 'DIARSIPKAN') . '.';
+                $notice = 'Status event "' . htmlspecialchars($ev['name']) . '" diubah menjadi ' . ($newStatus === 'active' ? 'AKTIF' : 'NONAKTIF') . '.';
                 $noticeType = 'success';
             }
         } else {
-            $notice = 'Event utama (default) tidak bisa diarsipkan.';
+            $notice = 'Event utama (default) tidak bisa dinonaktifkan. Jadikan event lain sebagai utama terlebih dahulu.';
             $noticeType = 'error';
         }
     }
@@ -1155,7 +1155,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
           <span class="icon-badge" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           Semua Event
         </h2>
-        <p class="desc">Kelola halaman, referral link, challenge, hadiah, dan tracking setiap event.</p>
+        <p class="desc">Kelola halaman, referral link, challenge, hadiah, tracking, dan status tampil publik setiap event.</p>
       </div>
       <div class="section-actions">
         <div class="search-wrap">
@@ -1233,8 +1233,8 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                   <input type="hidden" name="toggle_status" value="1">
                   <input type="hidden" name="slug" value="<?= htmlspecialchars($ev['slug']) ?>">
-                  <button class="event-action <?= $eventStatus === 'active' ? 'danger' : 'warning' ?>" type="submit" onclick="return confirm('Yakin ingin <?= $eventStatus === 'active' ? 'mengarsipkan' : 'mengaktifkan kembali' ?> event ini?')">
-                    <?= $eventStatus === 'active' ? 'Arsipkan' : 'Aktifkan' ?>
+                  <button class="event-action <?= $eventStatus === 'active' ? 'danger' : 'warning' ?>" type="submit" onclick="return confirm('Yakin ingin <?= $eventStatus === 'active' ? 'menonaktifkan' : 'mengaktifkan kembali' ?> event ini?')">
+                    <?= $eventStatus === 'active' ? 'Nonaktifkan' : 'Aktifkan' ?>
                   </button>
                 </form>
               <?php endif; ?>
