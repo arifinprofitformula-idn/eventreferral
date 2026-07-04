@@ -65,6 +65,11 @@ $logoPath = $brand['logo_path'] ? $brand['logo_path'] : 'assets/logo.png';
     border: 1px solid var(--gold); border-radius: 14px; padding: 20px;
   }
   .result p { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .card-title {
+    text-align: left; font-size: 15.5px; font-weight: 700; color: var(--gold);
+    margin-bottom: 4px; display: flex; align-items: center; gap: 6px;
+  }
+  .card-desc { text-align: left; font-size: 12.5px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
   .link-box {
     display: flex; gap: 8px; background: var(--charcoal); border-radius: 10px; padding: 10px 12px;
     align-items: center;
@@ -94,6 +99,27 @@ $logoPath = $brand['logo_path'] ? $brand['logo_path'] : 'assets/logo.png';
   }
   .copy-existing-link:hover { border-color: var(--gold); }
   .copy-hint { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .event-detail {
+    text-align: left; background: rgba(255,255,255,0.04); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 16px; font-size: 13.5px; line-height: 1.7;
+  }
+  .event-detail strong { color: var(--gold-soft); }
+  .templates { text-align: left; }
+  .template-card {
+    background: var(--charcoal); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 10px;
+  }
+  .template-card .t-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .template-card .t-head span { font-size: 12.5px; font-weight: 700; color: var(--gold); }
+  .template-card pre {
+    white-space: pre-wrap; word-break: break-word; font-family: inherit; font-size: 12.5px;
+    color: var(--white); margin-bottom: 10px; max-height: 140px; overflow-y: auto;
+  }
+  .template-card .copy-btn { width: 100%; }
+  .flyer-preview {
+    display: block; width: 100%; max-height: 320px; object-fit: contain;
+    border-radius: 10px; margin-bottom: 14px; background: var(--charcoal);
+  }
 </style>
 </head>
 <body>
@@ -123,12 +149,27 @@ $logoPath = $brand['logo_path'] ? $brand['logo_path'] : 'assets/logo.png';
   <div class="msg" id="errMsg"></div>
 
   <div class="result" id="resultBox">
-    <p>Link undangan kamu siap dibagikan:</p>
+    <div class="card-title">🔗 Link Referral Kamu</div>
+    <div class="card-desc">Ini link undanganmu — bagikan ke calon peserta agar mereka daftar lewat link ini dan otomatis terhubung ke WhatsApp kamu.</div>
+    <div class="event-detail" id="eventDetail"></div>
     <div class="link-box">
       <input type="text" id="linkOutput" readonly>
       <button class="copy-btn" id="copyBtn">Salin</button>
     </div>
     <a href="#" id="waShareBtn" class="share-btn" target="_blank">📲 Bagikan langsung ke WhatsApp →</a>
+  </div>
+
+  <div class="result" id="flyerBox">
+    <div class="card-title">🖼️ Flyer Acara</div>
+    <div class="card-desc">Unduh flyer ini dan kirimkan bersama link referralmu supaya calon peserta lebih yakin untuk mendaftar.</div>
+    <img id="flyerImage" class="flyer-preview" alt="Flyer acara">
+    <a href="#" id="flyerDownloadBtn" class="share-btn" download>⬇️ Unduh Flyer</a>
+  </div>
+
+  <div class="result templates" id="templateBox">
+    <div class="card-title">💬 Template Balasan untuk Peserta</div>
+    <div class="card-desc">Setelah ada yang mendaftar lewat link kamu, salin salah satu template ini, ganti [Nama Peserta], lalu kirim ke mereka via WhatsApp.</div>
+    <div id="templateList"></div>
   </div>
 </div>
 
@@ -138,9 +179,82 @@ const form = document.getElementById('genForm');
 const genBtn = document.getElementById('genBtn');
 const errMsg = document.getElementById('errMsg');
 const resultBox = document.getElementById('resultBox');
+const templateBox = document.getElementById('templateBox');
+const flyerBox = document.getElementById('flyerBox');
+const flyerImage = document.getElementById('flyerImage');
+const flyerDownloadBtn = document.getElementById('flyerDownloadBtn');
 const linkOutput = document.getElementById('linkOutput');
 const copyBtn = document.getElementById('copyBtn');
 const waShareBtn = document.getElementById('waShareBtn');
+const eventDetail = document.getElementById('eventDetail');
+const templateList = document.getElementById('templateList');
+
+function renderFlyer(event) {
+  const flyerPath = event && event.flyer_path;
+  if (!flyerPath) { flyerBox.style.display = 'none'; return; }
+  flyerImage.src = flyerPath;
+  flyerDownloadBtn.href = flyerPath;
+  flyerBox.style.display = 'block';
+}
+
+function renderEventDetail(event) {
+  if (!event) { eventDetail.style.display = 'none'; return; }
+  const rows = [
+    ['Acara', event.name],
+    ['Hari/Tanggal', event.event_day],
+    ['Waktu', event.event_time],
+    ['Lokasi', event.event_location],
+    ['Pembicara', event.event_speaker],
+  ].filter(([, value]) => value);
+
+  if (!rows.length) { eventDetail.style.display = 'none'; return; }
+
+  eventDetail.innerHTML = rows.map(([label, value]) =>
+    `<div><strong>${label}:</strong> ${escapeHtml(value)}</div>`
+  ).join('');
+  eventDetail.style.display = 'block';
+}
+
+function renderTemplates(templates) {
+  templateList.innerHTML = '';
+  if (!templates || !templates.length) return;
+
+  templates.forEach((tpl, idx) => {
+    const card = document.createElement('div');
+    card.className = 'template-card';
+
+    const head = document.createElement('div');
+    head.className = 't-head';
+    const label = document.createElement('span');
+    label.textContent = tpl.label;
+    head.appendChild(label);
+    card.appendChild(head);
+
+    const pre = document.createElement('pre');
+    pre.textContent = tpl.text;
+    card.appendChild(pre);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy-btn';
+    btn.textContent = 'Salin Template';
+    btn.addEventListener('click', function () {
+      copyText(tpl.text).then(() => {
+        btn.textContent = 'Tersalin!';
+        setTimeout(() => btn.textContent = 'Salin Template', 1500);
+      });
+    });
+    card.appendChild(btn);
+
+    templateList.appendChild(card);
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
 
 form.addEventListener('submit', async function (e) {
   e.preventDefault();
@@ -167,10 +281,23 @@ form.addEventListener('submit', async function (e) {
       linkOutput.value = result.link;
       const shareText = `Halo! Aku mau undang kamu ke acara edukasi gratis "${brandName}" — Jumat malam ini. Daftar di sini ya: ${result.link}`;
       waShareBtn.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+      renderEventDetail(result.event);
+      renderFlyer(result.event);
+      renderTemplates(result.templates);
       resultBox.style.display = 'block';
+      templateBox.style.display = 'block';
       form.style.display = 'none';
     } else if (result.existing_link) {
       showExistingLinkMessage(result.message, result.existing_link);
+      linkOutput.value = result.existing_link;
+      const shareText = `Halo! Aku mau undang kamu ke acara edukasi gratis "${brandName}" — Jumat malam ini. Daftar di sini ya: ${result.existing_link}`;
+      waShareBtn.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+      renderEventDetail(result.event);
+      renderFlyer(result.event);
+      renderTemplates(result.templates);
+      resultBox.style.display = 'block';
+      templateBox.style.display = 'block';
+      form.style.display = 'none';
     } else {
       errMsg.textContent = '⚠️ ' + (result.message || 'Terjadi kesalahan.');
       errMsg.style.display = 'block';

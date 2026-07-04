@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS events (
     event_speaker VARCHAR(100) NULL,
     event_capacity VARCHAR(20) NULL,
     reward_image VARCHAR(255) NULL,
+    flyer_path VARCHAR(255) NULL,
     meta_pixel_id VARCHAR(50) NULL,
     ga_measurement_id VARCHAR(30) NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -99,6 +100,7 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS brand_id INT NULL AFTER id;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS reward_image VARCHAR(255) NULL AFTER event_capacity;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS meta_pixel_id VARCHAR(50) NULL AFTER reward_image;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS ga_measurement_id VARCHAR(30) NULL AFTER meta_pixel_id;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS flyer_path VARCHAR(255) NULL AFTER reward_image;
 ALTER TABLE referrers ADD COLUMN IF NOT EXISTS brand_id INT NULL AFTER id;
 ALTER TABLE referrers ADD COLUMN IF NOT EXISTS event_slug VARCHAR(60) NOT NULL DEFAULT 'default' AFTER ref_code;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS brand_id INT NULL AFTER id;

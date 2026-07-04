@@ -48,6 +48,10 @@ define('REWARD_IMAGES_DIR', __DIR__ . '/assets/rewards');
 define('REWARD_IMAGES_URL_BASE', '/assets/rewards');
 define('MAX_REWARD_IMAGE_SIZE', 5 * 1024 * 1024); // 5 MB
 define('ALLOWED_REWARD_IMAGE_EXT', ['png','jpg','jpeg','webp','gif']);
+define('EVENT_FLYERS_DIR', __DIR__ . '/assets/flyers');
+define('EVENT_FLYERS_URL_BASE', '/assets/flyers');
+define('MAX_EVENT_FLYER_SIZE', 8 * 1024 * 1024); // 8 MB
+define('ALLOWED_EVENT_FLYER_EXT', ['png','jpg','jpeg','webp']);
 
 // ==== MULTI-BRAND (v7) ====
 define('BRAND_LOGOS_DIR', __DIR__ . '/uploads/brands');

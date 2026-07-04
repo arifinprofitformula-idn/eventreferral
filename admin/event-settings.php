@@ -9,6 +9,8 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
+$pdo = get_db();
+
 $eventSlug = clean($_GET['event'] ?? '');
 $event = $eventSlug !== '' ? get_event_by_slug($eventSlug) : null;
 if ($event && (int)$event['brand_id'] !== (int)$brand['id']) {
@@ -70,8 +72,38 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_POST['event_capacity'] = (string)(int)$formValues['event_capacity'];
                 $updated = update_event_settings($eventSlug, $_POST);
                 $event = array_merge($event, $updated);
-                header('Location: event-settings.php?event=' . urlencode($eventSlug) . '&saved=1');
-                exit;
+
+                // ---- Hapus flyer jika diminta ----
+                if (isset($_POST['remove_flyer']) && !empty($event['flyer_path'])) {
+                    delete_event_flyer($event['flyer_path']);
+                    $stmt = $pdo->prepare('UPDATE events SET flyer_path = NULL WHERE slug = ? AND brand_id = ?');
+                    $stmt->execute([$eventSlug, (int)$brand['id']]);
+                    $event['flyer_path'] = null;
+                }
+
+                // ---- Upload flyer baru jika ada ----
+                if (isset($_FILES['flyer']) && $_FILES['flyer']['error'] === UPLOAD_ERR_OK) {
+                    $file = $_FILES['flyer'];
+                    if ($file['size'] > MAX_EVENT_FLYER_SIZE) {
+                        $notice = 'Ukuran flyer terlalu besar. Maksimal ' . (MAX_EVENT_FLYER_SIZE / 1024 / 1024) . ' MB.';
+                        $noticeType = 'error';
+                    } else {
+                        $flyerPath = save_event_flyer($file['tmp_name'], $file['name'], $eventSlug);
+                        if (!$flyerPath) {
+                            $notice = 'Gagal upload flyer. Pastikan file adalah gambar dengan format yang diizinkan.';
+                            $noticeType = 'error';
+                        } else {
+                            $stmt = $pdo->prepare('UPDATE events SET flyer_path = ? WHERE slug = ? AND brand_id = ?');
+                            $stmt->execute([$flyerPath, $eventSlug, (int)$brand['id']]);
+                            $event['flyer_path'] = $flyerPath;
+                        }
+                    }
+                }
+
+                if (!$notice) {
+                    header('Location: event-settings.php?event=' . urlencode($eventSlug) . '&saved=1');
+                    exit;
+                }
             } catch (Exception $e) {
                 $notice = 'Detail acara belum bisa disimpan. Mohon periksa input dan coba lagi.';
                 $noticeType = 'error';
@@ -451,6 +483,33 @@ function event_field_class(array $errors, string $key): string
     font-weight: 700;
     margin-top: 8px;
   }
+  .flyer-field {
+    display: grid;
+    gap: 12px;
+  }
+  .flyer-current img {
+    max-width: 220px;
+    max-height: 160px;
+    width: auto;
+    height: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.13);
+    display: block;
+    margin-bottom: 8px;
+  }
+  .flyer-remove {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .flyer-field input[type="file"] {
+    color: var(--muted);
+    font-size: 13px;
+  }
   .save-bar {
     position: sticky;
     bottom: 0;
@@ -676,7 +735,7 @@ function event_field_class(array $errors, string $key): string
     <?php endif; ?>
 
     <div class="main-grid">
-      <form method="POST" class="panel" novalidate>
+      <form method="POST" class="panel" enctype="multipart/form-data" novalidate>
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
 
         <div class="panel-head">
@@ -755,6 +814,30 @@ function event_field_class(array $errors, string $key): string
             <div>
               <input class="<?= event_field_class($fieldErrors, 'event_capacity') ?>" type="number" min="1" step="1" id="event_capacity" name="event_capacity" value="<?= htmlspecialchars($formValues['event_capacity'] ?? '') ?>" required>
               <?php if (isset($fieldErrors['event_capacity'])): ?><div class="error-message"><?= htmlspecialchars($fieldErrors['event_capacity']) ?></div><?php endif; ?>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-meta">
+              <span class="field-icon">IMG</span>
+              <div>
+                <label for="flyer">Flyer Acara</label>
+                <p class="helper">Ditampilkan agar pengundang bisa unduh &amp; kirim ke calon peserta</p>
+              </div>
+            </div>
+            <div class="flyer-field">
+              <?php if (!empty($event['flyer_path'])): ?>
+                <div class="flyer-current">
+                  <img src="<?= htmlspecialchars($event['flyer_path']) ?>" alt="Flyer acara saat ini">
+                  <label class="flyer-remove">
+                    <input type="checkbox" name="remove_flyer" value="1"> Hapus flyer saat ini
+                  </label>
+                </div>
+              <?php else: ?>
+                <p class="helper">Belum ada flyer. Upload gambar flyer/poster acara.</p>
+              <?php endif; ?>
+              <input type="file" id="flyer" name="flyer" accept=".png,.jpg,.jpeg,.webp">
+              <p class="helper">PNG, JPG, JPEG, WEBP. Maksimal <?= (int)(MAX_EVENT_FLYER_SIZE / 1024 / 1024) ?> MB.</p>
             </div>
           </div>
         </div>

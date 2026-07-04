@@ -150,12 +150,12 @@ function build_invitation_email_html(array $brand, array $event, array $settings
 {
     $accent = ($brand['theme_preset'] ?? 'gold') === 'silver' ? '#B7BCC4' : '#C9A84C';
     $brandName = htmlspecialchars($brand['name'] ?? $brand['slug'], ENT_QUOTES, 'UTF-8');
-    $logoUrl = !empty($brand['logo_path'])
-        ? 'https://' . $brand['domain'] . $brand['logo_path']
-        : '';
+    $logoPath = !empty($brand['logo_path']) ? $brand['logo_path'] : '/assets/logo.png';
+    $logoUrl = 'https://' . $brand['domain'] . $logoPath;
 
     $placeholders = [
         '{{nama}}'            => htmlspecialchars($leadName, ENT_QUOTES, 'UTF-8'),
+        '{{name}}'            => htmlspecialchars($leadName, ENT_QUOTES, 'UTF-8'),
         '{{event_name}}'      => htmlspecialchars($event['name'] ?? '', ENT_QUOTES, 'UTF-8'),
         '{{event_day}}'       => htmlspecialchars($event['event_day'] ?? '', ENT_QUOTES, 'UTF-8'),
         '{{event_time}}'      => htmlspecialchars($event['event_time'] ?? '', ENT_QUOTES, 'UTF-8'),
@@ -174,7 +174,7 @@ function build_invitation_email_html(array $brand, array $event, array $settings
     $disclaimer = htmlspecialchars($brand['disclaimer_text'] ?? '', ENT_QUOTES, 'UTF-8');
 
     $logoBlock = $logoUrl !== ''
-        ? '<img src="' . htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8') . '" alt="' . $brandName . '" style="height:40px;">'
+        ? '<img src="' . htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8') . '" alt="' . $brandName . '" style="height:40px;display:block;margin:0 auto;">'
         : '<span style="font-size:20px;font-weight:700;color:#fff;">' . $brandName . '</span>';
 
     return <<<HTML
@@ -184,7 +184,7 @@ function build_invitation_email_html(array $brand, array $event, array $settings
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f0f;padding:24px 0;">
     <tr><td align="center">
       <table width="480" cellpadding="0" cellspacing="0" style="background:#1a1a1a;border-radius:16px;overflow:hidden;border:1px solid {$accent}40;">
-        <tr><td style="background:#141414;padding:20px 28px;">{$logoBlock}</td></tr>
+        <tr><td align="center" style="background:#141414;padding:20px 28px;text-align:center;">{$logoBlock}</td></tr>
         <tr><td style="padding:28px;color:#eaeaea;font-size:14px;line-height:1.6;">
           {$bodyHtml}
         </td></tr>

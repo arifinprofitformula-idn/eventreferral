@@ -249,6 +249,53 @@ function delete_reward_image($imagePath) {
 }
 
 /**
+ * Simpan flyer/poster acara untuk dibagikan pengundang di halaman buat-link.php.
+ * Memvalidasi ekstensi DAN memastikan file benar-benar gambar (getimagesize),
+ * lalu menyimpannya sebagai EVENT_FLYERS_DIR/{slug}.{ext} (menimpa versi lama).
+ *
+ * @return string|null Path URL flyer (EVENT_FLYERS_URL_BASE/{slug}.{ext}), atau null jika gagal.
+ */
+function save_event_flyer($tmpPath, $originalName, $eventSlug) {
+    $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+    if (!in_array($ext, ALLOWED_EVENT_FLYER_EXT, true)) {
+        return null;
+    }
+
+    if (@getimagesize($tmpPath) === false) {
+        return null;
+    }
+
+    if (!is_dir(EVENT_FLYERS_DIR)) {
+        mkdir(EVENT_FLYERS_DIR, 0755, true);
+    }
+
+    // Hapus file lama untuk slug ini walau ekstensinya berbeda.
+    foreach (ALLOWED_EVENT_FLYER_EXT as $oldExt) {
+        $oldPath = EVENT_FLYERS_DIR . '/' . $eventSlug . '.' . $oldExt;
+        if (is_file($oldPath)) {
+            unlink($oldPath);
+        }
+    }
+
+    $destPath = EVENT_FLYERS_DIR . '/' . $eventSlug . '.' . $ext;
+    if (!move_uploaded_file($tmpPath, $destPath)) {
+        return null;
+    }
+
+    return EVENT_FLYERS_URL_BASE . '/' . $eventSlug . '.' . $ext;
+}
+
+/** Hapus file flyer fisik milik sebuah event, jika ada. */
+function delete_event_flyer($flyerPath) {
+    if (!$flyerPath) return;
+    $fileName = basename($flyerPath);
+    $fullPath = EVENT_FLYERS_DIR . '/' . $fileName;
+    if (is_file($fullPath)) {
+        unlink($fullPath);
+    }
+}
+
+/**
  * Simpan logo brand yang diunggah lewat admin/setup-brand.php.
  * - Validasi ekstensi (png/jpg/jpeg/webp/svg) dan ukuran maks (MAX_LOGO_SIZE).
  * - File raster divalidasi dengan getimagesize() (memastikan benar-benar gambar).

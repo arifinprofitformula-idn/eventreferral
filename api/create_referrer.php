@@ -7,6 +7,7 @@
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/message_templates.php';
 header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -36,6 +37,7 @@ $eventSlug = clean($input['event'] ?? $brand['default_event_slug']);
 $event = get_event_by_slug($eventSlug);
 if (!$event || (int)$event['brand_id'] !== $brandId || $event['status'] !== 'active') {
     $eventSlug = $brand['default_event_slug'];
+    $event = get_event_by_slug($eventSlug);
 }
 
 $errors = [];
@@ -80,6 +82,15 @@ try {
                 'message' => "Nomor WhatsApp ini sudah punya kode link. Berikut ini adalah link referral Anda, Tap link untuk menyalin.",
                 'existing_ref_code' => $refCode,
                 'existing_link' => $existingLink,
+                'event' => [
+                    'name' => $event['name'] ?? null,
+                    'event_day' => $event['event_day'] ?? null,
+                    'event_time' => $event['event_time'] ?? null,
+                    'event_location' => $event['event_location'] ?? null,
+                    'event_speaker' => $event['event_speaker'] ?? null,
+                    'flyer_path' => $event['flyer_path'] ?? null,
+                ],
+                'templates' => build_participant_reply_templates($event ?: [], $existingLink),
             ]);
             exit;
         }
@@ -105,6 +116,15 @@ try {
         'success' => true,
         'ref_code' => $refCode,
         'link' => $link,
+        'event' => [
+            'name' => $event['name'] ?? null,
+            'event_day' => $event['event_day'] ?? null,
+            'event_time' => $event['event_time'] ?? null,
+            'event_location' => $event['event_location'] ?? null,
+            'event_speaker' => $event['event_speaker'] ?? null,
+            'flyer_path' => $event['flyer_path'] ?? null,
+        ],
+        'templates' => build_participant_reply_templates($event ?: [], $link),
     ]);
 } catch (Exception $e) {
     http_response_code(500);
