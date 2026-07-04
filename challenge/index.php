@@ -5,7 +5,10 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 $brand = require_brand_or_404(get_current_brand());
 $brandId = (int)$brand['id'];
 
-$eventSlug = isset($_GET['event']) ? clean($_GET['event']) : '';
+$eventSlug = isset($_GET['event']) ? clean($_GET['event']) : ($brand['default_event_slug'] ?? DEFAULT_EVENT_SLUG);
+if ($eventSlug === '') {
+    $eventSlug = $brand['default_event_slug'] ?? DEFAULT_EVENT_SLUG;
+}
 $eventNotFound = false;
 $leaderboardPerPage = 20;
 $currentPage = max(1, (int)($_GET['page'] ?? 1));
@@ -26,7 +29,8 @@ if ($eventSlug !== '') {
     }
 }
 
-// Ambil leaderboard: jika event dipilih -> hanya event itu. Jika tidak -> semua event digabung.
+// Ambil leaderboard untuk event aktif yang dipilih.
+// Jika /challenge/ dibuka tanpa ?event=, otomatis mengikuti event utama brand.
 // Skor challenge memakai WhatsApp unik per event berdasarkan pendaftaran pertama.
 // Raw leads tetap disimpan apa adanya untuk audit dan follow-up.
 if ($eventSlug !== '') {
@@ -48,40 +52,12 @@ if ($eventSlug !== '') {
         ORDER BY total DESC, r.created_at ASC
     ');
     $stmt->execute([$brandId, $brandId, $eventSlug]);
-} else {
-    $stmt = $pdo->prepare('
-        SELECT r.name, COUNT(fl.id) AS total
-        FROM referrers r
-        LEFT JOIN (
-            SELECT l1.id, l1.event_slug, l1.ref_code
-            FROM leads l1
-            INNER JOIN (
-                SELECT event_slug, whatsapp, MIN(id) AS first_id
-                FROM leads
-                WHERE brand_id = ? AND whatsapp IS NOT NULL AND whatsapp <> ""
-                GROUP BY event_slug, whatsapp
-            ) first_lead ON first_lead.first_id = l1.id
-        ) fl ON fl.event_slug = r.event_slug AND fl.ref_code = r.ref_code
-        WHERE r.brand_id = ?
-        GROUP BY r.name
-        ORDER BY total DESC
-    ');
-    $stmt->execute([$brandId, $brandId]);
 }
 $leaderboard = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if ($eventSlug !== '') {
     $totalReferrersStmt = $pdo->prepare('SELECT COUNT(*) FROM referrers WHERE brand_id = ? AND event_slug = ?');
     $totalReferrersStmt->execute([$brandId, $eventSlug]);
-    $totalReferrers = (int)$totalReferrersStmt->fetchColumn();
-} else {
-    $totalReferrersStmt = $pdo->prepare('
-        SELECT COUNT(*)
-        FROM referrers r
-        INNER JOIN events e ON e.slug = r.event_slug AND e.brand_id = r.brand_id
-        WHERE r.brand_id = ? AND e.status = "active"
-    ');
-    $totalReferrersStmt->execute([$brandId]);
     $totalReferrers = (int)$totalReferrersStmt->fetchColumn();
 }
 
@@ -91,7 +67,7 @@ $currentPage = min($currentPage, $totalPages);
 $leaderboardOffset = ($currentPage - 1) * $leaderboardPerPage;
 $leaderboardPage = array_slice($leaderboard, $leaderboardOffset, $leaderboardPerPage);
 
-$pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : ($selectedEvent ? $selectedEvent['name'] : 'Semua Acara');
+$pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : ($selectedEvent ? $selectedEvent['name'] : 'Event Utama');
 
 if ($eventNotFound) {
     http_response_code(404);
@@ -107,10 +83,6 @@ $referralUrl = $selectedEvent ? '/buat-link.php?event=' . urlencode($eventSlug) 
 if ($eventSlug !== '') {
     $updatedStmt = $pdo->prepare('SELECT MAX(created_at) FROM leads WHERE brand_id = ? AND event_slug = ?');
     $updatedStmt->execute([$brandId, $eventSlug]);
-    $lastUpdated = $updatedStmt->fetchColumn();
-} else {
-    $updatedStmt = $pdo->prepare('SELECT MAX(created_at) FROM leads WHERE brand_id = ?');
-    $updatedStmt->execute([$brandId]);
     $lastUpdated = $updatedStmt->fetchColumn();
 }
 
@@ -923,8 +895,7 @@ function challenge_page_url(int $page, string $eventSlug): string
       <div class="section-head" style="margin-bottom:0;">
         <h2>Pilih Arena Challenge</h2>
         <div class="selector">
-          <select class="select-event" onchange="if(this.value){window.location.href='/challenge/?event='+encodeURIComponent(this.value)}else{window.location.href='/challenge/'}">
-            <option value="">Semua Acara (Gabungan)</option>
+          <select class="select-event" onchange="if(this.value){window.location.href='/challenge/?event='+encodeURIComponent(this.value)}">
             <?php foreach ($allEvents as $ev): ?>
               <option value="<?= htmlspecialchars($ev['slug']) ?>" <?= $ev['slug'] === $eventSlug ? 'selected' : '' ?>>
                 <?= htmlspecialchars($ev['name']) ?>
