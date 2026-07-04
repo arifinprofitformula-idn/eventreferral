@@ -78,7 +78,16 @@ function format_extra_fields(?string $json): string {
 <title>Dashboard Admin — <?= htmlspecialchars($brand['name']) ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { --charcoal:#1A1A1A; --charcoal-soft:#242424; --gold:#C9A84C; --gold-soft:#E8D5A3; --white:#FAFAFA; --muted:#9C9992; }
+  <?= get_theme_css_vars($brand) ?>
+  :root {
+    --charcoal: var(--brand-charcoal);
+    --charcoal-soft: color-mix(in srgb, var(--brand-charcoal) 86%, #FFFFFF);
+    --gold: var(--brand-primary);
+    --gold-soft: var(--brand-soft);
+    --white:#FAFAFA;
+    --muted:#9C9992;
+    --border-accent: color-mix(in srgb, var(--gold) 22%, transparent);
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--charcoal); color: var(--white); font-family: 'Poppins', sans-serif; padding: 24px; }
   .wrap { max-width: 1100px; margin: 0 auto; }
@@ -86,7 +95,7 @@ function format_extra_fields(?string $json): string {
   h1 { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 24px; }
   .logout { color: var(--muted); font-size: 13.5px; text-decoration: none; }
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 40px; }
-  .stat-card { background: var(--charcoal-soft); border: 1px solid rgba(201,168,76,0.2); border-radius: 14px; padding: 20px; }
+  .stat-card { background: var(--charcoal-soft); border: 1px solid var(--border-accent); border-radius: 14px; padding: 20px; }
   .stat-card .num { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 32px; font-weight: 800; }
   .stat-card .label { color: var(--muted); font-size: 13px; margin-top: 4px; }
   h2 { font-family: 'Playfair Display', serif; color: var(--gold-soft); font-size: 18px; margin: 36px 0 16px; }
@@ -108,7 +117,7 @@ function format_extra_fields(?string $json): string {
   <header>
     <h1>📊 Dashboard <?= htmlspecialchars($brand['name']) ?></h1>
     <nav style="display:flex; align-items:center; gap:18px;">
-      <a href="dashboard.php" style="color:var(--gold); font-size:13.5px; text-decoration:none;">Dashboard</a>
+      <a href="dashboard.php" style="color:var(--gold-soft); font-size:13.5px; text-decoration:none;">Dashboard</a>
       <a href="events.php" style="color:var(--muted); font-size:13.5px; text-decoration:none;">Kelola Event</a>
       <a href="logout.php" class="logout">Keluar →</a>
     </nav>
