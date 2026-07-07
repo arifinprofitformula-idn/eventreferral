@@ -94,6 +94,22 @@ CREATE TABLE IF NOT EXISTS login_attempts (
     INDEX idx_ip (ip)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS admin_users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    brand_id INT NULL,
+    username VARCHAR(60) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    name VARCHAR(150) NULL,
+    email VARCHAR(150) NULL,
+    role ENUM('superadmin','admin') NOT NULL DEFAULT 'admin',
+    status ENUM('active','inactive') NOT NULL DEFAULT 'active',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_admin_users_username (username),
+    INDEX idx_admin_users_brand (brand_id),
+    INDEX idx_admin_users_role_status (role, status),
+    CONSTRAINT fk_admin_users_brand FOREIGN KEY (brand_id) REFERENCES brands(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Jika file ini terlanjur di-import ke database yang sudah punya tabel lama,
 -- CREATE TABLE IF NOT EXISTS tidak akan mengubah struktur tabel tersebut.
 -- Baris ALTER berikut membuat import ulang tetap bisa melengkapi kolom v8.
@@ -128,6 +144,17 @@ VALUES (
     'active'
 )
 ON DUPLICATE KEY UPDATE id = id;
+
+INSERT INTO admin_users (brand_id, username, password_hash, name, role, status)
+VALUES (
+    NULL,
+    'admin',
+    '$2y$12$iUeNUsTjuTdSG8uekn4OguWiD9GsNGxrSQQP/5PoITp/3UwRLq0Ja',
+    'Superadmin rahasiaemas.id',
+    'superadmin',
+    'active'
+)
+ON DUPLICATE KEY UPDATE username = username;
 
 UPDATE events SET brand_id = 1 WHERE brand_id IS NULL;
 UPDATE referrers SET brand_id = 1 WHERE brand_id IS NULL;

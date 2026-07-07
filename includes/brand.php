@@ -81,12 +81,42 @@ function require_brand_or_404(?array $brand): array {
 function require_admin_for_brand(?array $brand): array {
     $brand = require_brand_or_404($brand);
 
-    if (empty($_SESSION['admin_brand_id']) || (int)$_SESSION['admin_brand_id'] !== (int)$brand['id']) {
+    $isSuperadmin = !empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'superadmin';
+    $isBrandAdmin = !empty($_SESSION['admin_brand_id']) && (int)$_SESSION['admin_brand_id'] === (int)$brand['id'];
+
+    if (!$isSuperadmin && !$isBrandAdmin) {
         header('Location: /admin/login.php');
         exit;
     }
 
     return $brand;
+}
+
+/**
+ * Batasi halaman tertentu hanya untuk superadmin.
+ * Superadmin boleh mengelola user admin untuk brand/domain yang sedang dibuka.
+ */
+function require_superadmin_for_brand(?array $brand): array {
+    $brand = require_admin_for_brand($brand);
+
+    if (empty($_SESSION['admin_role']) || $_SESSION['admin_role'] !== 'superadmin') {
+        session_destroy();
+        header('Location: /admin/login.php?reauth=superadmin');
+        exit;
+    }
+
+    return $brand;
+}
+
+/** Cek apakah tabel opsional tersedia tanpa melempar warning ke halaman publik/admin. */
+function table_exists(PDO $pdo, string $tableName): bool {
+    try {
+        $stmt = $pdo->prepare('SHOW TABLES LIKE ?');
+        $stmt->execute([$tableName]);
+        return (bool)$stmt->fetchColumn();
+    } catch (Throwable $e) {
+        return false;
+    }
 }
 
 /**

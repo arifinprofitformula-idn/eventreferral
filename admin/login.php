@@ -6,9 +6,14 @@ start_secure_session();
 $brand = require_brand_or_404(get_current_brand());
 
 $error = null;
+$notice = null;
+
+if (($_GET['reauth'] ?? '') === 'superadmin') {
+    $notice = 'Silakan login ulang sebagai superadmin untuk membuka halaman Kelola Admin.';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
+    $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 
@@ -25,15 +30,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($attemptCount >= LOGIN_MAX_ATTEMPTS) {
             $error = 'Terlalu banyak percobaan gagal. Coba lagi dalam beberapa menit.';
-        } elseif (hash_equals($brand['admin_username'], $username) && password_verify($password, $brand['admin_password_hash'])) {
-            $stmt = $pdo->prepare('DELETE FROM login_attempts WHERE ip = ?');
-            $stmt->execute([$ip]);
-
-            session_regenerate_id(true);
-            $_SESSION['admin_brand_id'] = (int)$brand['id'];
-            header('Location: /admin/dashboard.php');
-            exit;
         } else {
+            $authenticated = false;
+            $sessionRole = 'admin';
+            $sessionUserId = null;
+            $sessionBrandId = (int)$brand['id'];
+
+            if (table_exists($pdo, 'admin_users')) {
+                $stmt = $pdo->prepare('
+                    SELECT id, brand_id, username, password_hash, role, status
+                    FROM admin_users
+                    WHERE username = ? AND status = "active"
+                    LIMIT 1
+                ');
+                $stmt->execute([$username]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($user && password_verify($password, $user['password_hash'])) {
+                    $userRole = (string)$user['role'];
+                    $userBrandId = $user['brand_id'] !== null ? (int)$user['brand_id'] : null;
+                    if ($userRole === 'superadmin' || $userBrandId === (int)$brand['id']) {
+                        $authenticated = true;
+                        $sessionRole = $userRole;
+                        $sessionUserId = (int)$user['id'];
+                        $sessionBrandId = $userBrandId ?: (int)$brand['id'];
+                    }
+                }
+            }
+
+            // Bootstrap superadmin: memakai kredensial utama config.php agar superadmin
+            // tetap bisa masuk sebelum tabel admin_users dibuat/diisi.
+            if (!$authenticated && hash_equals(ADMIN_USERNAME, $username) && password_verify($password, ADMIN_PASSWORD_HASH)) {
+                $authenticated = true;
+                $sessionRole = 'superadmin';
+                $sessionBrandId = (int)$brand['id'];
+            }
+
+            // Fallback kompatibilitas untuk admin brand lama di tabel brands.
+            if (!$authenticated && hash_equals($brand['admin_username'], $username) && password_verify($password, $brand['admin_password_hash'])) {
+                $authenticated = true;
+                $sessionRole = 'admin';
+                $sessionBrandId = (int)$brand['id'];
+            }
+
+            if ($authenticated) {
+                $stmt = $pdo->prepare('DELETE FROM login_attempts WHERE ip = ?');
+                $stmt->execute([$ip]);
+
+                session_regenerate_id(true);
+                $_SESSION['admin_brand_id'] = $sessionBrandId;
+                $_SESSION['admin_role'] = $sessionRole;
+                $_SESSION['admin_user_id'] = $sessionUserId;
+                header('Location: /admin/dashboard.php');
+                exit;
+            }
+
             $stmt = $pdo->prepare('INSERT INTO login_attempts (ip) VALUES (?)');
             $stmt->execute([$ip]);
             $error = 'Username atau password salah.';
@@ -41,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-if (!empty($_SESSION['admin_brand_id']) && (int)$_SESSION['admin_brand_id'] === (int)$brand['id']) {
+if ((!empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'superadmin') || (!empty($_SESSION['admin_brand_id']) && (int)$_SESSION['admin_brand_id'] === (int)$brand['id'])) {
     header('Location: /admin/dashboard.php');
     exit;
 }
@@ -300,6 +351,24 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     font-size: 13px;
     line-height: 1.45;
   }
+  .alert-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    color: #FEF3C7;
+    background: rgba(245,158,11,0.10);
+    border: 1px solid rgba(245,158,11,0.28);
+    border-radius: 14px;
+    padding: 11px 12px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .alert-notice svg {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    margin-top: 1px;
+  }
   .alert-error svg {
     width: 17px;
     height: 17px;
@@ -424,6 +493,15 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
       </div>
 
       <form class="login-form" method="POST" id="loginForm">
+        <?php if (!empty($notice)): ?>
+          <div class="alert-notice" role="status">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 8v5m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span><?= htmlspecialchars($notice) ?></span>
+          </div>
+        <?php endif; ?>
+
         <?php if (!empty($error)): ?>
           <div class="alert-error" role="alert">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
