@@ -33,6 +33,7 @@ $formValues = $event ?: [
     'event_location' => '',
     'event_speaker' => '',
     'event_capacity' => '',
+    'event_date' => '',
 ];
 
 if (!$eventNotFound && defined('MAX_EVENT_FLYER_SIZE') && defined('ALLOWED_EVENT_FLYER_EXT') && function_exists('save_event_flyer') && function_exists('delete_event_flyer')) {
@@ -53,6 +54,7 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
         'event_location' => trim($_POST['event_location'] ?? ''),
         'event_speaker' => trim($_POST['event_speaker'] ?? ''),
         'event_capacity' => trim($_POST['event_capacity'] ?? ''),
+        'event_date' => trim($_POST['event_date'] ?? ''),
     ]);
 
     if (!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
@@ -73,6 +75,12 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if (!ctype_digit($formValues['event_capacity']) || (int)$formValues['event_capacity'] <= 0) {
             $fieldErrors['event_capacity'] = 'Kapasitas harus berupa angka positif.';
+        }
+        if ($formValues['event_date'] !== '') {
+            $parsedDate = DateTime::createFromFormat('Y-m-d', $formValues['event_date']);
+            if (!$parsedDate || $parsedDate->format('Y-m-d') !== $formValues['event_date']) {
+                $fieldErrors['event_date'] = 'Format tanggal tidak valid.';
+            }
         }
 
         if (!empty($fieldErrors)) {
@@ -469,7 +477,8 @@ function event_field_class(array $errors, string $key): string
     line-height: 1.5;
   }
   .field input[type="text"],
-  .field input[type="number"] {
+  .field input[type="number"],
+  .field input[type="date"] {
     width: 100%;
     min-height: 52px;
     color: var(--text);
@@ -769,6 +778,20 @@ function event_field_class(array $errors, string $key): string
             <div>
               <input class="<?= event_field_class($fieldErrors, 'event_day') ?>" type="text" id="event_day" name="event_day" value="<?= htmlspecialchars($formValues['event_day'] ?? '') ?>" required>
               <?php if (isset($fieldErrors['event_day'])): ?><div class="error-message"><?= htmlspecialchars($fieldErrors['event_day']) ?></div><?php endif; ?>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-meta">
+              <span class="field-icon">DATE</span>
+              <div>
+                <label for="event_date">Tanggal Acara (untuk Kalender Publik)</label>
+                <p class="helper">Dipakai untuk mengurutkan event di halaman /kalender/. Opsional, tapi sangat disarankan diisi.</p>
+              </div>
+            </div>
+            <div>
+              <input class="<?= event_field_class($fieldErrors, 'event_date') ?>" type="date" id="event_date" name="event_date" value="<?= htmlspecialchars($formValues['event_date'] ?? '') ?>">
+              <?php if (isset($fieldErrors['event_date'])): ?><div class="error-message"><?= htmlspecialchars($fieldErrors['event_date']) ?></div><?php endif; ?>
             </div>
           </div>
 

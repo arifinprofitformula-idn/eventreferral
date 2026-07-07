@@ -159,7 +159,7 @@ function get_event_by_slug($slug) {
     return $row ?: null;
 }
 
-/** Perbarui detail acara (hari, waktu, lokasi, pembicara, kapasitas) milik sebuah event. */
+/** Perbarui detail acara (hari, waktu, lokasi, pembicara, kapasitas, tanggal) milik sebuah event. */
 function update_event_settings($slug, array $data) {
     $settings = [
         'event_day' => trim($data['event_day'] ?? ''),
@@ -175,10 +175,22 @@ function update_event_settings($slug, array $data) {
         }
     }
 
+    // event_date bersifat OPSIONAL — tidak mengubah validasi field lama di atas.
+    // Dipakai khusus untuk sorting kronologis di /kalender/index.php.
+    $eventDateRaw = trim($data['event_date'] ?? '');
+    $eventDate = null;
+    if ($eventDateRaw !== '') {
+        $parsed = DateTime::createFromFormat('Y-m-d', $eventDateRaw);
+        if (!$parsed || $parsed->format('Y-m-d') !== $eventDateRaw) {
+            throw new InvalidArgumentException('Format tanggal acara tidak valid.');
+        }
+        $eventDate = $eventDateRaw;
+    }
+
     $pdo = get_db();
     $stmt = $pdo->prepare('
         UPDATE events
-        SET event_day = ?, event_time = ?, event_location = ?, event_speaker = ?, event_capacity = ?
+        SET event_day = ?, event_time = ?, event_location = ?, event_speaker = ?, event_capacity = ?, event_date = ?
         WHERE slug = ?
     ');
     $stmt->execute([
@@ -187,9 +199,11 @@ function update_event_settings($slug, array $data) {
         $settings['event_location'],
         $settings['event_speaker'],
         $settings['event_capacity'],
+        $eventDate,
         $slug,
     ]);
 
+    $settings['event_date'] = $eventDate;
     return $settings;
 }
 

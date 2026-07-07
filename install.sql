@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS events (
     status ENUM('active','archived') NOT NULL DEFAULT 'active',
     whatsapp_default VARCHAR(20) NULL,
     event_day VARCHAR(100) NULL,
+    event_date DATE NULL,
     event_time VARCHAR(50) NULL,
     event_location VARCHAR(150) NULL,
     event_speaker VARCHAR(100) NULL,
@@ -101,6 +102,7 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS reward_image VARCHAR(255) NULL AFTER
 ALTER TABLE events ADD COLUMN IF NOT EXISTS meta_pixel_id VARCHAR(50) NULL AFTER reward_image;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS ga_measurement_id VARCHAR(30) NULL AFTER meta_pixel_id;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS flyer_path VARCHAR(255) NULL AFTER reward_image;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS event_date DATE NULL AFTER event_day;
 ALTER TABLE referrers ADD COLUMN IF NOT EXISTS brand_id INT NULL AFTER id;
 ALTER TABLE referrers ADD COLUMN IF NOT EXISTS event_slug VARCHAR(60) NOT NULL DEFAULT 'default' AFTER ref_code;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS brand_id INT NULL AFTER id;
