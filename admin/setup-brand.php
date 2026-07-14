@@ -2,8 +2,7 @@
 /**
  * admin/setup-brand.php
  * Onboarding brand baru — HANYA Coach yang tahu akses ini.
- * Dilindungi oleh MASTER_SETUP_KEY (bukan PIN/password admin brand manapun),
- * karena sistem ini sengaja TIDAK punya dashboard admin lintas-brand.
+ * Dilindungi oleh MASTER_SETUP_KEY atau sesi superadmin aktif.
  *
  * Akses: admin/setup-brand.php?key=MASTER_SETUP_KEY
  */
@@ -13,7 +12,10 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 start_secure_session();
 
 $providedKey = $_POST['key'] ?? $_GET['key'] ?? '';
-if (!is_string($providedKey) || $providedKey === '' || !hash_equals(MASTER_SETUP_KEY, $providedKey)) {
+$hasValidSetupKey = is_string($providedKey) && $providedKey !== '' && hash_equals(MASTER_SETUP_KEY, $providedKey);
+$isLoggedInSuperadmin = !empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'superadmin';
+
+if (!$hasValidSetupKey && !$isLoggedInSuperadmin) {
     http_response_code(403);
     exit('Akses ditolak.');
 }
