@@ -22,7 +22,7 @@ DirectoryIndex index.php
 </IfModule>
 
 # Blok file konfigurasi, database, dokumentasi, backup, log, dan metadata project.
-<FilesMatch "^(?:config\.php|install\.sql|README\.md|index-old\.html|composer\.(?:json|lock)|package(?:-lock)?\.json|\.env.*)$">
+<FilesMatch "^(?:config\.php|README\.md|composer\.(?:json|lock)|package(?:-lock)?\.json|\.env.*)$">
   Require all denied
 </FilesMatch>
 

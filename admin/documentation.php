@@ -258,7 +258,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
           Riwayat Versi — Sejak Pertama Dibangun
         </div>
-        <p class="card-subtitle">Setiap versi menambah kemampuan tanpa mengubah fondasi versi sebelumnya. Detail lengkap tiap file ada di <code>CHANGELOG.md</code> dan file <code>migrate_v*.sql</code> di root repo.</p>
+        <p class="card-subtitle">Setiap versi menambah kemampuan tanpa mengubah fondasi versi sebelumnya. Detail lengkap tiap file ada di <code>docs/CHANGELOG.md</code> dan file <code>migrate_v*.sql</code> di folder <code>database/migrations/</code>.</p>
 
         <div class="timeline">
           <div class="tl-item">
@@ -355,7 +355,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
           Urutan Migrasi Database
         </div>
-        <p class="card-subtitle">Untuk instalasi yang sudah berjalan (bukan instalasi baru). Instalasi baru cukup import <code>install.sql</code> — sudah mencakup semua versi.</p>
+        <p class="card-subtitle">Untuk instalasi yang sudah berjalan (bukan instalasi baru). Instalasi baru cukup import <code>database/install.sql</code> — sudah mencakup semua versi.</p>
 
         <div class="table-wrap">
           <table>
@@ -382,7 +382,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg>
           Deploy Production
         </div>
-        <p class="card-subtitle">Pola resmi sejak sistem ini pertama dibangun dengan Git — detail lengkap ada di <code>DEPLOYMENT.md</code>.</p>
+        <p class="card-subtitle">Pola resmi sejak sistem ini pertama dibangun dengan Git — detail lengkap ada di <code>docs/DEPLOYMENT.md</code>.</p>
 
         <h3>Struktur folder server</h3>
         <pre><code>/home/USER/

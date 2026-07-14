@@ -24,7 +24,7 @@ try {
     $pdo = get_db();
 
     // Validasi brand_id WAJIB — mencegah domain brand A membaca data event milik brand B
-    // lewat tebakan slug, walau folder /e/ dibagi bersama semua domain (lihat DEPLOYMENT.md).
+    // lewat tebakan slug, walau folder /e/ dibagi bersama semua domain (lihat docs/DEPLOYMENT.md).
     $stmt = $pdo->prepare("SELECT * FROM events WHERE slug = ? AND brand_id = ? AND status = 'active'");
     $stmt->execute([$slug, $brand['id']]);
     $event = $stmt->fetch(PDO::FETCH_ASSOC);

@@ -26,7 +26,7 @@ Sistem ini terdiri dari 3 bagian:
 1. Di cPanel, buka **phpMyAdmin**.
 2. Klik database yang baru dibuat di sidebar kiri.
 3. Klik tab **Import** di bagian atas.
-4. Pilih file **`install.sql`** (ada di folder ini), lalu klik **Go**.
+4. Pilih file **`database/install.sql`** (ada di folder ini), lalu klik **Go**.
 5. Pastikan muncul pesan sukses dan tabel inti muncul: `brands`, `events`,
    `referrers`, `leads`, dan `login_attempts`.
 6. **PENTING untuk staging:** jika domain yang dites adalah
@@ -50,7 +50,7 @@ Sistem ini terdiri dari 3 bagian:
      index.php
      buat-link.php
      config.php
-     install.sql
+     database/install.sql
      api/
      admin/
      assets/
@@ -124,7 +124,7 @@ tidak perlu edit file atau HTML.
 ## Aturan Git / File yang Tidak Di-commit
 
 Project ini sudah dilengkapi `.gitignore`. File yang aman masuk repo adalah
-kode aplikasi, `install.sql`, asset publik, `.htaccess`, README, dan
+kode aplikasi, `database/install.sql`, asset publik, `.htaccess`, README, dan
 `config.example.php`.
 
 Jangan commit file/folder berikut:
@@ -148,7 +148,7 @@ shared/rahasiaemas.id       = config dan data runtime production
 domain root                 = diarahkan ke repositories/rahasiaemas.id
 ```
 
-Panduan lengkap ada di `DEPLOYMENT.md`, termasuk contoh symlink `config.php`,
+Panduan lengkap ada di `docs/DEPLOYMENT.md`, termasuk contoh symlink `config.php`,
 folder event upload `e/`, folder reward image, cron deploy, dan script
 `deploy/deploy.sh`.
 

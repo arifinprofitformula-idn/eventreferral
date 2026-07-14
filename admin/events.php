@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($_SESSION['csrf_token'
                     $notice = 'ZIP harus berisi file index.html di posisi root (bukan di dalam subfolder).';
                     $noticeType = 'error';
                 } elseif (!$configRaw) {
-                    $notice = 'ZIP harus berisi file config.json di posisi root. Lihat README-EVENTS.md untuk formatnya.';
+                    $notice = 'ZIP harus berisi file config.json di posisi root. Lihat docs/README-EVENTS.md untuk formatnya.';
                     $noticeType = 'error';
                 } else {
                     $cfg = json_decode($configRaw, true);
