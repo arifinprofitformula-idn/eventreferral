@@ -43,7 +43,7 @@ define('EVENTS_DIR', __DIR__ . '/e');
 define('EVENTS_URL_BASE', '/e');
 define('MAX_ZIP_SIZE', 15 * 1024 * 1024); // 15 MB
 define('ALLOWED_ASSET_EXT', ['html','htm','css','js','json','txt','png','jpg','jpeg','gif','webp','svg','ico','woff','woff2','ttf','eot','mp4','webm']);
-define('RESERVED_SLUGS', ['default','admin','api','assets','challenge','e','includes','config','index','install','migrate','buat-link','login','logout','dashboard','events','export','readme','changelog','template-event-starter','www','static','cdn','ftp','mail','uploads','brands','setup-brand']);
+define('RESERVED_SLUGS', ['default','admin','api','assets','challenge','e','includes','config','index','install','migrate','buat-link','login','logout','dashboard','events','export','readme','changelog','template-event-starter','www','static','cdn','ftp','mail','uploads','brands','setup-brand','referrer']);
 define('REWARD_IMAGES_DIR', __DIR__ . '/assets/rewards');
 define('REWARD_IMAGES_URL_BASE', '/assets/rewards');
 define('MAX_REWARD_IMAGE_SIZE', 5 * 1024 * 1024); // 5 MB

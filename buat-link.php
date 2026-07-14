@@ -456,6 +456,29 @@ function ui_icon(string $name): string
       0 18px 38px rgba(214,165,54,0.28),
       inset 0 1px 0 rgba(255,255,255,0.55);
   }
+  #dashboardCtaBtn {
+    animation: dashboardCtaPulse 2s ease-in-out infinite;
+  }
+  #dashboardCtaBtn:hover {
+    animation-play-state: paused;
+  }
+  @keyframes dashboardCtaPulse {
+    0%, 100% {
+      box-shadow:
+        0 18px 38px rgba(214,165,54,0.28),
+        inset 0 1px 0 rgba(255,255,255,0.55),
+        0 0 0 0 rgba(214,165,54,0.55);
+    }
+    50% {
+      box-shadow:
+        0 18px 38px rgba(214,165,54,0.28),
+        inset 0 1px 0 rgba(255,255,255,0.55),
+        0 0 0 10px rgba(214,165,54,0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #dashboardCtaBtn { animation: none; }
+  }
   #genBtn {
     min-height: 60px;
     border-radius: 18px;
@@ -801,6 +824,12 @@ function ui_icon(string $name): string
         </div>
       </div>
 
+      <div class="panel result" id="dashboardCtaBox" style="display:none;">
+        <div class="card-title"><span class="card-icon"><?= ui_icon('trophy') ?></span> Pantau Pendaftar Kamu</div>
+        <div class="card-desc">Aktifkan dashboard pribadi untuk melihat siapa saja yang sudah daftar lewat link kamu, lalu follow up langsung lewat WhatsApp.</div>
+        <a href="#" id="dashboardCtaBtn" class="btn btn-primary"><?= ui_icon('link') ?><span>Aktifkan Dashboard Pengundang</span></a>
+      </div>
+
       <div class="panel result" id="flyerBox">
         <div class="card-title"><span class="card-icon"><?= ui_icon('image') ?></span> Flyer Acara</div>
         <div class="card-desc">Unduh flyer ini dan kirimkan bersama link referralmu supaya calon peserta lebih yakin untuk mendaftar.</div>
@@ -836,6 +865,8 @@ const eventDetail = document.getElementById('eventDetail');
 const templateList = document.getElementById('templateList');
 const refCodeInput = document.getElementById('ref_code');
 const livePreview = document.getElementById('livePreview');
+const dashboardCtaBox = document.getElementById('dashboardCtaBox');
+const dashboardCtaBtn = document.getElementById('dashboardCtaBtn');
 const genBtnLabel = genBtn.querySelector('.btn-label');
 const copyBtnLabel = copyBtn.querySelector('.btn-label');
 const ICON_COPY = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
@@ -938,13 +969,18 @@ function showFriendlyError(message) {
   errMsg.style.display = 'block';
 }
 
-function showResult(link, event, templates) {
+function showResult(link, event, templates, refCode, whatsapp) {
   linkOutput.value = link;
   const shareText = `Aku mengundang kamu ikut event ${eventName}. Daftar lewat link ini: ${link}`;
   waShareBtn.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
   renderEventDetail(event);
   renderFlyer(event);
   renderTemplates(templates);
+  if (refCode && whatsapp && dashboardCtaBtn) {
+    const params = new URLSearchParams({ ref_code: refCode, whatsapp: whatsapp });
+    dashboardCtaBtn.href = `/referrer/set-password.php?${params.toString()}`;
+    dashboardCtaBox.style.display = 'block';
+  }
   resultBox.style.display = 'block';
   form.style.display = 'none';
   resultBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -972,10 +1008,10 @@ form.addEventListener('submit', async function (e) {
     const result = await res.json();
 
     if (result.success) {
-      showResult(result.link, result.event, result.templates);
+      showResult(result.link, result.event, result.templates, result.ref_code, data.whatsapp);
     } else if (result.existing_link) {
       showExistingLinkMessage(result.message, result.existing_link);
-      showResult(result.existing_link, result.event, result.templates);
+      showResult(result.existing_link, result.event, result.templates, result.existing_ref_code, data.whatsapp);
     } else {
       showFriendlyError(result.message);
     }
