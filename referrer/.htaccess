@@ -3,7 +3,7 @@ DirectoryIndex login.php
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule !^(?:$|login\.php|logout\.php|set-password\.php|dashboard\.php)$ - [F,L,NC]
+  RewriteRule !^(?:$|login\.php|logout\.php|set-password\.php|dashboard\.php|update-followup\.php|export\.php)$ - [F,L,NC]
 </IfModule>
 
 <FilesMatch "\.(?:sql|bak|backup|old|orig|save|swp|ini|log|md|yml|yaml|json|lock|sh|ps1|bat|cmd)$">

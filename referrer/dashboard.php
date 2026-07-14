@@ -25,6 +25,9 @@ if (empty($myLinks)) {
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? $brand['domain'];
 
+$dateFrom = clean($_GET['date_from'] ?? '');
+$dateTo = clean($_GET['date_to'] ?? '');
+
 $leads = [];
 $totalLeads = 0;
 if (!empty($myLinks)) {
@@ -37,19 +40,34 @@ if (!empty($myLinks)) {
     }
     $whereClause = implode(' OR ', $conditions);
 
-    $stmt = $pdo->prepare("
-        SELECT l.name, l.email, l.whatsapp, l.kota, l.ref_code, l.event_slug, l.created_at,
+    $sql = "
+        SELECT l.id, l.name, l.email, l.whatsapp, l.kota, l.ref_code, l.event_slug, l.created_at, l.followup_status,
                e.name AS event_name
         FROM leads l
         LEFT JOIN events e ON e.slug = l.event_slug AND e.brand_id = l.brand_id
         WHERE l.brand_id = ? AND ($whereClause)
-        ORDER BY l.created_at DESC
-        LIMIT 500
-    ");
+    ";
+    if ($dateFrom !== '') {
+        $sql .= ' AND l.created_at >= ?';
+        $params[] = $dateFrom . ' 00:00:00';
+    }
+    if ($dateTo !== '') {
+        $sql .= ' AND l.created_at <= ?';
+        $params[] = $dateTo . ' 23:59:59';
+    }
+    $sql .= ' ORDER BY l.created_at DESC LIMIT 500';
+
+    $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $totalLeads = count($leads);
 }
+
+$followupLabels = ['baru' => 'Baru', 'dihubungi' => 'Sudah Dihubungi', 'closing' => 'Closing'];
+$exportParams = [];
+if ($dateFrom !== '') $exportParams['date_from'] = $dateFrom;
+if ($dateTo !== '') $exportParams['date_to'] = $dateTo;
+$exportUrl = 'export.php' . (!empty($exportParams) ? ('?' . http_build_query($exportParams)) : '');
 
 $totalEventsLinked = count($myLinks);
 $referrerName = $myLinks[0]['name'] ?? '';
@@ -136,6 +154,19 @@ function referrer_build_link(string $protocol, string $host, array $brand, strin
   .wa-link:hover { text-decoration: underline; }
   .search-input { width: min(260px, 100%); height: 44px; color: var(--text); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); border-radius: 12px; font: inherit; font-size: 13px; padding: 0 14px; outline: none; }
   .empty { color: var(--muted); background: rgba(255,255,255,0.035); border: 1px dashed color-mix(in srgb, var(--gold-soft) 18%, transparent); border-radius: 16px; font-size: 14px; padding: 26px; text-align: center; }
+  .filter-bar { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; padding: 14px; background: rgba(8,8,7,0.34); border: 1px solid var(--border-soft); border-radius: 14px; }
+  .filter-field { display: grid; gap: 5px; }
+  .filter-field label { color: var(--muted); font-size: 11.5px; font-weight: 700; }
+  .filter-field input[type="date"] { height: 42px; color: var(--text); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 0 12px; font: inherit; font-size: 13px; outline: none; color-scheme: dark; }
+  .filter-actions { display: flex; gap: 8px; }
+  .btn-filter, .btn-export { height: 42px; padding: 0 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.10); font-weight: 700; font-size: 12.5px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+  .btn-filter { color: #111; background: linear-gradient(135deg, var(--gold), var(--gold-soft)); border: 0; }
+  .btn-export { color: var(--text); background: rgba(255,255,255,0.04); }
+  .btn-export:hover { background: rgba(255,255,255,0.07); }
+  .status-select { height: 34px; color: var(--text); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; font-size: 12px; font-weight: 700; padding: 0 10px; cursor: pointer; outline: none; }
+  .status-select.st-baru { color: var(--muted); }
+  .status-select.st-dihubungi { color: var(--gold-soft); border-color: color-mix(in srgb, var(--gold) 40%, transparent); background: color-mix(in srgb, var(--gold) 10%, transparent); }
+  .status-select.st-closing { color: var(--success); border-color: color-mix(in srgb, var(--success) 40%, transparent); background: color-mix(in srgb, var(--success) 10%, transparent); }
   @media (max-width: 760px) {
     .topbar-inner, .wrap { padding-left: 16px; padding-right: 16px; }
     .stats { grid-template-columns: 1fr; }
@@ -203,12 +234,31 @@ function referrer_build_link(string $protocol, string $host, array $brand, strin
       </div>
       <input class="search-input" id="leadSearch" type="search" placeholder="Cari pendaftar..." aria-label="Cari pendaftar">
     </div>
+
+    <form class="filter-bar" method="GET">
+      <div class="filter-field">
+        <label for="date_from">Dari Tanggal</label>
+        <input type="date" id="date_from" name="date_from" value="<?= htmlspecialchars($dateFrom) ?>">
+      </div>
+      <div class="filter-field">
+        <label for="date_to">Sampai Tanggal</label>
+        <input type="date" id="date_to" name="date_to" value="<?= htmlspecialchars($dateTo) ?>">
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn-filter">Terapkan Filter</button>
+        <?php if ($dateFrom !== '' || $dateTo !== ''): ?>
+          <a href="dashboard.php" class="btn-export">Reset</a>
+        <?php endif; ?>
+        <a href="<?= htmlspecialchars($exportUrl) ?>" class="btn-export">Export CSV</a>
+      </div>
+    </form>
+
     <?php if (empty($leads)): ?>
       <p class="empty">Belum ada pendaftar dari link kamu. Yuk bagikan lagi link referralmu!</p>
     <?php else: ?>
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Waktu</th><th>Nama</th><th>Email</th><th>WhatsApp</th><th>Kota</th><th>Event</th></tr></thead>
+        <thead><tr><th>Waktu</th><th>Nama</th><th>Email</th><th>WhatsApp</th><th>Kota</th><th>Event</th><th>Status</th></tr></thead>
         <tbody id="leadRows">
         <?php foreach ($leads as $l): ?>
         <?php $waLink = referrer_whatsapp_link($l['whatsapp'] ?? ''); ?>
@@ -219,6 +269,13 @@ function referrer_build_link(string $protocol, string $host, array $brand, strin
           <td><?php if ($waLink): ?><a class="wa-link" href="<?= htmlspecialchars($waLink) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($l['whatsapp']) ?></a><?php else: ?><?= htmlspecialchars($l['whatsapp']) ?><?php endif; ?></td>
           <td><?= htmlspecialchars($l['kota']) ?></td>
           <td><?= htmlspecialchars($l['event_name'] ?? '-') ?></td>
+          <td>
+            <select class="status-select st-<?= htmlspecialchars($l['followup_status']) ?>" data-lead-id="<?= (int)$l['id'] ?>" onchange="updateFollowupStatus(this)">
+              <?php foreach ($followupLabels as $key => $label): ?>
+                <option value="<?= htmlspecialchars($key) ?>" <?= $l['followup_status'] === $key ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </td>
         </tr>
         <?php endforeach; ?>
         </tbody>
@@ -235,6 +292,13 @@ function referrer_build_link(string $protocol, string $host, array $brand, strin
           <?= htmlspecialchars($l['kota']) ?> · <?= htmlspecialchars($l['event_name'] ?? '-') ?><br>
           <?= date('d M Y, H:i', strtotime($l['created_at'])) ?>
         </div>
+        <div style="margin-top:10px;">
+          <select class="status-select st-<?= htmlspecialchars($l['followup_status']) ?>" data-lead-id="<?= (int)$l['id'] ?>" onchange="updateFollowupStatus(this)">
+            <?php foreach ($followupLabels as $key => $label): ?>
+              <option value="<?= htmlspecialchars($key) ?>" <?= $l['followup_status'] === $key ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
       </article>
       <?php endforeach; ?>
     </div>
@@ -250,6 +314,43 @@ function referrer_build_link(string $protocol, string $host, array $brand, strin
       btn.textContent = 'Tersalin!';
       setTimeout(() => btn.textContent = original, 1500);
     });
+  }
+
+  function updateFollowupStatus(select) {
+    const leadId = select.getAttribute('data-lead-id');
+    const newStatus = select.value;
+    const previousClass = Array.from(select.classList).find((c) => c.startsWith('st-'));
+
+    select.disabled = true;
+    fetch('update-followup.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lead_id: leadId, status: newStatus }),
+    })
+      .then((res) => res.json())
+      .then((result) => {
+        if (!result.success) {
+          throw new Error(result.message || 'Gagal memperbarui status.');
+        }
+        if (previousClass) select.classList.remove(previousClass);
+        select.classList.add('st-' + newStatus);
+        // Sinkronkan select lain (desktop/mobile) untuk lead yang sama.
+        document.querySelectorAll(`select[data-lead-id="${leadId}"]`).forEach((other) => {
+          if (other !== select) {
+            other.value = newStatus;
+            const otherPrev = Array.from(other.classList).find((c) => c.startsWith('st-'));
+            if (otherPrev) other.classList.remove(otherPrev);
+            other.classList.add('st-' + newStatus);
+          }
+        });
+      })
+      .catch(() => {
+        alert('Gagal memperbarui status follow-up. Coba lagi.');
+        if (previousClass) select.value = previousClass.replace('st-', '');
+      })
+      .finally(() => {
+        select.disabled = false;
+      });
   }
 
   const searchInput = document.getElementById('leadSearch');

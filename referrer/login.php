@@ -137,7 +137,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
       <button type="submit">Masuk</button>
     </form>
 
-    <p class="footer-note">Belum punya password? <a href="/referrer/set-password.php">Aktifkan dashboard kamu</a></p>
+    <p class="footer-note">Belum punya atau lupa password? <a href="/referrer/set-password.php">Aktifkan / atur ulang di sini</a></p>
   </div>
 </body>
 </html>

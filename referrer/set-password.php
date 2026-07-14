@@ -136,8 +136,8 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
 <body>
   <div class="card">
     <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($brand['name']) ?>">
-    <h1>Aktifkan Dashboard Pengundang</h1>
-    <p class="subtitle">Buat password untuk memantau daftar peserta yang mendaftar lewat link referral kamu.</p>
+    <h1>Aktifkan / Atur Ulang Password</h1>
+    <p class="subtitle">Buat atau ganti password untuk memantau daftar peserta yang mendaftar lewat link referral kamu. Sudah punya akun? Isi form ini lagi untuk mengganti password lama.</p>
 
     <?php if ($error): ?>
       <div class="alert-error" role="alert"><?= htmlspecialchars($error) ?></div>

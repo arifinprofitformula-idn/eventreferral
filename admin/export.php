@@ -34,7 +34,7 @@ header('Content-Disposition: attachment; filename=pendaftar_' . $brand['slug'] .
 
 $out = fopen('php://output', 'w');
 fputs($out, "\xEF\xBB\xBF"); // BOM agar Excel baca UTF-8 dengan benar
-fputcsv($out, ['Nama', 'Email', 'WhatsApp', 'Kota', 'Kode Referral', 'Event', 'Info Tambahan', 'Diundang Oleh', 'Waktu Daftar']);
+fputcsv($out, ['Nama', 'Email', 'WhatsApp', 'Kota', 'Kode Referral', 'Event', 'Info Tambahan', 'Diundang Oleh', 'Waktu Daftar'], ',', '"', '\\');
 
 foreach ($leads as $l) {
     fputcsv($out, [
@@ -47,7 +47,7 @@ foreach ($leads as $l) {
         format_extra_fields_csv($l['extra_fields'] ?? null),
         $l['referrer_name'] ?? '-',
         $l['created_at'],
-    ]);
+    ], ',', '"', '\\');
 }
 
 fclose($out);
