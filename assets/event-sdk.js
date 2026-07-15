@@ -30,6 +30,10 @@
  *    <span data-rg-field="event_capacity"></span>
  *    <span data-rg-field="event_name"></span>
  *
+ *    Untuk gambar flyer acara (opsional, diupload admin lewat Detail Acara):
+ *    <img data-rg-field="flyer_path" style="display:none;" alt="Flyer acara">
+ *    <div data-rg-field-fallback="flyer_path">...tampilan default jika flyer belum ada...</div>
+ *
  * 5. (Opsional) Untuk pesan sukses/error inline:
  *    <div data-rg-message style="display:none"></div>
  *    Jika tidak ada, SDK akan pakai alert() sebagai fallback.
@@ -161,7 +165,21 @@
     var els = document.querySelectorAll('[data-rg-field]');
     els.forEach(function (el) {
       var key = el.getAttribute('data-rg-field');
-      if (event[key] !== undefined && event[key] !== null && event[key] !== '') {
+      var hasValue = event[key] !== undefined && event[key] !== null && event[key] !== '';
+
+      if (el.tagName === 'IMG') {
+        var fallbacks = document.querySelectorAll('[data-rg-field-fallback="' + key + '"]');
+        if (hasValue) {
+          el.src = event[key];
+          el.style.display = '';
+          fallbacks.forEach(function (fb) { fb.style.display = 'none'; });
+        } else {
+          fallbacks.forEach(function (fb) { fb.style.display = ''; });
+        }
+        return;
+      }
+
+      if (hasValue) {
         el.textContent = event[key];
       }
     });

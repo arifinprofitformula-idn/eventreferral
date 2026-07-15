@@ -592,7 +592,12 @@ function build_landing_page_prompt(array $brand, array $eventBrief, string $cust
     }
 
     return <<<PROMPT
-Kamu adalah AI perancang landing page untuk brand edukasi finansial "{$brandName}" (vibe: {$themeVibe}).
+Kamu adalah AI perancang landing page (copywriter + content strategist + art director) untuk brand edukasi
+finansial "{$brandName}" (vibe: {$themeVibe}). Landing page yang kamu rancang harus terasa KAYA, detail, dan
+dikembangkan secara unik untuk event ini — seperti landing page webinar profesional dengan banyak section
+yang saling melengkapi, BUKAN halaman pendek generik satu paragraf, dan BUKAN struktur yang selalu sama
+persis di setiap event. Kamu bebas berkreasi dalam memilih section apa saja yang dipakai, urutannya, jumlah
+itemnya, dan sudut pandang ceritanya — selama tetap relevan dan spesifik untuk tema event ini.
 
 JUDUL EVENT (WAJIB JADI ACUAN UTAMA): "{$eventName}"
 
@@ -604,18 +609,42 @@ Pembicara: {$eventSpeaker}
 Kapasitas: {$eventCapacity}
 {$context}
 
-Tugasmu: pilih SATU template landing page yang paling cocok dari daftar berikut, lalu isi kontennya:
+LANGKAH 1 — Pilih SATU template visual yang paling cocok dari daftar berikut:
 {$templateList}
 
-Aturan konten:
-- Bahasa Indonesia, action-oriented, optimis, tidak boleh membuat klaim keuntungan finansial berlebihan atau menjanjikan hasil pasti.
-- "headline" WAJIB dibungkus markdown bold dengan dua bintang, contoh: **Mulai dari Satu Link Referral**.
-- "eyebrow" adalah label pendek (maks 4 kata) di atas headline, contoh: "EVENT EKSKLUSIF" atau "KUOTA TERBATAS".
-- "description" adalah 1-3 paragraf pendek promosi acara, pisahkan paragraf dengan newline "\\n\\n".
-- "cta_text" adalah teks tombol pendaftaran, maksimal 6 kata, action-oriented (contoh: "Daftar Sekarang — Gratis").
-- "accent_color" WAJIB kode hex 6-digit (contoh "#C9A84C") yang cocok dengan vibe template terpilih.
-- WAJIB relevan dengan judul event, jangan keluar tema.
-- Untuk "sections.show_testimonial": isi true HANYA jika konteks tambahan dari admin menyebutkan testimoni/social proof spesifik yang bisa dipakai; jika tidak yakin, isi false dan kosongkan testimonial_quote/testimonial_name.
+LANGKAH 2 — Isi hero (selalu tampil, di posisi paling atas):
+- "headline": WAJIB dibungkus markdown bold dua bintang, contoh: **Mulai dari Satu Link Referral**.
+- "eyebrow": label pendek (maks 6 kata) di atas headline.
+- "subheadline": 1 kalimat pendek penegas di bawah headline.
+- "description": 1-2 paragraf pendek yang menjelaskan urgensi/konteks acara, pisahkan paragraf dengan "\\n\\n".
+- "cta_text": teks tombol pendaftaran, maksimal 6 kata, action-oriented.
+- "accent_color": kode hex 6-digit (contoh "#C9A84C") yang cocok dengan vibe template terpilih.
+
+LANGKAH 3 — Rancang isi ("content") landing page. Kamu punya PERPUSTAKAAN section berikut untuk dipilih bebas
+(TIDAK WAJIB semua dipakai — pilih 5 sampai 8 yang paling pas untuk event ini, boleh kombinasi apa saja):
+
+- "stat_grid": section data/realita pendukung urgensi topik. Isi: title, lede, stats (3-5 item {"value": angka/statistik singkat mis. "7%", "label": penjelasan singkat}), quote (opsional, 1 kalimat kutipan reflektif).
+- "formula_steps": section langkah/formula praktis bernomor (alternatif dari roadmap, cocok untuk konten "cara/strategi"). Isi: title, lede, steps (3-6 item {"num": nomor urut string, "title": maks 6 kata, "desc": 1 kalimat}), plus (opsional, 1 kartu highlight bonus/tambahan istimewa: {"badge": label pendek, "title": judul, "desc": penjelasan, "points": 3-5 poin singkat}).
+- "why_now": 3 kartu alasan "kenapa topik ini penting sekarang". Isi: title, lede, cards (TEPAT 3 item {"icon": 1 simbol/emoji, "title": maks 5 kata, "desc": 1 kalimat}).
+- "audience_cards": kartu ikon untuk target audiens (alternatif lebih detail dari audience_chips). Isi: title, cards (3-4 item {"icon": emoji, "title": nama segmen, "desc": 1 kalimat kenapa segmen ini cocok}).
+- "audience_chips": chip singkat untuk target audiens (versi ringkas). Isi: title, chips (3-6 label singkat 1-3 kata), footnote (1 kalimat penutup).
+- "roadmap": timeline materi/sesi acara terurut (alternatif dari formula_steps, cocok untuk konten "kurikulum/susunan acara"). Isi: title, lede, steps (3-6 item {"step": nomor urut string, "title": maks 6 kata, "desc": 1 kalimat}).
+- "speaker": profil pembicara. Isi: role (1 baris peran/kredensial, maks 6 kata, sesuai nama pembicara di atas), bio (1 paragraf pendek 2-3 kalimat relevan tema event). WAJIB diisi jika nama pembicara tersedia.
+- "benefits": daftar output/kompetensi konkret yang didapat peserta. Isi: title, items (4-6 kalimat singkat, bukan objek).
+- "testimonial": HANYA isi jika konteks tambahan dari admin menyebutkan testimoni/social proof spesifik yang bisa dipakai. Isi: quote, name. Jika tidak ada bahan testimoni, JANGAN sertakan blok ini sama sekali.
+- "faq": pertanyaan umum calon peserta. Isi: title, items (3-5 pasangan {"q": pertanyaan singkat, "a": jawaban 1-2 kalimat}).
+
+Jangan pernah menyertakan "registration_form" di dalam objek "blocks" (kontennya sudah ditentukan sistem,
+bukan tugasmu) — cukup sebutkan key "registration_form" di array "layout" pada posisi yang menurutmu pas
+secara naratif (biasanya menjelang akhir halaman, sebelum atau sesudah FAQ).
+
+Aturan penting:
+- "layout" adalah array urutan key section yang kamu pilih dari daftar di atas (TERMASUK "registration_form"
+  di posisi yang kamu tentukan). Jangan sertakan key section yang kontennya tidak kamu isi di "blocks".
+- Setiap section yang kamu pilih HARUS relevan dan spesifik terhadap judul & konteks event — jangan menulis
+  isi generik yang bisa dipakai event apa saja.
+- Bahasa Indonesia, action-oriented, optimis, tidak boleh membuat klaim keuntungan finansial berlebihan atau
+  menjanjikan hasil pasti.
 
 Balas HANYA dalam format JSON valid (tanpa markdown, tanpa teks lain), dengan struktur persis:
 {
@@ -626,13 +655,235 @@ Balas HANYA dalam format JSON valid (tanpa markdown, tanpa teks lain), dengan st
   "subheadline": "...",
   "description": "...",
   "cta_text": "...",
-  "sections": {
-    "show_testimonial": false,
-    "testimonial_quote": "",
-    "testimonial_name": ""
+  "layout": ["stat_grid", "formula_steps", "audience_cards", "speaker", "benefits", "registration_form", "faq"],
+  "blocks": {
+    "stat_grid": {"title": "...", "lede": "...", "quote": "...", "stats": [{"value": "...", "label": "..."}]},
+    "formula_steps": {"title": "...", "lede": "...", "steps": [{"num": "1", "title": "...", "desc": "..."}], "plus": {"badge": "...", "title": "...", "desc": "...", "points": ["..."]}},
+    "why_now": {"title": "...", "lede": "...", "cards": [{"icon": "...", "title": "...", "desc": "..."}]},
+    "audience_cards": {"title": "...", "cards": [{"icon": "...", "title": "...", "desc": "..."}]},
+    "audience_chips": {"title": "...", "chips": ["..."], "footnote": "..."},
+    "roadmap": {"title": "...", "lede": "...", "steps": [{"step": "1", "title": "...", "desc": "..."}]},
+    "speaker": {"role": "...", "bio": "..."},
+    "benefits": {"title": "...", "items": ["..."]},
+    "testimonial": {"quote": "...", "name": "..."},
+    "faq": {"title": "...", "items": [{"q": "...", "a": "..."}]}
   }
 }
 PROMPT;
+}
+
+/** Bersihkan array item AI (mis. why_cards/roadmap/faq) jadi array asosiatif string sesuai $fields, buang item yang field wajibnya kosong. */
+function sanitize_landing_item_list($raw, array $fields, string $requiredField, int $maxItems): array
+{
+    if (!is_array($raw)) {
+        return [];
+    }
+
+    $clean = [];
+    foreach ($raw as $item) {
+        if (!is_array($item) || trim((string)($item[$requiredField] ?? '')) === '') {
+            continue;
+        }
+        $row = [];
+        foreach ($fields as $field) {
+            $row[$field] = trim((string)($item[$field] ?? ''));
+        }
+        $clean[] = $row;
+        if (count($clean) >= $maxItems) {
+            break;
+        }
+    }
+
+    return $clean;
+}
+
+/** Bersihkan array string polos (mis. audience_chips/benefits), buang item kosong. */
+function sanitize_landing_string_list($raw, int $maxItems): array
+{
+    if (!is_array($raw)) {
+        return [];
+    }
+
+    $clean = [];
+    foreach ($raw as $item) {
+        $value = trim((string)$item);
+        if ($value === '') {
+            continue;
+        }
+        $clean[] = $value;
+        if (count($clean) >= $maxItems) {
+            break;
+        }
+    }
+
+    return $clean;
+}
+
+/**
+ * Daftar putih section ("blocks") yang boleh dipilih AI, disertai fungsi validasi minimal kontennya
+ * masing-masing. Section yang tidak lolos validasi (kurang item / field wajib kosong) tidak akan
+ * dimasukkan ke $blocks — nanti otomatis tidak tampil di layout apa pun urutan yang diminta AI.
+ */
+function sanitize_landing_blocks($raw): array
+{
+    $raw = is_array($raw) ? $raw : [];
+    $blocks = [];
+
+    if (is_array($raw['stat_grid'] ?? null)) {
+        $stats = sanitize_landing_item_list($raw['stat_grid']['stats'] ?? null, ['value', 'label'], 'value', 5);
+        if (count($stats) >= 2) {
+            $blocks['stat_grid'] = [
+                'title' => trim((string)($raw['stat_grid']['title'] ?? '')),
+                'lede' => trim((string)($raw['stat_grid']['lede'] ?? '')),
+                'quote' => trim((string)($raw['stat_grid']['quote'] ?? '')),
+                'stats' => $stats,
+            ];
+        }
+    }
+
+    if (is_array($raw['formula_steps'] ?? null)) {
+        $steps = sanitize_landing_item_list($raw['formula_steps']['steps'] ?? null, ['num', 'title', 'desc'], 'title', 6);
+        if (count($steps) >= 2) {
+            $plusRaw = is_array($raw['formula_steps']['plus'] ?? null) ? $raw['formula_steps']['plus'] : [];
+            $plusTitle = trim((string)($plusRaw['title'] ?? ''));
+            $blocks['formula_steps'] = [
+                'title' => trim((string)($raw['formula_steps']['title'] ?? '')),
+                'lede' => trim((string)($raw['formula_steps']['lede'] ?? '')),
+                'steps' => $steps,
+                'plus' => [
+                    'badge' => $plusTitle !== '' ? trim((string)($plusRaw['badge'] ?? '')) : '',
+                    'title' => $plusTitle,
+                    'desc' => $plusTitle !== '' ? trim((string)($plusRaw['desc'] ?? '')) : '',
+                    'points' => $plusTitle !== '' ? sanitize_landing_string_list($plusRaw['points'] ?? null, 5) : [],
+                ],
+            ];
+        }
+    }
+
+    if (is_array($raw['why_now'] ?? null)) {
+        $cards = sanitize_landing_item_list($raw['why_now']['cards'] ?? null, ['icon', 'title', 'desc'], 'title', 3);
+        if (count($cards) >= 2) {
+            $blocks['why_now'] = [
+                'title' => trim((string)($raw['why_now']['title'] ?? '')),
+                'lede' => trim((string)($raw['why_now']['lede'] ?? '')),
+                'cards' => $cards,
+            ];
+        }
+    }
+
+    if (is_array($raw['audience_cards'] ?? null)) {
+        $cards = sanitize_landing_item_list($raw['audience_cards']['cards'] ?? null, ['icon', 'title', 'desc'], 'title', 4);
+        if (count($cards) >= 2) {
+            $blocks['audience_cards'] = [
+                'title' => trim((string)($raw['audience_cards']['title'] ?? '')),
+                'cards' => $cards,
+            ];
+        }
+    }
+
+    if (is_array($raw['audience_chips'] ?? null)) {
+        $chips = sanitize_landing_string_list($raw['audience_chips']['chips'] ?? null, 6);
+        if (count($chips) >= 2) {
+            $blocks['audience_chips'] = [
+                'title' => trim((string)($raw['audience_chips']['title'] ?? '')),
+                'footnote' => trim((string)($raw['audience_chips']['footnote'] ?? '')),
+                'chips' => $chips,
+            ];
+        }
+    }
+
+    if (is_array($raw['roadmap'] ?? null)) {
+        $steps = sanitize_landing_item_list($raw['roadmap']['steps'] ?? null, ['step', 'title', 'desc'], 'title', 6);
+        if (count($steps) >= 2) {
+            $blocks['roadmap'] = [
+                'title' => trim((string)($raw['roadmap']['title'] ?? '')),
+                'lede' => trim((string)($raw['roadmap']['lede'] ?? '')),
+                'steps' => $steps,
+            ];
+        }
+    }
+
+    if (is_array($raw['speaker'] ?? null)) {
+        $bio = trim((string)($raw['speaker']['bio'] ?? ''));
+        if ($bio !== '') {
+            $blocks['speaker'] = [
+                'role' => trim((string)($raw['speaker']['role'] ?? '')),
+                'bio' => $bio,
+            ];
+        }
+    }
+
+    if (is_array($raw['benefits'] ?? null)) {
+        $items = sanitize_landing_string_list($raw['benefits']['items'] ?? null, 6);
+        if (count($items) >= 2) {
+            $blocks['benefits'] = [
+                'title' => trim((string)($raw['benefits']['title'] ?? '')),
+                'items' => $items,
+            ];
+        }
+    }
+
+    if (is_array($raw['testimonial'] ?? null)) {
+        $quote = trim((string)($raw['testimonial']['quote'] ?? ''));
+        if ($quote !== '') {
+            $blocks['testimonial'] = [
+                'quote' => $quote,
+                'name' => trim((string)($raw['testimonial']['name'] ?? '')),
+            ];
+        }
+    }
+
+    if (is_array($raw['faq'] ?? null)) {
+        $items = sanitize_landing_item_list($raw['faq']['items'] ?? null, ['q', 'a'], 'q', 5);
+        if (count($items) >= 2) {
+            $blocks['faq'] = [
+                'title' => trim((string)($raw['faq']['title'] ?? '')),
+                'items' => $items,
+            ];
+        }
+    }
+
+    return $blocks;
+}
+
+/**
+ * Bersihkan urutan section pilihan AI ("layout"): hanya key yang valid & isinya lolos sanitasi
+ * (ada di $availableBlocks) yang dipertahankan, plus jaminan kontrak sistem — "registration_form"
+ * dan "speaker" (kalau kontennya tersedia) tetap tampil walau AI lupa menyebutkannya.
+ */
+function sanitize_landing_layout($rawLayout, array $availableBlocks): array
+{
+    $layout = [];
+    if (is_array($rawLayout)) {
+        foreach ($rawLayout as $key) {
+            $key = is_string($key) ? $key : '';
+            if ($key === '' || in_array($key, $layout, true)) {
+                continue;
+            }
+            if ($key === 'registration_form' || isset($availableBlocks[$key])) {
+                $layout[] = $key;
+            }
+        }
+    }
+
+    if (empty($layout)) {
+        $layout = array_keys($availableBlocks);
+    }
+
+    if (!in_array('speaker', $layout, true) && isset($availableBlocks['speaker'])) {
+        $layout[] = 'speaker';
+    }
+
+    if (!in_array('registration_form', $layout, true)) {
+        $faqPos = array_search('faq', $layout, true);
+        if ($faqPos !== false) {
+            array_splice($layout, $faqPos, 0, ['registration_form']);
+        } else {
+            $layout[] = 'registration_form';
+        }
+    }
+
+    return $layout;
 }
 
 function generate_ai_landing_page(array $brand, array $eventBrief, string $customContext): array
@@ -661,10 +912,8 @@ function generate_ai_landing_page(array $brand, array $eventBrief, string $custo
         $accentColor = $templateMeta['default_accent'] ?? '#C9A84C';
     }
 
-    $sections = is_array($parsed['sections'] ?? null) ? $parsed['sections'] : [];
-    $showTestimonial = !empty($sections['show_testimonial'])
-        && in_array('testimonial', $templateMeta['optional_sections'] ?? [], true)
-        && trim((string)($sections['testimonial_quote'] ?? '')) !== '';
+    $blocks = sanitize_landing_blocks($parsed['blocks'] ?? null);
+    $layout = sanitize_landing_layout($parsed['layout'] ?? null, $blocks);
 
     return [
         'template_key' => $templateKey,
@@ -674,11 +923,8 @@ function generate_ai_landing_page(array $brand, array $eventBrief, string $custo
         'subheadline' => (string)($parsed['subheadline'] ?? ''),
         'description' => (string)($parsed['description'] ?? ''),
         'cta_text' => (string)$parsed['cta_text'],
-        'sections' => [
-            'show_testimonial' => $showTestimonial,
-            'testimonial_quote' => $showTestimonial ? (string)$sections['testimonial_quote'] : '',
-            'testimonial_name' => $showTestimonial ? (string)($sections['testimonial_name'] ?? '') : '',
-        ],
+        'layout' => $layout,
+        'blocks' => $blocks,
     ];
 }
 

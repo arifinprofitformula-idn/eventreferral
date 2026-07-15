@@ -4,127 +4,512 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{EVENT_NAME}} — {{BRAND_NAME}}</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#15100C; --accent:{{ACCENT_COLOR}}; --accent-soft:{{ACCENT_COLOR_SOFT}}; --white:#FFFDF9; --muted:#B5A99B; }
+  :root {
+    --bg-0: #15100C;
+    --bg-1: #1B140E;
+    --surface: #211812;
+    --surface-elevated: #2B1F16;
+    --accent: {{ACCENT_COLOR}};
+    --accent-soft: {{ACCENT_COLOR_SOFT}};
+    --border-accent: color-mix(in srgb, var(--accent) 30%, transparent);
+    --text: #FFFDF9;
+    --text-secondary: #C9BBAC;
+    --text-muted: #8A7C6D;
+    --success: #22C55E;
+    --radius-lg: 24px;
+    --radius-md: 18px;
+    --sans: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--white); font-family: 'Poppins', sans-serif; line-height: 1.6; }
-  h1, h2 { font-weight: 900; }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 0 24px; }
-  section { padding: 56px 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg-0); color: var(--text); font-family: var(--sans); line-height: 1.6; overflow-x: hidden; }
+  img { max-width: 100%; display: block; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; }
+  h1, h2, h3 { font-weight: 900; letter-spacing: -0.01em; }
+
+  header.site { position: sticky; top: 0; z-index: 50; background: rgba(21,16,12,0.86); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border-accent); }
+  header.site .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .brand-mark { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
+  .brand-mark img { width: clamp(120px, 16vw, 165px); height: 40px; object-fit: contain; object-position: left center; }
+  .header-cta { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #1A0D06; font-weight: 800; font-size: 13.5px; padding: 10px 18px; border-radius: 999px; text-decoration: none; white-space: nowrap; }
+
+  .tag { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #1A0D06; background: var(--accent); padding: 8px 16px; border-radius: 999px; }
+  .tag.outline { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid var(--border-accent); }
+  .center { text-align: center; }
+  @keyframes rg-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+  .pulse { animation: rg-pulse 1.8s ease-in-out infinite; }
 
   .hero {
-    min-height: 100svh; display: flex; flex-direction: column; justify-content: center; align-items: center;
-    text-align: center; padding: 40px 24px;
-    background: radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 55%), var(--bg);
+    padding: 56px 0 50px; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 44px; align-items: center;
+    background: radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 55%);
   }
-  .hero img { width: 72px; margin-bottom: 20px; border-radius: 10px; }
-  .badge-urgent { display: inline-flex; align-items: center; gap: 8px; color: #0B0705; background: var(--accent); border-radius: 999px; font-size: 12.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; padding: 8px 14px; margin-bottom: 18px; animation: pulse 1.8s ease-in-out infinite; }
-  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-  .hero h1 { color: var(--white); font-size: clamp(30px, 6.4vw, 46px); margin-bottom: 16px; max-width: 580px; }
-  .hero h1 strong { color: var(--accent); }
-  .hero p { color: var(--muted); max-width: 460px; margin-bottom: 30px; font-size: 15.5px; }
-  .invited-by { color: var(--accent-soft); font-size: 14px; margin-bottom: 14px; }
+  .hero-copy .tag { margin-bottom: 20px; }
+  .hero-copy h1 { font-size: clamp(32px, 4.8vw, 50px); line-height: 1.08; margin-bottom: 14px; }
+  .hero-copy h1 strong { color: var(--accent); }
+  .hero-sub-headline { font-size: clamp(16px, 1.9vw, 19px); color: var(--accent-soft); font-weight: 700; margin-bottom: 14px; line-height: 1.4; }
+  .hero-sub { font-size: 15.5px; color: var(--text-secondary); max-width: 520px; margin-bottom: 26px; }
+  .hero-meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 28px; }
+  .meta-card { background: var(--surface); border: 1px solid var(--border-accent); border-radius: 14px; padding: 14px 16px; }
+  .meta-card .meta-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; margin-bottom: 4px; }
+  .meta-card .meta-value { font-size: 14px; font-weight: 700; color: var(--text); }
+  .hero-cta-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: 15px; padding: 17px 32px; border-radius: 14px; text-decoration: none; border: none; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: #1A0D06; box-shadow: 0 14px 34px -8px color-mix(in srgb, var(--accent) 55%, transparent); }
+  .btn-ghost { color: var(--text-secondary); font-size: 14px; font-weight: 700; }
+  .invited-by { margin-top: 16px; font-size: 13.5px; color: var(--accent-soft); background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid var(--border-accent); padding: 10px 16px; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; }
+  .brand-ribbon { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 14px; color: var(--accent-soft); font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 
-  .btn-accent { display: inline-block; background: var(--accent); color: #0B0705; font-weight: 800; padding: 17px 34px; border-radius: 12px; text-decoration: none; border: none; cursor: pointer; font-size: 16.5px; box-shadow: 0 14px 34px color-mix(in srgb, var(--accent) 35%, transparent); }
+  .hero-visual { position: relative; }
+  .hero-visual .frame { border-radius: var(--radius-lg); overflow: hidden; border: 2px solid var(--accent); aspect-ratio: 4/5; background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 22%, transparent), var(--surface)); display: flex; align-items: center; justify-content: center; box-shadow: 0 30px 70px -24px rgba(0,0,0,0.7); }
+  .hero-visual .frame img { width: 100%; height: 100%; object-fit: cover; }
+  .frame-fallback { text-align: center; padding: 24px; color: var(--accent); }
+  .frame-fallback .fallback-icon { font-size: 46px; margin-bottom: 12px; }
+  .frame-fallback p { font-size: 15px; color: var(--text-secondary); max-width: 200px; margin: 0 auto; font-weight: 700; }
+  .badge-float { position: absolute; bottom: -18px; left: -18px; background: var(--accent); border-radius: 16px; padding: 14px 18px; display: flex; align-items: center; gap: 12px; box-shadow: 0 20px 40px -16px rgba(0,0,0,0.6); }
+  .badge-float .num { font-size: 26px; color: #1A0D06; font-weight: 900; }
+  .badge-float .label { font-size: 12px; color: #1A0D06; line-height: 1.3; max-width: 140px; font-weight: 700; }
 
-  .event-card { border: 2px solid var(--accent); border-radius: 16px; padding: 26px; max-width: 480px; margin: 0 auto; }
-  .event-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 14.5px; }
-  .event-row:last-child { border-bottom: none; }
-  .event-row .label { color: var(--muted); }
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; padding-top: 32px; }
+    .hero-visual { order: -1; max-width: 300px; margin: 0 auto; }
+    .badge-float { display: none; }
+    .hero-meta-grid { grid-template-columns: 1fr 1fr; }
+  }
 
-  .testimonial { max-width: 480px; margin: 0 auto; border: 1px dashed color-mix(in srgb, var(--accent) 50%, transparent); border-radius: 16px; padding: 22px; text-align: center; }
-  .testimonial p { font-style: italic; opacity: .92; margin-bottom: 10px; }
-  .testimonial span { color: var(--accent); font-size: 13px; font-weight: 700; }
+  section { padding: 62px 0; }
+  .section-alt { background: var(--bg-1); }
+  .section-title { font-size: clamp(26px, 3.6vw, 40px); text-align: center; margin-bottom: 16px; }
+  .section-lede { text-align: center; color: var(--text-secondary); max-width: 640px; margin: 0 auto 42px; font-size: 15.5px; }
 
-  .form-card { background: rgba(255,255,255,0.03); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 20px; padding: 28px 24px; max-width: 440px; margin: 0 auto; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 34px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border-accent); border-radius: var(--radius-md); padding: 22px 18px; text-align: center; }
+  .stat-card .stat-num { font-size: 30px; color: var(--accent); font-weight: 900; }
+  .stat-card .stat-label { font-size: 12.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.4; font-weight: 500; }
+  .reality-quote { max-width: 700px; margin: 0 auto; text-align: center; font-size: clamp(18px, 2.3vw, 23px); line-height: 1.5; color: var(--accent-soft); font-weight: 800; padding: 0 12px; }
+  @media (max-width: 780px) { .stat-grid { grid-template-columns: 1fr 1fr; } }
+
+  .formula-list { display: flex; flex-direction: column; gap: 14px; max-width: 780px; margin: 0 auto; }
+  .formula-item { display: grid; grid-template-columns: 54px 1fr; gap: 20px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border-accent); border-radius: var(--radius-md); padding: 22px 24px; }
+  .formula-item .step-num { width: 46px; height: 46px; border-radius: 13px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; color: #1A0D06; }
+  .formula-item h3 { font-size: 17px; margin-bottom: 6px; color: var(--text); }
+  .formula-item p { font-size: 14px; color: var(--text-secondary); font-weight: 400; }
+  .plus-card { max-width: 780px; margin: 28px auto 0; background: color-mix(in srgb, var(--accent) 12%, transparent); border: 2px solid var(--accent); border-radius: var(--radius-lg); padding: 30px 28px; }
+  .plus-card .plus-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; font-size: 13px; color: #1A0D06; background: var(--accent); padding: 6px 14px; border-radius: 999px; margin-bottom: 14px; }
+  .plus-card h3 { font-size: 21px; margin-bottom: 10px; }
+  .plus-card p { color: var(--text-secondary); font-size: 14.5px; margin-bottom: 16px; font-weight: 400; }
+  .plus-points { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .plus-points li { list-style: none; font-size: 13.5px; color: var(--text); display: flex; gap: 8px; font-weight: 500; }
+  .plus-points li::before { content: '✓'; color: var(--accent); font-weight: 900; flex-shrink: 0; }
+  @media (max-width: 640px) { .plus-points { grid-template-columns: 1fr; } .formula-item { grid-template-columns: 40px 1fr; padding: 18px; } }
+
+  .why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .why-card { background: var(--surface); border: 1px solid var(--border-accent); border-radius: var(--radius-md); padding: 26px 22px; }
+  .why-card .icon-badge { width: 44px; height: 44px; border-radius: 12px; margin-bottom: 14px; background: var(--accent); color: #1A0D06; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; }
+  .why-card h3 { font-size: 16.5px; margin-bottom: 8px; }
+  .why-card p { font-size: 13.5px; color: var(--text-secondary); font-weight: 400; }
+  @media (max-width: 780px) { .why-grid { grid-template-columns: 1fr; } }
+
+  .chip-cloud { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; max-width: 760px; margin: 0 auto 20px; }
+  .chip { background: var(--surface); border: 1px solid var(--border-accent); border-radius: 999px; padding: 12px 22px; font-size: 14.5px; font-weight: 700; color: var(--text); display: inline-flex; align-items: center; gap: 8px; }
+  .chip .dot-gold { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .audience-footnote { text-align: center; color: var(--text-secondary); font-size: 14px; max-width: 540px; margin: 0 auto; }
+
+  .timeline { max-width: 760px; margin: 0 auto; position: relative; padding-left: 36px; }
+  .timeline::before { content: ''; position: absolute; left: 11px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(180deg, var(--accent), transparent); }
+  .timeline-item { position: relative; padding-bottom: 32px; }
+  .timeline-item:last-child { padding-bottom: 0; }
+  .timeline-item::before { content: ''; position: absolute; left: -36px; top: 4px; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg-0); }
+  .timeline-item h3 { font-size: 18px; margin-bottom: 6px; }
+  .timeline-item .sesi-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-soft); font-weight: 800; margin-bottom: 4px; }
+  .timeline-item p { font-size: 14.5px; color: var(--text-secondary); font-weight: 400; }
+  @media (max-width: 640px) { .timeline { padding-left: 30px; } }
+
+  .benefit-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .benefit-item { display: flex; gap: 14px; background: var(--surface); border: 1px solid var(--border-accent); border-radius: 16px; padding: 18px 20px; }
+  .benefit-item .check { width: 26px; height: 26px; border-radius: 50%; background: rgba(34,197,94,0.16); color: var(--success); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; }
+  .benefit-item p { font-size: 14.5px; color: var(--text); font-weight: 500; }
+  @media (max-width: 700px) { .benefit-grid { grid-template-columns: 1fr; } }
+
+  .speaker-card { display: grid; grid-template-columns: 140px 1fr; gap: 30px; align-items: center; background: var(--surface-elevated); border: 1px solid var(--border-accent); border-radius: var(--radius-lg); padding: 32px; }
+  .speaker-avatar { width: 100%; aspect-ratio: 1; border-radius: 20px; display: flex; align-items: center; justify-content: center; background: var(--accent); font-size: 40px; color: #1A0D06; font-weight: 900; }
+  .speaker-info .role { color: var(--accent); font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .speaker-info h3 { font-size: 24px; margin-bottom: 10px; }
+  .speaker-info p { color: var(--text-secondary); font-size: 14.5px; font-weight: 400; }
+  @media (max-width: 700px) { .speaker-card { grid-template-columns: 1fr; text-align: center; } .speaker-avatar { max-width: 120px; margin: 0 auto; } }
+
+  .form-shell { max-width: 620px; margin: 0 auto; position: relative; overflow: hidden; background: var(--surface-elevated); border: 2px solid var(--accent); border-radius: var(--radius-lg); padding: 34px; box-shadow: 0 30px 70px -30px rgba(0,0,0,0.6); }
+  .capacity-note { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-secondary); margin-bottom: 22px; border-bottom: 1px dashed var(--border-accent); padding-bottom: 18px; }
   .field { margin-bottom: 16px; }
-  .field label { display: block; font-size: 13px; color: var(--accent-soft); margin-bottom: 6px; font-weight: 700; }
-  .field input { width: 100%; background: var(--bg); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 13px 15px; color: var(--white); font-size: 15px; font-family: inherit; outline: none; }
-  .field input:focus { border-color: var(--accent); }
-  .submit-btn { width: 100%; background: var(--accent); color: #0B0705; font-weight: 800; font-size: 16px; padding: 16px; border: none; border-radius: 12px; cursor: pointer; margin-top: 4px; }
+  .field label { display: block; font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 7px; }
+  .field .req { color: var(--accent); }
+  .field input, .field select {
+    width: 100%; background: var(--bg-1); border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text); font-size: 15px; padding: 13px 15px; border-radius: 12px;
+    font-family: var(--sans); outline: none; transition: border-color 0.15s ease;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .submit-btn { width: 100%; margin-top: 6px; background: var(--accent); color: #1A0D06; font-weight: 900; font-size: 16px; padding: 17px; border: none; border-radius: 14px; cursor: pointer; }
+  .microcopy { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 14px; }
+  [data-rg-message] { text-align: center; font-size: 13.5px; padding: 12px 16px; border-radius: 12px; margin-bottom: 18px; }
 
-  [data-rg-message] { text-align: center; padding: 14px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; }
+  .faq-item { border-bottom: 1px solid var(--border-accent); padding: 18px 0; max-width: 720px; margin: 0 auto; }
+  .faq-q { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; font-weight: 700; font-size: 15.5px; }
+  .faq-q .chev { transition: transform 0.2s ease; color: var(--accent); flex-shrink: 0; }
+  .faq-item.open .faq-q .chev { transform: rotate(180deg); }
+  .faq-a { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; font-size: 14px; color: var(--text-secondary); font-weight: 400; }
+  .faq-item.open .faq-a { max-height: 240px; margin-top: 10px; }
 
-  h2.section-title { text-align: center; margin-bottom: 30px; font-size: 26px; color: var(--white); }
-  footer { text-align: center; padding: 40px 0 56px; color: var(--muted); font-size: 12.5px; }
+  footer { padding: 40px 0 100px; text-align: center; }
+  footer .brand { display: flex; justify-content: center; margin-bottom: 12px; }
+  footer .brand img { max-width: 160px; max-height: 40px; object-fit: contain; }
+  footer .disclaimer { font-size: 12px; color: var(--text-muted); max-width: 560px; margin: 0 auto 10px; line-height: 1.6; }
+  footer .copyright { font-size: 12px; color: var(--text-muted); }
+
+  .floating-cta { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 60; display: none; align-items: center; justify-content: center; }
+  .floating-cta.show { display: flex; }
+  .floating-cta a { width: 100%; text-align: center; }
+
+  @media (max-width: 780px) { .floating-cta { display: flex; } footer { padding-bottom: 110px; } }
+  @media (max-width: 520px) {
+    header.site .wrap { height: 66px; padding: 0 16px; }
+    .brand-mark img { width: 128px; height: 36px; }
+    .header-cta { padding: 9px 13px; font-size: 12.5px; }
+  }
 </style>
 </head>
 <body>
 
-<section class="hero">
-  <img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}">
-  <div data-rg-invited-by style="display:none;">
-    <span class="invited-by">Kamu diundang oleh <strong data-rg-referrer-name></strong></span>
-  </div>
-  <span class="badge-urgent">{{EYEBROW}}</span>
-  <h1>{{HEADLINE}}</h1>
-  <p>{{SUBHEADLINE}}</p>
-  <a href="#daftar" class="btn-accent">{{CTA_TEXT}}</a>
-</section>
-
-<section>
+<header class="site">
   <div class="wrap">
-    {{DESCRIPTION}}
+    <a class="brand-mark" href="#" aria-label="{{BRAND_NAME}}">
+      <img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}">
+    </a>
+    <a class="header-cta" href="#daftar">Daftar Sekarang</a>
   </div>
-</section>
+</header>
 
-<section>
-  <div class="wrap">
-    <h2 class="section-title">Detail Acara</h2>
-    <div class="event-card">
-      <div class="event-row"><span class="label">Hari & Tanggal</span><span data-rg-field="event_day">—</span></div>
-      <div class="event-row"><span class="label">Waktu</span><span data-rg-field="event_time">—</span></div>
-      <div class="event-row"><span class="label">Lokasi</span><span data-rg-field="event_location">—</span></div>
-      <div class="event-row"><span class="label">Pembicara</span><span data-rg-field="event_speaker">—</span></div>
-      <div class="event-row"><span class="label">Kapasitas</span><span data-rg-field="event_capacity">—</span></div>
+<section class="hero wrap">
+  <div class="hero-copy">
+    <div class="brand-ribbon">{{BRAND_NAME}} Presents</div>
+    <span class="tag pulse">{{EYEBROW}}</span>
+    <h1 style="margin-top:16px;">{{HEADLINE}}</h1>
+    <p class="hero-sub-headline">{{SUBHEADLINE}}</p>
+    <div class="hero-sub">{{DESCRIPTION}}</div>
+
+    <div class="hero-meta-grid">
+      <div class="meta-card">
+        <div class="meta-label">Hari &amp; Tanggal</div>
+        <div class="meta-value" data-rg-field="event_day">—</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-label">Waktu</div>
+        <div class="meta-value" data-rg-field="event_time">—</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-label">Lokasi</div>
+        <div class="meta-value" data-rg-field="event_location">—</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-label">Kapasitas</div>
+        <div class="meta-value" data-rg-field="event_capacity">—</div>
+      </div>
+    </div>
+
+    <div class="hero-cta-row">
+      <a class="btn btn-primary" href="#daftar">{{CTA_TEXT}}</a>
+      <a class="btn-ghost" href="#daftar">Pelajari Lebih Lanjut &darr;</a>
+    </div>
+
+    <div class="invited-by" data-rg-invited-by style="display:none;">
+      Diundang oleh <strong data-rg-referrer-name></strong> — daftar sekarang sebelum kuota penuh!
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="frame">
+      <img data-rg-field="flyer_path" style="display:none;" alt="Flyer {{EVENT_NAME}}">
+      <div class="frame-fallback" data-rg-field-fallback="flyer_path">
+        <div class="fallback-icon">🔥</div>
+        <p>{{EVENT_NAME}}</p>
+      </div>
+    </div>
+    <div class="badge-float">
+      <div class="num">🔥</div>
+      <div class="label">Kuota terbatas — daftar sebelum penuh</div>
     </div>
   </div>
 </section>
 
-<!--SECTION:testimonial:start-->
-<section>
+<!--BLOCK:testimonial:start-->
+<section class="section-alt">
   <div class="wrap">
-    <div class="testimonial">
-      <p>"{{TESTIMONIAL_QUOTE}}"</p>
-      <span>— {{TESTIMONIAL_NAME}}</span>
+    <div class="center"><span class="tag outline">Kata Peserta</span></div>
+    <div class="why-card" style="max-width:640px; margin:16px auto 0; text-align:left;">
+      <p style="font-style:italic; color:var(--text-secondary); margin-bottom:10px;">"{{TESTIMONIAL_QUOTE}}"</p>
+      <span style="color:var(--accent-soft); font-size:13px; font-weight:800;">— {{TESTIMONIAL_NAME}}</span>
     </div>
   </div>
 </section>
-<!--SECTION:testimonial:end-->
+<!--BLOCK:testimonial:end-->
 
-<section id="daftar">
+<!--BLOCK:stat_grid:start-->
+<section class="section-alt">
   <div class="wrap">
-    <h2 class="section-title">Daftar Sekarang — Kuota Terbatas!</h2>
-    <div class="form-card">
+    <div class="center"><span class="tag outline">Realita Hari Ini</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{STAT_TITLE}}</h2>
+    <p class="section-lede">{{STAT_LEDE}}</p>
+    <div class="stat-grid">
+      <!--LOOP:stats-->
+      <div class="stat-card">
+        <div class="stat-num">{{ITEM.value}}</div>
+        <div class="stat-label">{{ITEM.label}}</div>
+      </div>
+      <!--/LOOP:stats-->
+    </div>
+    <p class="reality-quote">"{{STAT_QUOTE}}"</p>
+  </div>
+</section>
+<!--BLOCK:stat_grid:end-->
+
+<!--BLOCK:formula_steps:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag pulse">Solusinya</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{FORMULA_TITLE}}</h2>
+    <p class="section-lede">{{FORMULA_LEDE}}</p>
+    <div class="formula-list">
+      <!--LOOP:formula_steps-->
+      <div class="formula-item">
+        <div class="step-num">{{ITEM.num}}</div>
+        <div>
+          <h3>{{ITEM.title}}</h3>
+          <p>{{ITEM.desc}}</p>
+        </div>
+      </div>
+      <!--/LOOP:formula_steps-->
+    </div>
+
+    <!--SECTION:formula_plus:start-->
+    <div class="plus-card">
+      <span class="plus-badge">{{FORMULA_PLUS_BADGE}}</span>
+      <h3>{{FORMULA_PLUS_TITLE}}</h3>
+      <p>{{FORMULA_PLUS_DESC}}</p>
+      <ul class="plus-points">
+        <!--LOOP:formula_plus_points-->
+        <li>{{ITEM.value}}</li>
+        <!--/LOOP:formula_plus_points-->
+      </ul>
+    </div>
+    <!--SECTION:formula_plus:end-->
+  </div>
+</section>
+<!--BLOCK:formula_steps:end-->
+
+<!--BLOCK:why_now:start-->
+<section class="section-alt">
+  <div class="wrap">
+    <div class="center"><span class="tag outline">Kenapa Sekarang</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{WHY_NOW_TITLE}}</h2>
+    <p class="section-lede">{{WHY_NOW_LEDE}}</p>
+
+    <div class="why-grid">
+      <!--LOOP:why_cards-->
+      <div class="why-card">
+        <div class="icon-badge">{{ITEM.icon}}</div>
+        <h3>{{ITEM.title}}</h3>
+        <p>{{ITEM.desc}}</p>
+      </div>
+      <!--/LOOP:why_cards-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:why_now:end-->
+
+<!--BLOCK:audience_cards:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag outline">Untuk Siapa</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{AUDIENCE_CARDS_TITLE}}</h2>
+    <div class="why-grid">
+      <!--LOOP:audience_cards-->
+      <div class="why-card">
+        <div class="icon-badge">{{ITEM.icon}}</div>
+        <h3>{{ITEM.title}}</h3>
+        <p>{{ITEM.desc}}</p>
+      </div>
+      <!--/LOOP:audience_cards-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:audience_cards:end-->
+
+<!--BLOCK:audience_chips:start-->
+<section class="section-alt">
+  <div class="wrap">
+    <div class="center"><span class="tag outline">Untuk Siapa</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{AUDIENCE_CHIPS_TITLE}}</h2>
+    <div class="chip-cloud">
+      <!--LOOP:audience_chips-->
+      <span class="chip"><span class="dot-gold"></span> {{ITEM.value}}</span>
+      <!--/LOOP:audience_chips-->
+    </div>
+    <p class="audience-footnote">{{AUDIENCE_CHIPS_FOOTNOTE}}</p>
+  </div>
+</section>
+<!--BLOCK:audience_chips:end-->
+
+<!--BLOCK:roadmap:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag outline">Roadmap Materi</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{ROADMAP_TITLE}}</h2>
+    <p class="section-lede">{{ROADMAP_LEDE}}</p>
+
+    <div class="timeline">
+      <!--LOOP:roadmap-->
+      <div class="timeline-item">
+        <div class="sesi-label">Sesi {{ITEM.step}}</div>
+        <h3>{{ITEM.title}}</h3>
+        <p>{{ITEM.desc}}</p>
+      </div>
+      <!--/LOOP:roadmap-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:roadmap:end-->
+
+<!--BLOCK:benefits:start-->
+<section class="section-alt">
+  <div class="wrap">
+    <div class="center"><span class="tag outline">Yang Kamu Kuasai</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{BENEFITS_TITLE}}</h2>
+    <div class="benefit-grid">
+      <!--LOOP:benefits-->
+      <div class="benefit-item"><div class="check">✓</div><p>{{ITEM.value}}</p></div>
+      <!--/LOOP:benefits-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:benefits:end-->
+
+<!--BLOCK:speaker:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag outline">Pembicara</span></div>
+    <h2 class="section-title" style="margin-top:14px;">Dipandu Langsung Oleh</h2>
+    <div class="speaker-card">
+      <div class="speaker-avatar">★</div>
+      <div class="speaker-info">
+        <div class="role">{{SPEAKER_ROLE}}</div>
+        <h3 data-rg-field="event_speaker">{{SPEAKER_NAME}}</h3>
+        <p>{{SPEAKER_BIO}}</p>
+      </div>
+    </div>
+  </div>
+</section>
+<!--BLOCK:speaker:end-->
+
+<!--BLOCK:registration_form:start-->
+<section id="daftar" class="section-alt">
+  <div class="wrap">
+    <div class="center"><span class="tag pulse">Kuota Terbatas!</span></div>
+    <h2 class="section-title" style="margin-top:14px;">Amankan Kursimu Sekarang</h2>
+    <p class="section-lede">Isi data di bawah ini. Tim kami akan kirim konfirmasi langsung ke WhatsApp kamu — gratis, tanpa syarat tersembunyi.</p>
+
+    <div class="form-shell">
+      <div class="capacity-note">
+        <span data-rg-field="event_location">Online</span>
+        <span>Data aman &amp; tidak dibagikan</span>
+      </div>
+
       <div data-rg-message style="display:none;"></div>
+
       <form data-rg-form>
         <div class="field">
-          <label>Nama Lengkap</label>
+          <label>Nama Lengkap <span class="req">*</span></label>
           <input type="text" name="name" placeholder="Nama lengkap kamu" required minlength="3">
         </div>
         <div class="field">
-          <label>Email</label>
+          <label>Email <span class="req">*</span></label>
           <input type="email" name="email" placeholder="email@kamu.com" required>
         </div>
         <div class="field">
-          <label>Nomor WhatsApp</label>
+          <label>Nomor WhatsApp <span class="req">*</span></label>
           <input type="tel" name="whatsapp" placeholder="08xxxxxxxxxx" required minlength="9">
         </div>
         <div class="field">
-          <label>Kota Domisili</label>
+          <label>Kota Domisili <span class="req">*</span></label>
           <input type="text" name="kota" placeholder="Kota kamu" required minlength="2">
         </div>
         <button type="submit" class="submit-btn">{{CTA_TEXT}}</button>
+        <p class="microcopy">Dengan mendaftar, kamu akan menerima info acara &amp; follow-up terkait via WhatsApp.</p>
       </form>
     </div>
   </div>
 </section>
+<!--BLOCK:registration_form:end-->
+
+<!--BLOCK:faq:start-->
+<section class="section-alt">
+  <div class="wrap">
+    <div class="center"><span class="tag outline">Pertanyaan Umum</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{FAQ_TITLE}}</h2>
+
+    <div class="faq-list">
+      <!--LOOP:faq-->
+      <div class="faq-item">
+        <div class="faq-q">{{ITEM.q}} <span class="chev">&#8964;</span></div>
+        <div class="faq-a">{{ITEM.a}}</div>
+      </div>
+      <!--/LOOP:faq-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:faq:end-->
 
 <footer>
-  <div class="wrap">{{BRAND_NAME}} — <span data-rg-field="event_name">{{EVENT_NAME}}</span></div>
+  <div class="wrap">
+    <div class="brand"><img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}"></div>
+    <p class="disclaimer">Materi acara ini bersifat edukasi umum untuk meningkatkan literasi keuangan dan bukan merupakan jasa perencanaan keuangan personal maupun jaminan hasil finansial tertentu. Sesuaikan setiap keputusan keuangan dengan kondisi pribadi Anda.</p>
+    <p class="copyright">&copy; <span id="rgYear"></span> {{BRAND_NAME}} — Seluruh hak cipta dilindungi.</p>
+  </div>
 </footer>
 
+<div class="floating-cta">
+  <a class="btn btn-primary" href="#daftar">{{CTA_TEXT}}</a>
+</div>
+
 <script src="/assets/event-sdk.js" defer></script>
+<script>
+  document.getElementById('rgYear').textContent = new Date().getFullYear();
+
+  document.querySelectorAll('.faq-item').forEach(function (item) {
+    var q = item.querySelector('.faq-q');
+    if (!q) return;
+    q.addEventListener('click', function () {
+      var wasOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(function (i) { i.classList.remove('open'); });
+      if (!wasOpen) item.classList.add('open');
+    });
+  });
+
+  (function () {
+    var floatingCta = document.querySelector('.floating-cta');
+    var daftarSection = document.getElementById('daftar');
+    if (!floatingCta || !daftarSection) return;
+    var toggleFloating = function () {
+      var rect = daftarSection.getBoundingClientRect();
+      var isNear = rect.top <= window.innerHeight * 0.75 && rect.bottom > 0;
+      floatingCta.classList.toggle('show', !isNear && window.scrollY > 260);
+    };
+    document.addEventListener('scroll', toggleFloating, { passive: true });
+    toggleFloating();
+  })();
+</script>
 </body>
 </html>

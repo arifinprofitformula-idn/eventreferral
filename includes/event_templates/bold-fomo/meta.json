@@ -1,8 +1,7 @@
 {
   "key": "bold-fomo",
   "label": "Bold FOMO",
-  "description": "Vibe urgent, high-energy, penuh semangat. Badge urgency berdenyut di atas headline, tombol CTA besar dengan shadow kuat, aksen warna mencolok. Cocok untuk event dengan kuota terbatas atau promo waktu terbatas.",
+  "description": "Vibe urgent, high-energy, penuh semangat (Poppins bold). Menyediakan pustaka section lengkap (stat data, formula/langkah bernomor, roadmap timeline, kartu why-now, kartu/chip audiens, benefit, profil pembicara, testimoni, FAQ) yang bisa dipilih & disusun bebas sesuai kebutuhan event. Cocok untuk event dengan kuota terbatas atau promo waktu terbatas.",
   "vibe_tags": ["urgent", "energik", "kuota-terbatas", "high-energy"],
-  "default_accent": "#FF5A36",
-  "optional_sections": ["testimonial"]
+  "default_accent": "#FF5A36"
 }

@@ -4,122 +4,507 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{EVENT_NAME}} — {{BRAND_NAME}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#101317; --surface:#161B21; --accent:{{ACCENT_COLOR}}; --accent-soft:{{ACCENT_COLOR_SOFT}}; --white:#F5F7FA; --muted:#8A93A0; }
+  :root {
+    --bg-0: #0E1116;
+    --bg-1: #141821;
+    --surface: #181D27;
+    --surface-elevated: #1F2530;
+    --accent: {{ACCENT_COLOR}};
+    --accent-soft: {{ACCENT_COLOR_SOFT}};
+    --border-accent: color-mix(in srgb, var(--accent) 26%, transparent);
+    --text: #F2F5F9;
+    --text-secondary: #9AA4B2;
+    --text-muted: #6B7482;
+    --success: #22C55E;
+    --radius-lg: 22px;
+    --radius-md: 16px;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--white); font-family: 'Inter', system-ui, sans-serif; line-height: 1.65; }
-  h1, h2 { font-weight: 800; letter-spacing: -0.02em; }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 0 24px; }
-  section { padding: 56px 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg-0); color: var(--text); font-family: var(--sans); line-height: 1.65; overflow-x: hidden; }
+  img { max-width: 100%; display: block; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; }
+  h1, h2, h3 { font-weight: 800; letter-spacing: -0.02em; }
 
-  .hero { min-height: 90svh; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding: 40px 28px; max-width: 640px; margin: 0 auto; }
-  .hero img { width: 64px; height: 64px; object-fit: contain; margin-bottom: 24px; border-radius: 14px; background: var(--surface); padding: 8px; }
-  .eyebrow { display: inline-flex; align-items: center; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 6px 12px; margin-bottom: 18px; }
-  .hero h1 { color: var(--white); font-size: clamp(30px, 5.4vw, 46px); line-height: 1.12; margin-bottom: 16px; }
-  .hero h1 strong { color: var(--accent); }
-  .hero p { color: var(--muted); max-width: 480px; margin-bottom: 30px; font-size: 15.5px; }
-  .invited-by { color: var(--accent-soft); font-size: 14px; margin-bottom: 14px; }
+  header.site { position: sticky; top: 0; z-index: 50; background: rgba(14,17,22,0.86); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,0.06); }
+  header.site .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .brand-mark { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
+  .brand-mark img { width: clamp(110px, 15vw, 150px); height: 36px; object-fit: contain; object-position: left center; }
+  .header-cta { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #08090B; font-weight: 800; font-size: 13.5px; padding: 10px 18px; border-radius: 10px; text-decoration: none; white-space: nowrap; }
 
-  .btn-accent { display: inline-block; background: var(--accent); color: #0B0D10; font-weight: 800; padding: 16px 30px; border-radius: 12px; text-decoration: none; border: none; cursor: pointer; font-size: 15.5px; }
+  .tag { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid var(--border-accent); padding: 7px 13px; border-radius: 8px; }
+  .center { text-align: center; }
 
-  .event-card { background: var(--surface); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 26px; max-width: 480px; margin: 0 auto; }
-  .event-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 14px; }
-  .event-row:last-child { border-bottom: none; }
-  .event-row .label { color: var(--muted); }
+  .hero { padding: 60px 0 52px; display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 44px; align-items: center; }
+  .hero-copy .tag { margin-bottom: 18px; }
+  .hero-copy h1 { font-size: clamp(32px, 4.6vw, 50px); line-height: 1.1; margin-bottom: 14px; }
+  .hero-copy h1 strong { color: var(--accent); }
+  .hero-sub-headline { font-size: clamp(16px, 1.8vw, 18px); color: var(--text); font-weight: 600; margin-bottom: 14px; line-height: 1.5; }
+  .hero-sub { font-size: 15.5px; color: var(--text-secondary); max-width: 520px; margin-bottom: 26px; }
+  .hero-meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 28px; }
+  .meta-card { background: var(--surface); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 13px 15px; }
+  .meta-card .meta-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; margin-bottom: 4px; }
+  .meta-card .meta-value { font-size: 13.5px; font-weight: 700; color: var(--text); }
+  .hero-cta-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: 14.5px; padding: 15px 28px; border-radius: 12px; text-decoration: none; border: none; cursor: pointer; transition: transform 0.15s ease; }
+  .btn-primary { background: var(--accent); color: #08090B; box-shadow: 0 10px 26px -8px color-mix(in srgb, var(--accent) 55%, transparent); }
+  .btn-primary:hover { transform: translateY(-2px); }
+  .btn-ghost { color: var(--text-secondary); font-size: 13.5px; font-weight: 700; }
+  .invited-by { margin-top: 16px; font-size: 13px; color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); border: 1px solid var(--border-accent); padding: 10px 16px; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; }
+  .brand-ribbon { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 12px; color: var(--text-muted); font-size: 11.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
 
-  .testimonial { max-width: 480px; margin: 0 auto; background: var(--surface); border-radius: 18px; padding: 24px; }
-  .testimonial p { opacity: .92; margin-bottom: 10px; font-size: 15px; }
-  .testimonial span { color: var(--accent); font-size: 13px; font-weight: 700; }
+  .hero-visual { position: relative; }
+  .hero-visual .frame { border-radius: var(--radius-lg); overflow: hidden; border: 1px solid rgba(255,255,255,0.08); aspect-ratio: 4/5; background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 18%, transparent), var(--surface)); display: flex; align-items: center; justify-content: center; }
+  .hero-visual .frame img { width: 100%; height: 100%; object-fit: cover; }
+  .frame-fallback { text-align: center; padding: 24px; color: var(--accent); }
+  .frame-fallback .fallback-icon { font-size: 40px; margin-bottom: 12px; font-weight: 900; }
+  .frame-fallback p { font-size: 14px; color: var(--text-secondary); max-width: 200px; margin: 0 auto; font-weight: 600; }
+  .badge-float { position: absolute; bottom: -16px; left: -16px; background: var(--surface-elevated); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 13px 17px; display: flex; align-items: center; gap: 12px; box-shadow: 0 20px 40px -16px rgba(0,0,0,0.5); }
+  .badge-float .num { font-size: 24px; color: var(--accent); font-weight: 900; }
+  .badge-float .label { font-size: 11.5px; color: var(--text-secondary); line-height: 1.3; max-width: 140px; font-weight: 600; }
 
-  .form-card { background: var(--surface); border: 1px solid rgba(255,255,255,0.08); border-radius: 22px; padding: 28px 24px; max-width: 440px; margin: 0 auto; }
-  .field { margin-bottom: 16px; }
-  .field label { display: block; font-size: 13px; color: var(--white); margin-bottom: 6px; font-weight: 600; }
-  .field input { width: 100%; background: var(--bg); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 13px 15px; color: var(--white); font-size: 15px; font-family: inherit; outline: none; }
-  .field input:focus { border-color: var(--accent); }
-  .submit-btn { width: 100%; background: var(--accent); color: #0B0D10; font-weight: 800; font-size: 15.5px; padding: 15px; border: none; border-radius: 12px; cursor: pointer; margin-top: 4px; }
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; padding-top: 30px; }
+    .hero-visual { order: -1; max-width: 280px; margin: 0 auto; }
+    .badge-float { display: none; }
+    .hero-meta-grid { grid-template-columns: 1fr 1fr; }
+  }
 
-  [data-rg-message] { text-align: center; padding: 14px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; }
+  section { padding: 60px 0; }
+  .section-alt { background: var(--bg-1); }
+  .section-title { font-size: clamp(24px, 3.2vw, 36px); text-align: center; margin-bottom: 14px; }
+  .section-lede { text-align: center; color: var(--text-secondary); max-width: 620px; margin: 0 auto 40px; font-size: 15px; }
 
-  h2.section-title { text-align: center; margin-bottom: 28px; font-size: 24px; color: var(--white); }
-  footer { text-align: center; padding: 40px 0 56px; color: var(--muted); font-size: 12.5px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 32px; }
+  .stat-card { background: var(--surface); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-md); padding: 20px 16px; text-align: center; }
+  .stat-card .stat-num { font-size: 28px; color: var(--accent); font-weight: 900; }
+  .stat-card .stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 6px; line-height: 1.4; font-weight: 500; }
+  .reality-quote { max-width: 680px; margin: 0 auto; text-align: center; font-size: clamp(17px, 2.1vw, 21px); line-height: 1.5; color: var(--accent-soft); font-weight: 700; padding: 0 12px; }
+  @media (max-width: 780px) { .stat-grid { grid-template-columns: 1fr 1fr; } }
+
+  .formula-list { display: flex; flex-direction: column; gap: 12px; max-width: 760px; margin: 0 auto; }
+  .formula-item { display: grid; grid-template-columns: 50px 1fr; gap: 18px; align-items: flex-start; background: var(--surface); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-md); padding: 20px 22px; }
+  .formula-item .step-num { width: 42px; height: 42px; border-radius: 11px; background: color-mix(in srgb, var(--accent) 16%, transparent); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; color: var(--accent); }
+  .formula-item h3 { font-size: 15.5px; margin-bottom: 6px; color: var(--text); }
+  .formula-item p { font-size: 13px; color: var(--text-secondary); font-weight: 400; }
+  .plus-card { max-width: 760px; margin: 24px auto 0; background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid var(--border-accent); border-radius: var(--radius-lg); padding: 26px 24px; }
+  .plus-card .plus-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; font-size: 12px; color: #08090B; background: var(--accent); padding: 6px 13px; border-radius: 8px; margin-bottom: 13px; }
+  .plus-card h3 { font-size: 19px; margin-bottom: 9px; }
+  .plus-card p { color: var(--text-secondary); font-size: 13.5px; margin-bottom: 14px; font-weight: 400; }
+  .plus-points { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .plus-points li { list-style: none; font-size: 13px; color: var(--text); display: flex; gap: 8px; font-weight: 500; }
+  .plus-points li::before { content: '✓'; color: var(--accent); font-weight: 900; flex-shrink: 0; }
+  @media (max-width: 640px) { .plus-points { grid-template-columns: 1fr; } .formula-item { grid-template-columns: 38px 1fr; padding: 16px; } }
+
+  .why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .why-card { background: var(--surface); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-md); padding: 24px 20px; }
+  .why-card .icon-badge { width: 40px; height: 40px; border-radius: 10px; margin-bottom: 13px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; }
+  .why-card h3 { font-size: 15.5px; margin-bottom: 8px; }
+  .why-card p { font-size: 13px; color: var(--text-secondary); font-weight: 400; }
+  @media (max-width: 780px) { .why-grid { grid-template-columns: 1fr; } }
+
+  .chip-cloud { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 740px; margin: 0 auto 18px; }
+  .chip { background: var(--surface); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 11px 20px; font-size: 13.5px; font-weight: 700; color: var(--text); display: inline-flex; align-items: center; gap: 8px; }
+  .chip .dot-gold { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .audience-footnote { text-align: center; color: var(--text-secondary); font-size: 13.5px; max-width: 520px; margin: 0 auto; }
+
+  .timeline { max-width: 740px; margin: 0 auto; position: relative; padding-left: 34px; }
+  .timeline::before { content: ''; position: absolute; left: 10px; top: 6px; bottom: 8px; width: 2px; background: linear-gradient(180deg, var(--accent), transparent); }
+  .timeline-item { position: relative; padding-bottom: 30px; }
+  .timeline-item:last-child { padding-bottom: 0; }
+  .timeline-item::before { content: ''; position: absolute; left: -34px; top: 3px; width: 22px; height: 22px; border-radius: 6px; background: var(--bg-0); border: 2px solid var(--accent); }
+  .timeline-item h3 { font-size: 16.5px; margin-bottom: 6px; }
+  .timeline-item .sesi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 800; margin-bottom: 4px; }
+  .timeline-item p { font-size: 13.5px; color: var(--text-secondary); font-weight: 400; }
+  @media (max-width: 640px) { .timeline { padding-left: 28px; } }
+
+  .benefit-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .benefit-item { display: flex; gap: 13px; background: var(--surface); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px 18px; }
+  .benefit-item .check { width: 24px; height: 24px; border-radius: 7px; background: rgba(34,197,94,0.14); color: var(--success); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; }
+  .benefit-item p { font-size: 13.5px; color: var(--text); font-weight: 500; }
+  @media (max-width: 700px) { .benefit-grid { grid-template-columns: 1fr; } }
+
+  .speaker-card { display: grid; grid-template-columns: 130px 1fr; gap: 28px; align-items: center; background: var(--surface-elevated); border: 1px solid rgba(255,255,255,0.07); border-radius: var(--radius-lg); padding: 30px; }
+  .speaker-avatar { width: 100%; aspect-ratio: 1; border-radius: 16px; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--accent) 16%, transparent); font-size: 36px; color: var(--accent); font-weight: 900; }
+  .speaker-info .role { color: var(--accent); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .speaker-info h3 { font-size: 22px; margin-bottom: 9px; }
+  .speaker-info p { color: var(--text-secondary); font-size: 13.5px; font-weight: 400; }
+  @media (max-width: 700px) { .speaker-card { grid-template-columns: 1fr; text-align: center; } .speaker-avatar { max-width: 110px; margin: 0 auto; } }
+
+  .form-shell { max-width: 600px; margin: 0 auto; background: var(--surface-elevated); border: 1px solid rgba(255,255,255,0.07); border-radius: var(--radius-lg); padding: 32px; }
+  .capacity-note { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.07); padding-bottom: 16px; }
+  .field { margin-bottom: 15px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 7px; }
+  .field .req { color: var(--accent); }
+  .field input, .field select {
+    width: 100%; background: var(--bg-1); border: 1px solid rgba(255,255,255,0.10);
+    color: var(--text); font-size: 14.5px; padding: 12px 14px; border-radius: 10px;
+    font-family: var(--sans); outline: none; transition: border-color 0.15s ease;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .submit-btn { width: 100%; margin-top: 4px; background: var(--accent); color: #08090B; font-weight: 900; font-size: 15px; padding: 16px; border: none; border-radius: 12px; cursor: pointer; }
+  .microcopy { text-align: center; font-size: 11.5px; color: var(--text-muted); margin-top: 13px; }
+  [data-rg-message] { text-align: center; font-size: 13px; padding: 11px 15px; border-radius: 10px; margin-bottom: 16px; }
+
+  .faq-item { border-bottom: 1px solid rgba(255,255,255,0.07); padding: 17px 0; max-width: 700px; margin: 0 auto; }
+  .faq-q { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; font-weight: 700; font-size: 14.5px; }
+  .faq-q .chev { transition: transform 0.2s ease; color: var(--accent); flex-shrink: 0; }
+  .faq-item.open .faq-q .chev { transform: rotate(180deg); }
+  .faq-a { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; font-size: 13.5px; color: var(--text-secondary); font-weight: 400; }
+  .faq-item.open .faq-a { max-height: 240px; margin-top: 9px; }
+
+  footer { padding: 36px 0 96px; text-align: center; }
+  footer .brand { display: flex; justify-content: center; margin-bottom: 10px; }
+  footer .brand img { max-width: 140px; max-height: 36px; object-fit: contain; }
+  footer .disclaimer { font-size: 11.5px; color: var(--text-muted); max-width: 540px; margin: 0 auto 8px; line-height: 1.6; }
+  footer .copyright { font-size: 11.5px; color: var(--text-muted); }
+
+  .floating-cta { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 60; display: none; align-items: center; justify-content: center; }
+  .floating-cta.show { display: flex; }
+  .floating-cta a { width: 100%; text-align: center; }
+
+  @media (max-width: 780px) { .floating-cta { display: flex; } footer { padding-bottom: 106px; } }
+  @media (max-width: 520px) {
+    header.site .wrap { height: 62px; padding: 0 16px; }
+    .brand-mark img { width: 104px; height: 30px; }
+    .header-cta { padding: 9px 13px; font-size: 12px; }
+  }
 </style>
 </head>
 <body>
 
-<section class="hero">
-  <img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}">
-  <div data-rg-invited-by style="display:none;">
-    <span class="invited-by">Kamu diundang oleh <strong data-rg-referrer-name></strong></span>
-  </div>
-  <span class="eyebrow">{{EYEBROW}}</span>
-  <h1>{{HEADLINE}}</h1>
-  <p>{{SUBHEADLINE}}</p>
-  <a href="#daftar" class="btn-accent">{{CTA_TEXT}}</a>
-</section>
-
-<section>
+<header class="site">
   <div class="wrap">
-    {{DESCRIPTION}}
+    <a class="brand-mark" href="#" aria-label="{{BRAND_NAME}}">
+      <img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}">
+    </a>
+    <a class="header-cta" href="#daftar">Daftar Gratis</a>
   </div>
-</section>
+</header>
 
-<section>
-  <div class="wrap">
-    <h2 class="section-title">Detail Acara</h2>
-    <div class="event-card">
-      <div class="event-row"><span class="label">Hari & Tanggal</span><span data-rg-field="event_day">—</span></div>
-      <div class="event-row"><span class="label">Waktu</span><span data-rg-field="event_time">—</span></div>
-      <div class="event-row"><span class="label">Lokasi</span><span data-rg-field="event_location">—</span></div>
-      <div class="event-row"><span class="label">Pembicara</span><span data-rg-field="event_speaker">—</span></div>
-      <div class="event-row"><span class="label">Kapasitas</span><span data-rg-field="event_capacity">—</span></div>
+<section class="hero wrap">
+  <div class="hero-copy">
+    <div class="brand-ribbon">{{BRAND_NAME}}</div>
+    <span class="tag">{{EYEBROW}}</span>
+    <h1 style="margin-top:16px;">{{HEADLINE}}</h1>
+    <p class="hero-sub-headline">{{SUBHEADLINE}}</p>
+    <div class="hero-sub">{{DESCRIPTION}}</div>
+
+    <div class="hero-meta-grid">
+      <div class="meta-card">
+        <div class="meta-label">Hari &amp; Tanggal</div>
+        <div class="meta-value" data-rg-field="event_day">—</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-label">Waktu</div>
+        <div class="meta-value" data-rg-field="event_time">—</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-label">Lokasi</div>
+        <div class="meta-value" data-rg-field="event_location">—</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-label">Kapasitas</div>
+        <div class="meta-value" data-rg-field="event_capacity">—</div>
+      </div>
+    </div>
+
+    <div class="hero-cta-row">
+      <a class="btn btn-primary" href="#daftar">{{CTA_TEXT}}</a>
+      <a class="btn-ghost" href="#daftar">Pelajari Lebih Lanjut &darr;</a>
+    </div>
+
+    <div class="invited-by" data-rg-invited-by style="display:none;">
+      Diundang oleh <strong data-rg-referrer-name></strong> — daftar sekarang sebelum kuota penuh.
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="frame">
+      <img data-rg-field="flyer_path" style="display:none;" alt="Flyer {{EVENT_NAME}}">
+      <div class="frame-fallback" data-rg-field-fallback="flyer_path">
+        <div class="fallback-icon">+</div>
+        <p>{{EVENT_NAME}}</p>
+      </div>
+    </div>
+    <div class="badge-float">
+      <div class="num">+</div>
+      <div class="label">Materi terstruktur, langsung bisa dipraktikkan</div>
     </div>
   </div>
 </section>
 
-<!--SECTION:testimonial:start-->
-<section>
+<!--BLOCK:testimonial:start-->
+<section class="section-alt">
   <div class="wrap">
-    <div class="testimonial">
-      <p>"{{TESTIMONIAL_QUOTE}}"</p>
-      <span>— {{TESTIMONIAL_NAME}}</span>
+    <div class="center"><span class="tag">Kata Peserta</span></div>
+    <div class="why-card" style="max-width:620px; margin:16px auto 0; text-align:left;">
+      <p style="color:var(--text-secondary); margin-bottom:10px;">"{{TESTIMONIAL_QUOTE}}"</p>
+      <span style="color:var(--accent); font-size:13px; font-weight:700;">— {{TESTIMONIAL_NAME}}</span>
     </div>
   </div>
 </section>
-<!--SECTION:testimonial:end-->
+<!--BLOCK:testimonial:end-->
 
-<section id="daftar">
+<!--BLOCK:stat_grid:start-->
+<section class="section-alt">
   <div class="wrap">
-    <h2 class="section-title">Daftar Sekarang</h2>
-    <div class="form-card">
+    <div class="center"><span class="tag">Realita Hari Ini</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{STAT_TITLE}}</h2>
+    <p class="section-lede">{{STAT_LEDE}}</p>
+    <div class="stat-grid">
+      <!--LOOP:stats-->
+      <div class="stat-card">
+        <div class="stat-num">{{ITEM.value}}</div>
+        <div class="stat-label">{{ITEM.label}}</div>
+      </div>
+      <!--/LOOP:stats-->
+    </div>
+    <p class="reality-quote">"{{STAT_QUOTE}}"</p>
+  </div>
+</section>
+<!--BLOCK:stat_grid:end-->
+
+<!--BLOCK:formula_steps:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag">Solusinya</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{FORMULA_TITLE}}</h2>
+    <p class="section-lede">{{FORMULA_LEDE}}</p>
+    <div class="formula-list">
+      <!--LOOP:formula_steps-->
+      <div class="formula-item">
+        <div class="step-num">{{ITEM.num}}</div>
+        <div>
+          <h3>{{ITEM.title}}</h3>
+          <p>{{ITEM.desc}}</p>
+        </div>
+      </div>
+      <!--/LOOP:formula_steps-->
+    </div>
+
+    <!--SECTION:formula_plus:start-->
+    <div class="plus-card">
+      <span class="plus-badge">{{FORMULA_PLUS_BADGE}}</span>
+      <h3>{{FORMULA_PLUS_TITLE}}</h3>
+      <p>{{FORMULA_PLUS_DESC}}</p>
+      <ul class="plus-points">
+        <!--LOOP:formula_plus_points-->
+        <li>{{ITEM.value}}</li>
+        <!--/LOOP:formula_plus_points-->
+      </ul>
+    </div>
+    <!--SECTION:formula_plus:end-->
+  </div>
+</section>
+<!--BLOCK:formula_steps:end-->
+
+<!--BLOCK:why_now:start-->
+<section class="section-alt">
+  <div class="wrap">
+    <div class="center"><span class="tag">Kenapa Sekarang</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{WHY_NOW_TITLE}}</h2>
+    <p class="section-lede">{{WHY_NOW_LEDE}}</p>
+
+    <div class="why-grid">
+      <!--LOOP:why_cards-->
+      <div class="why-card">
+        <div class="icon-badge">{{ITEM.icon}}</div>
+        <h3>{{ITEM.title}}</h3>
+        <p>{{ITEM.desc}}</p>
+      </div>
+      <!--/LOOP:why_cards-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:why_now:end-->
+
+<!--BLOCK:audience_cards:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag">Untuk Siapa</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{AUDIENCE_CARDS_TITLE}}</h2>
+    <div class="why-grid">
+      <!--LOOP:audience_cards-->
+      <div class="why-card">
+        <div class="icon-badge">{{ITEM.icon}}</div>
+        <h3>{{ITEM.title}}</h3>
+        <p>{{ITEM.desc}}</p>
+      </div>
+      <!--/LOOP:audience_cards-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:audience_cards:end-->
+
+<!--BLOCK:audience_chips:start-->
+<section class="section-alt">
+  <div class="wrap">
+    <div class="center"><span class="tag">Untuk Siapa</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{AUDIENCE_CHIPS_TITLE}}</h2>
+    <div class="chip-cloud">
+      <!--LOOP:audience_chips-->
+      <span class="chip"><span class="dot-gold"></span> {{ITEM.value}}</span>
+      <!--/LOOP:audience_chips-->
+    </div>
+    <p class="audience-footnote">{{AUDIENCE_CHIPS_FOOTNOTE}}</p>
+  </div>
+</section>
+<!--BLOCK:audience_chips:end-->
+
+<!--BLOCK:roadmap:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag">Roadmap Materi</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{ROADMAP_TITLE}}</h2>
+    <p class="section-lede">{{ROADMAP_LEDE}}</p>
+
+    <div class="timeline">
+      <!--LOOP:roadmap-->
+      <div class="timeline-item">
+        <div class="sesi-label">Sesi {{ITEM.step}}</div>
+        <h3>{{ITEM.title}}</h3>
+        <p>{{ITEM.desc}}</p>
+      </div>
+      <!--/LOOP:roadmap-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:roadmap:end-->
+
+<!--BLOCK:benefits:start-->
+<section class="section-alt">
+  <div class="wrap">
+    <div class="center"><span class="tag">Yang Kamu Kuasai</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{BENEFITS_TITLE}}</h2>
+    <div class="benefit-grid">
+      <!--LOOP:benefits-->
+      <div class="benefit-item"><div class="check">✓</div><p>{{ITEM.value}}</p></div>
+      <!--/LOOP:benefits-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:benefits:end-->
+
+<!--BLOCK:speaker:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag">Pembicara</span></div>
+    <h2 class="section-title" style="margin-top:14px;">Dipandu Langsung Oleh</h2>
+    <div class="speaker-card">
+      <div class="speaker-avatar">✦</div>
+      <div class="speaker-info">
+        <div class="role">{{SPEAKER_ROLE}}</div>
+        <h3 data-rg-field="event_speaker">{{SPEAKER_NAME}}</h3>
+        <p>{{SPEAKER_BIO}}</p>
+      </div>
+    </div>
+  </div>
+</section>
+<!--BLOCK:speaker:end-->
+
+<!--BLOCK:registration_form:start-->
+<section id="daftar" class="section-alt">
+  <div class="wrap">
+    <div class="center"><span class="tag">Langkah Terakhir</span></div>
+    <h2 class="section-title" style="margin-top:14px;">Amankan Kursimu Sekarang</h2>
+    <p class="section-lede">Isi data di bawah ini. Tim kami akan kirim konfirmasi langsung ke WhatsApp kamu — gratis, tanpa syarat tersembunyi.</p>
+
+    <div class="form-shell">
+      <div class="capacity-note">
+        <span data-rg-field="event_location">Online</span>
+        <span>Data aman &amp; tidak dibagikan</span>
+      </div>
+
       <div data-rg-message style="display:none;"></div>
+
       <form data-rg-form>
         <div class="field">
-          <label>Nama Lengkap</label>
+          <label>Nama Lengkap <span class="req">*</span></label>
           <input type="text" name="name" placeholder="Nama lengkap kamu" required minlength="3">
         </div>
         <div class="field">
-          <label>Email</label>
+          <label>Email <span class="req">*</span></label>
           <input type="email" name="email" placeholder="email@kamu.com" required>
         </div>
         <div class="field">
-          <label>Nomor WhatsApp</label>
+          <label>Nomor WhatsApp <span class="req">*</span></label>
           <input type="tel" name="whatsapp" placeholder="08xxxxxxxxxx" required minlength="9">
         </div>
         <div class="field">
-          <label>Kota Domisili</label>
+          <label>Kota Domisili <span class="req">*</span></label>
           <input type="text" name="kota" placeholder="Kota kamu" required minlength="2">
         </div>
         <button type="submit" class="submit-btn">{{CTA_TEXT}}</button>
+        <p class="microcopy">Dengan mendaftar, kamu akan menerima info acara &amp; follow-up terkait via WhatsApp.</p>
       </form>
     </div>
   </div>
 </section>
+<!--BLOCK:registration_form:end-->
+
+<!--BLOCK:faq:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag">Pertanyaan Umum</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{FAQ_TITLE}}</h2>
+
+    <div class="faq-list">
+      <!--LOOP:faq-->
+      <div class="faq-item">
+        <div class="faq-q">{{ITEM.q}} <span class="chev">&#8964;</span></div>
+        <div class="faq-a">{{ITEM.a}}</div>
+      </div>
+      <!--/LOOP:faq-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:faq:end-->
 
 <footer>
-  <div class="wrap">{{BRAND_NAME}} — <span data-rg-field="event_name">{{EVENT_NAME}}</span></div>
+  <div class="wrap">
+    <div class="brand"><img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}"></div>
+    <p class="disclaimer">Materi acara ini bersifat edukasi umum untuk meningkatkan literasi keuangan dan bukan merupakan jasa perencanaan keuangan personal maupun jaminan hasil finansial tertentu. Sesuaikan setiap keputusan keuangan dengan kondisi pribadi Anda.</p>
+    <p class="copyright">&copy; <span id="rgYear"></span> {{BRAND_NAME}} — Seluruh hak cipta dilindungi.</p>
+  </div>
 </footer>
 
+<div class="floating-cta">
+  <a class="btn btn-primary" href="#daftar">{{CTA_TEXT}}</a>
+</div>
+
 <script src="/assets/event-sdk.js" defer></script>
+<script>
+  document.getElementById('rgYear').textContent = new Date().getFullYear();
+
+  document.querySelectorAll('.faq-item').forEach(function (item) {
+    var q = item.querySelector('.faq-q');
+    if (!q) return;
+    q.addEventListener('click', function () {
+      var wasOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(function (i) { i.classList.remove('open'); });
+      if (!wasOpen) item.classList.add('open');
+    });
+  });
+
+  (function () {
+    var floatingCta = document.querySelector('.floating-cta');
+    var daftarSection = document.getElementById('daftar');
+    if (!floatingCta || !daftarSection) return;
+    var toggleFloating = function () {
+      var rect = daftarSection.getBoundingClientRect();
+      var isNear = rect.top <= window.innerHeight * 0.75 && rect.bottom > 0;
+      floatingCta.classList.toggle('show', !isNear && window.scrollY > 260);
+    };
+    document.addEventListener('scroll', toggleFloating, { passive: true });
+    toggleFloating();
+  })();
+</script>
 </body>
 </html>

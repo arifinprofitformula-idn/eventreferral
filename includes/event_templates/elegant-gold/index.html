@@ -4,120 +4,555 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{EVENT_NAME}} — {{BRAND_NAME}}</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root { --charcoal:#1A1A1A; --gold:{{ACCENT_COLOR}}; --gold-soft:{{ACCENT_COLOR_SOFT}}; --white:#FAFAFA; --muted:#9C9992; }
+  :root {
+    --bg-0: #0B0B0A;
+    --bg-1: #121110;
+    --surface: #18160F;
+    --surface-elevated: #211E17;
+    --gold: {{ACCENT_COLOR}};
+    --gold-soft: {{ACCENT_COLOR_SOFT}};
+    --border-gold: color-mix(in srgb, var(--gold) 24%, transparent);
+    --text: #F7F3E8;
+    --text-secondary: #ADA694;
+    --text-muted: #7C7666;
+    --success: #22C55E;
+    --danger: #EF4444;
+    --radius-lg: 26px;
+    --radius-md: 20px;
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--charcoal); color: var(--white); font-family: 'Poppins', sans-serif; line-height: 1.6; }
-  h1, h2 { font-family: 'Playfair Display', serif; font-weight: 800; }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 0 24px; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg-0);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(900px 560px at 88% -8%, color-mix(in srgb, var(--gold) 14%, transparent), transparent 62%),
+      radial-gradient(720px 520px at 6% 105%, color-mix(in srgb, var(--gold) 8%, transparent), transparent 60%);
+    background-attachment: fixed;
+  }
+  img { max-width: 100%; display: block; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.01em; }
+
+  header.site {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(11,11,10,0.82);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-gold);
+  }
+  header.site .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .brand-mark { display: inline-flex; align-items: center; gap: 12px; min-width: 0; color: var(--gold-soft); text-decoration: none; }
+  .brand-mark img { width: clamp(120px, 16vw, 170px); height: 40px; object-fit: contain; object-position: left center; }
+  .header-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-soft));
+    color: #1A1508; font-weight: 700; font-size: 13.5px;
+    padding: 10px 18px; border-radius: 999px; text-decoration: none; white-space: nowrap;
+  }
+
+  .tag {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--gold-soft);
+    background: color-mix(in srgb, var(--gold) 10%, transparent);
+    border: 1px solid var(--border-gold);
+    padding: 7px 14px; border-radius: 999px;
+  }
+  .tag.free { color: #A9E8B8; background: rgba(34,197,94,0.10); border-color: rgba(34,197,94,0.25); }
+  .center { text-align: center; }
+
+  .hero { padding: 56px 0 48px; display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 48px; align-items: center; }
+  .hero-copy .tag { margin-bottom: 20px; }
+  .hero-copy h1 { font-size: clamp(34px, 4.6vw, 52px); line-height: 1.08; margin-bottom: 14px; }
+  .hero-copy h1 strong { color: var(--gold); font-weight: 700; }
+  .hero-sub-headline { font-family: var(--serif); font-size: clamp(17px, 2vw, 20px); color: var(--gold-soft); margin-bottom: 16px; line-height: 1.4; }
+  .hero-sub { font-size: 16px; color: var(--text-secondary); max-width: 520px; margin-bottom: 28px; }
+  .hero-meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 30px; }
+  .meta-card { background: var(--surface); border: 1px solid var(--border-gold); border-radius: 16px; padding: 14px 16px; }
+  .meta-card .meta-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; margin-bottom: 4px; }
+  .meta-card .meta-value { font-size: 14px; font-weight: 600; color: var(--text); }
+  .hero-cta-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-weight: 700; font-size: 15px; padding: 16px 30px; border-radius: 14px;
+    text-decoration: none; border: none; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold), var(--gold-soft)); color: #1A1508;
+    box-shadow: 0 10px 30px -8px color-mix(in srgb, var(--gold) 50%, transparent);
+  }
+  .btn-primary:hover { transform: translateY(-2px); }
+  .btn-ghost { color: var(--text-secondary); font-size: 14px; font-weight: 600; }
+  .invited-by {
+    margin-top: 18px; font-size: 13.5px; color: var(--gold-soft);
+    background: color-mix(in srgb, var(--gold) 8%, transparent); border: 1px solid var(--border-gold);
+    padding: 10px 16px; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .brand-ribbon { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 14px; color: var(--gold-soft); font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+  .brand-ribbon::before, .brand-ribbon::after { content: ''; width: 34px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold)); opacity: 0.75; }
+  .brand-ribbon::after { background: linear-gradient(90deg, var(--gold), transparent); }
+
+  .hero-visual { position: relative; }
+  .hero-visual .frame { border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-gold); box-shadow: 0 30px 70px -24px rgba(0,0,0,0.7); aspect-ratio: 4/5; background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 16%, transparent), color-mix(in srgb, var(--gold) 3%, transparent)); display: flex; align-items: center; justify-content: center; }
+  .hero-visual .frame img { width: 100%; height: 100%; object-fit: cover; }
+  .frame-fallback { text-align: center; padding: 24px; color: var(--gold-soft); }
+  .frame-fallback .fallback-icon { font-size: 44px; margin-bottom: 12px; }
+  .frame-fallback p { font-family: var(--serif); font-size: 15px; color: var(--text-secondary); max-width: 200px; margin: 0 auto; }
+  .badge-float {
+    position: absolute; bottom: -18px; left: -18px;
+    background: var(--surface-elevated); border: 1px solid var(--border-gold);
+    border-radius: 16px; padding: 14px 18px; display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 20px 40px -16px rgba(0,0,0,0.6);
+  }
+  .badge-float .num { font-family: var(--serif); font-size: 26px; color: var(--gold); font-weight: 700; }
+  .badge-float .label { font-size: 12px; color: var(--text-secondary); line-height: 1.3; max-width: 140px; }
+
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; padding-top: 32px; }
+    .hero-visual { order: -1; max-width: 300px; margin: 0 auto; }
+    .badge-float { display: none; }
+    .hero-meta-grid { grid-template-columns: 1fr 1fr; }
+  }
+
   section { padding: 64px 0; }
+  .section-alt { background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--gold) 4%, transparent) 12%, color-mix(in srgb, var(--gold) 4%, transparent) 88%, transparent); }
+  .section-title { font-size: clamp(26px, 3.4vw, 38px); text-align: center; margin-bottom: 16px; }
+  .section-lede { text-align: center; color: var(--text-secondary); max-width: 640px; margin: 0 auto 44px; font-size: 16px; }
 
-  .hero { min-height: 100svh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px 24px; }
-  .hero img { width: 80px; margin-bottom: 24px; border-radius: 10px; }
-  .eyebrow { display: inline-block; color: var(--gold-soft); font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 14px; }
-  .hero h1 { color: var(--gold); font-size: clamp(28px, 6vw, 42px); margin-bottom: 16px; max-width: 560px; }
-  .hero p { opacity: 0.85; max-width: 460px; margin-bottom: 30px; }
-  .invited-by { color: var(--gold-soft); font-size: 14px; margin-bottom: 14px; }
+  /* Stat grid (reality-check) */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 36px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border-gold); border-radius: var(--radius-md); padding: 22px 18px; text-align: center; }
+  .stat-card .stat-num { font-family: var(--serif); font-size: 32px; color: var(--gold); font-weight: 600; }
+  .stat-card .stat-label { font-size: 12.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.4; }
+  .reality-quote { max-width: 700px; margin: 0 auto; text-align: center; font-family: var(--serif); font-size: clamp(19px, 2.4vw, 24px); line-height: 1.5; color: var(--gold-soft); font-style: italic; padding: 0 12px; }
+  @media (max-width: 780px) { .stat-grid { grid-template-columns: 1fr 1fr; } }
 
-  .btn-gold { display: inline-block; background: var(--gold); color: var(--charcoal); font-weight: 700; padding: 16px 32px; border-radius: 12px; text-decoration: none; border: none; cursor: pointer; font-size: 16px; }
+  /* Formula steps + plus highlight */
+  .formula-list { display: flex; flex-direction: column; gap: 14px; max-width: 780px; margin: 0 auto; }
+  .formula-item { display: grid; grid-template-columns: 56px 1fr; gap: 20px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border-gold); border-radius: var(--radius-md); padding: 22px 24px; }
+  .formula-item .step-num { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, color-mix(in srgb, var(--gold) 18%, transparent), color-mix(in srgb, var(--gold) 6%, transparent)); border: 1px solid var(--border-gold); display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-weight: 700; font-size: 18px; color: var(--gold-soft); }
+  .formula-item h3 { font-size: 17px; margin-bottom: 6px; color: var(--text); }
+  .formula-item p { font-size: 14px; color: var(--text-secondary); }
+  .plus-card { max-width: 780px; margin: 28px auto 0; background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 14%, transparent), color-mix(in srgb, var(--gold) 2%, transparent)); border: 1px solid var(--gold); border-radius: var(--radius-lg); padding: 30px 28px; }
+  .plus-card .plus-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: #1A1508; background: linear-gradient(135deg, var(--gold), var(--gold-soft)); padding: 6px 14px; border-radius: 999px; margin-bottom: 14px; }
+  .plus-card h3 { font-size: 21px; margin-bottom: 10px; }
+  .plus-card p { color: var(--text-secondary); font-size: 14.5px; margin-bottom: 16px; }
+  .plus-points { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .plus-points li { list-style: none; font-size: 13.5px; color: var(--text); display: flex; gap: 8px; }
+  .plus-points li::before { content: '✓'; color: var(--gold); font-weight: 800; flex-shrink: 0; }
+  @media (max-width: 640px) { .plus-points { grid-template-columns: 1fr; } .formula-item { grid-template-columns: 42px 1fr; padding: 18px; } }
 
-  .event-card { border: 1px solid var(--gold); border-radius: 16px; padding: 28px; max-width: 480px; margin: 0 auto; }
-  .event-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 14.5px; }
-  .event-row:last-child { border-bottom: none; }
-  .event-row .label { color: var(--muted); }
+  .why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .why-card { background: var(--surface); border: 1px solid var(--border-gold); border-radius: var(--radius-md); padding: 26px 22px; }
+  .why-card .icon-badge { width: 44px; height: 44px; border-radius: 12px; margin-bottom: 14px; background: color-mix(in srgb, var(--gold) 12%, transparent); border: 1px solid var(--border-gold); display: flex; align-items: center; justify-content: center; font-size: 19px; }
+  .why-card h3 { font-size: 16.5px; margin-bottom: 8px; }
+  .why-card p { font-size: 13.5px; color: var(--text-secondary); }
+  @media (max-width: 780px) { .why-grid { grid-template-columns: 1fr; } }
 
-  .testimonial { max-width: 480px; margin: 0 auto; text-align: center; border-left: 3px solid var(--gold); padding: 4px 0 4px 22px; text-align: left; }
-  .testimonial p { font-style: italic; opacity: .9; margin-bottom: 10px; }
-  .testimonial span { color: var(--gold-soft); font-size: 13px; font-weight: 600; }
+  .chip-cloud { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; max-width: 760px; margin: 0 auto 20px; }
+  .chip { background: var(--surface); border: 1px solid var(--border-gold); border-radius: 999px; padding: 12px 22px; font-size: 14.5px; font-weight: 600; color: var(--text); display: inline-flex; align-items: center; gap: 8px; }
+  .chip .dot-gold { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+  .audience-footnote { text-align: center; color: var(--text-secondary); font-size: 14px; max-width: 540px; margin: 0 auto; }
 
-  .form-card { background: rgba(255,255,255,0.03); border: 1px solid color-mix(in srgb, var(--gold) 20%, transparent); border-radius: 20px; padding: 28px 24px; max-width: 440px; margin: 0 auto; }
+  .timeline { max-width: 760px; margin: 0 auto; position: relative; padding-left: 36px; }
+  .timeline::before { content: ''; position: absolute; left: 11px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(180deg, var(--gold), color-mix(in srgb, var(--gold) 8%, transparent)); }
+  .timeline-item { position: relative; padding-bottom: 32px; }
+  .timeline-item:last-child { padding-bottom: 0; }
+  .timeline-item::before { content: ''; position: absolute; left: -36px; top: 4px; width: 24px; height: 24px; border-radius: 50%; background: var(--bg-0); border: 2px solid var(--gold); }
+  .timeline-item h3 { font-size: 18px; margin-bottom: 6px; }
+  .timeline-item .sesi-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; margin-bottom: 4px; }
+  .timeline-item p { font-size: 14.5px; color: var(--text-secondary); }
+  @media (max-width: 640px) { .timeline { padding-left: 30px; } }
+
+  .benefit-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .benefit-item { display: flex; gap: 14px; background: var(--surface); border: 1px solid var(--border-gold); border-radius: 16px; padding: 18px 20px; }
+  .benefit-item .check { width: 26px; height: 26px; border-radius: 50%; background: rgba(34,197,94,0.14); color: var(--success); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+  .benefit-item p { font-size: 14.5px; color: var(--text); }
+  @media (max-width: 700px) { .benefit-grid { grid-template-columns: 1fr; } }
+
+  .speaker-card { display: grid; grid-template-columns: 140px 1fr; gap: 30px; align-items: center; background: var(--surface-elevated); border: 1px solid var(--border-gold); border-radius: var(--radius-lg); padding: 32px; }
+  .speaker-avatar { width: 100%; aspect-ratio: 1; border-radius: 20px; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 20%, transparent), color-mix(in srgb, var(--gold) 4%, transparent)); border: 1px solid var(--border-gold); font-family: var(--serif); font-size: 40px; color: var(--gold); }
+  .speaker-info .role { color: var(--gold-soft); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .speaker-info h3 { font-size: 24px; margin-bottom: 10px; }
+  .speaker-info p { color: var(--text-secondary); font-size: 14.5px; }
+  @media (max-width: 700px) { .speaker-card { grid-template-columns: 1fr; text-align: center; } .speaker-avatar { max-width: 120px; margin: 0 auto; } }
+
+  .form-shell { max-width: 620px; margin: 0 auto; position: relative; overflow: hidden; background: var(--surface-elevated); border: 1px solid var(--border-gold); border-radius: var(--radius-lg); padding: 34px; box-shadow: 0 30px 70px -30px rgba(0,0,0,0.6); }
+  .form-shell::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 4px; background: linear-gradient(90deg, transparent, var(--gold), var(--gold-soft), var(--gold), transparent); opacity: 0.9; }
+  .capacity-note { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-secondary); margin-bottom: 22px; border-bottom: 1px dashed var(--border-gold); padding-bottom: 18px; }
   .field { margin-bottom: 16px; }
-  .field label { display: block; font-size: 13px; color: var(--gold-soft); margin-bottom: 6px; font-weight: 600; }
-  .field input { width: 100%; background: var(--charcoal); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 13px 15px; color: var(--white); font-size: 15px; font-family: inherit; outline: none; }
-  .field input:focus { border-color: var(--gold); }
-  .submit-btn { width: 100%; background: var(--gold); color: var(--charcoal); font-weight: 700; font-size: 15.5px; padding: 15px; border: none; border-radius: 12px; cursor: pointer; margin-top: 4px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 7px; }
+  .field .req { color: var(--gold); }
+  .field input, .field select {
+    width: 100%; background: var(--bg-1); border: 1px solid rgba(255,255,255,0.10);
+    color: var(--text); font-size: 15px; padding: 13px 15px; border-radius: 12px;
+    font-family: var(--sans); outline: none; transition: border-color 0.15s ease;
+  }
+  .field input:focus, .field select:focus { border-color: var(--gold); }
+  .submit-btn { width: 100%; margin-top: 6px; background: linear-gradient(135deg, var(--gold), var(--gold-soft)); color: #1A1508; font-weight: 800; font-size: 16px; padding: 17px; border: none; border-radius: 14px; cursor: pointer; }
+  .microcopy { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 14px; }
+  [data-rg-message] { text-align: center; font-size: 13.5px; padding: 12px 16px; border-radius: 12px; margin-bottom: 18px; }
 
-  [data-rg-message] { text-align: center; padding: 14px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; }
+  .faq-item { border-bottom: 1px solid var(--border-gold); padding: 18px 0; max-width: 720px; margin: 0 auto; }
+  .faq-q { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; font-weight: 600; font-size: 15.5px; }
+  .faq-q .chev { transition: transform 0.2s ease; color: var(--gold); flex-shrink: 0; }
+  .faq-item.open .faq-q .chev { transform: rotate(180deg); }
+  .faq-a { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; font-size: 14px; color: var(--text-secondary); }
+  .faq-item.open .faq-a { max-height: 240px; margin-top: 10px; }
 
-  footer { text-align: center; padding: 40px 0 56px; color: var(--muted); font-size: 12.5px; }
+  footer { padding: 40px 0 100px; text-align: center; }
+  footer .brand { display: flex; justify-content: center; margin-bottom: 12px; }
+  footer .brand img { max-width: 160px; max-height: 40px; object-fit: contain; }
+  footer .disclaimer { font-size: 12px; color: var(--text-muted); max-width: 560px; margin: 0 auto 10px; line-height: 1.6; }
+  footer .copyright { font-size: 12px; color: var(--text-muted); }
+
+  .floating-cta { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 60; display: none; align-items: center; justify-content: center; }
+  .floating-cta.show { display: flex; }
+  .floating-cta a { width: 100%; text-align: center; }
+
+  @media (max-width: 780px) { .floating-cta { display: flex; } footer { padding-bottom: 110px; } }
+  @media (max-width: 520px) {
+    header.site .wrap { height: 66px; padding: 0 16px; }
+    .brand-mark img { width: 120px; height: 34px; }
+    .header-cta { padding: 9px 13px; font-size: 12.5px; }
+  }
 </style>
 </head>
 <body>
 
-<section class="hero">
-  <img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}">
-  <div data-rg-invited-by style="display:none;">
-    <span class="invited-by">Kamu diundang oleh <strong data-rg-referrer-name></strong></span>
-  </div>
-  <span class="eyebrow">{{EYEBROW}}</span>
-  <h1>{{HEADLINE}}</h1>
-  <p>{{SUBHEADLINE}}</p>
-  <a href="#daftar" class="btn-gold">{{CTA_TEXT}}</a>
-</section>
-
-<section>
+<header class="site">
   <div class="wrap">
-    {{DESCRIPTION}}
+    <a class="brand-mark" href="#" aria-label="{{BRAND_NAME}}">
+      <img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}">
+    </a>
+    <a class="header-cta" href="#daftar">Daftar Gratis</a>
   </div>
-</section>
+</header>
 
-<section>
-  <div class="wrap">
-    <h2 style="color:var(--gold); text-align:center; margin-bottom:32px; font-size:26px;">Detail Acara</h2>
-    <div class="event-card">
-      <div class="event-row"><span class="label">Hari & Tanggal</span><span data-rg-field="event_day">—</span></div>
-      <div class="event-row"><span class="label">Waktu</span><span data-rg-field="event_time">—</span></div>
-      <div class="event-row"><span class="label">Lokasi</span><span data-rg-field="event_location">—</span></div>
-      <div class="event-row"><span class="label">Pembicara</span><span data-rg-field="event_speaker">—</span></div>
-      <div class="event-row"><span class="label">Kapasitas</span><span data-rg-field="event_capacity">—</span></div>
+<section class="hero wrap">
+  <div class="hero-copy">
+    <div class="brand-ribbon">{{BRAND_NAME}} Presents</div>
+    <span class="tag free">{{EYEBROW}}</span>
+    <h1>{{HEADLINE}}</h1>
+    <p class="hero-sub-headline">{{SUBHEADLINE}}</p>
+    <div class="hero-sub">{{DESCRIPTION}}</div>
+
+    <div class="hero-meta-grid">
+      <div class="meta-card">
+        <div class="meta-label">Hari &amp; Tanggal</div>
+        <div class="meta-value" data-rg-field="event_day">—</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-label">Waktu</div>
+        <div class="meta-value" data-rg-field="event_time">—</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-label">Lokasi</div>
+        <div class="meta-value" data-rg-field="event_location">—</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-label">Kapasitas</div>
+        <div class="meta-value" data-rg-field="event_capacity">—</div>
+      </div>
+    </div>
+
+    <div class="hero-cta-row">
+      <a class="btn btn-primary" href="#daftar">{{CTA_TEXT}}</a>
+      <a class="btn-ghost" href="#daftar">Pelajari Lebih Lanjut &darr;</a>
+    </div>
+
+    <div class="invited-by" data-rg-invited-by style="display:none;">
+      Diundang oleh <strong data-rg-referrer-name></strong> — daftar sekarang sebelum kuota penuh.
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="frame">
+      <img data-rg-field="flyer_path" style="display:none;" alt="Flyer {{EVENT_NAME}}">
+      <div class="frame-fallback" data-rg-field-fallback="flyer_path">
+        <div class="fallback-icon">✦</div>
+        <p>{{EVENT_NAME}}</p>
+      </div>
+    </div>
+    <div class="badge-float">
+      <div class="num">✦</div>
+      <div class="label">Materi terstruktur, langsung bisa dipraktikkan</div>
     </div>
   </div>
 </section>
 
-<!--SECTION:testimonial:start-->
-<section>
+<!--BLOCK:testimonial:start-->
+<section class="section-alt">
   <div class="wrap">
-    <div class="testimonial">
-      <p>"{{TESTIMONIAL_QUOTE}}"</p>
-      <span>— {{TESTIMONIAL_NAME}}</span>
+    <div class="center"><span class="tag">Kata Peserta</span></div>
+    <div class="why-card" style="max-width:640px; margin:16px auto 0; text-align:left;">
+      <p style="font-style:italic; color:var(--text-secondary); margin-bottom:10px;">"{{TESTIMONIAL_QUOTE}}"</p>
+      <span style="color:var(--gold-soft); font-size:13px; font-weight:700;">— {{TESTIMONIAL_NAME}}</span>
     </div>
   </div>
 </section>
-<!--SECTION:testimonial:end-->
+<!--BLOCK:testimonial:end-->
 
-<section id="daftar">
+<!--BLOCK:stat_grid:start-->
+<section class="section-alt">
   <div class="wrap">
-    <h2 style="color:var(--gold); text-align:center; margin-bottom:28px; font-size:26px;">Daftar Sekarang</h2>
-    <div class="form-card">
+    <div class="center"><span class="tag">Realita Hari Ini</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{STAT_TITLE}}</h2>
+    <p class="section-lede">{{STAT_LEDE}}</p>
+    <div class="stat-grid">
+      <!--LOOP:stats-->
+      <div class="stat-card">
+        <div class="stat-num">{{ITEM.value}}</div>
+        <div class="stat-label">{{ITEM.label}}</div>
+      </div>
+      <!--/LOOP:stats-->
+    </div>
+    <p class="reality-quote">"{{STAT_QUOTE}}"</p>
+  </div>
+</section>
+<!--BLOCK:stat_grid:end-->
+
+<!--BLOCK:formula_steps:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag">Solusinya</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{FORMULA_TITLE}}</h2>
+    <p class="section-lede">{{FORMULA_LEDE}}</p>
+    <div class="formula-list">
+      <!--LOOP:formula_steps-->
+      <div class="formula-item">
+        <div class="step-num">{{ITEM.num}}</div>
+        <div>
+          <h3>{{ITEM.title}}</h3>
+          <p>{{ITEM.desc}}</p>
+        </div>
+      </div>
+      <!--/LOOP:formula_steps-->
+    </div>
+
+    <!--SECTION:formula_plus:start-->
+    <div class="plus-card">
+      <span class="plus-badge">{{FORMULA_PLUS_BADGE}}</span>
+      <h3>{{FORMULA_PLUS_TITLE}}</h3>
+      <p>{{FORMULA_PLUS_DESC}}</p>
+      <ul class="plus-points">
+        <!--LOOP:formula_plus_points-->
+        <li>{{ITEM.value}}</li>
+        <!--/LOOP:formula_plus_points-->
+      </ul>
+    </div>
+    <!--SECTION:formula_plus:end-->
+  </div>
+</section>
+<!--BLOCK:formula_steps:end-->
+
+<!--BLOCK:why_now:start-->
+<section class="section-alt">
+  <div class="wrap">
+    <div class="center"><span class="tag">Kenapa Sekarang</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{WHY_NOW_TITLE}}</h2>
+    <p class="section-lede">{{WHY_NOW_LEDE}}</p>
+    <div class="why-grid">
+      <!--LOOP:why_cards-->
+      <div class="why-card">
+        <div class="icon-badge">{{ITEM.icon}}</div>
+        <h3>{{ITEM.title}}</h3>
+        <p>{{ITEM.desc}}</p>
+      </div>
+      <!--/LOOP:why_cards-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:why_now:end-->
+
+<!--BLOCK:audience_cards:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag">Untuk Siapa</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{AUDIENCE_CARDS_TITLE}}</h2>
+    <div class="why-grid">
+      <!--LOOP:audience_cards-->
+      <div class="why-card">
+        <div class="icon-badge">{{ITEM.icon}}</div>
+        <h3>{{ITEM.title}}</h3>
+        <p>{{ITEM.desc}}</p>
+      </div>
+      <!--/LOOP:audience_cards-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:audience_cards:end-->
+
+<!--BLOCK:audience_chips:start-->
+<section class="section-alt">
+  <div class="wrap">
+    <div class="center"><span class="tag">Untuk Siapa</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{AUDIENCE_CHIPS_TITLE}}</h2>
+    <div class="chip-cloud">
+      <!--LOOP:audience_chips-->
+      <span class="chip"><span class="dot-gold"></span> {{ITEM.value}}</span>
+      <!--/LOOP:audience_chips-->
+    </div>
+    <p class="audience-footnote">{{AUDIENCE_CHIPS_FOOTNOTE}}</p>
+  </div>
+</section>
+<!--BLOCK:audience_chips:end-->
+
+<!--BLOCK:roadmap:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag">Roadmap Materi</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{ROADMAP_TITLE}}</h2>
+    <p class="section-lede">{{ROADMAP_LEDE}}</p>
+    <div class="timeline">
+      <!--LOOP:roadmap-->
+      <div class="timeline-item">
+        <div class="sesi-label">Sesi {{ITEM.step}}</div>
+        <h3>{{ITEM.title}}</h3>
+        <p>{{ITEM.desc}}</p>
+      </div>
+      <!--/LOOP:roadmap-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:roadmap:end-->
+
+<!--BLOCK:benefits:start-->
+<section class="section-alt">
+  <div class="wrap">
+    <div class="center"><span class="tag">Yang Kamu Kuasai</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{BENEFITS_TITLE}}</h2>
+    <div class="benefit-grid">
+      <!--LOOP:benefits-->
+      <div class="benefit-item"><div class="check">✓</div><p>{{ITEM.value}}</p></div>
+      <!--/LOOP:benefits-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:benefits:end-->
+
+<!--BLOCK:speaker:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag">Pembicara</span></div>
+    <h2 class="section-title" style="margin-top:14px;">Dipandu Langsung Oleh</h2>
+    <div class="speaker-card">
+      <div class="speaker-avatar">✦</div>
+      <div class="speaker-info">
+        <div class="role">{{SPEAKER_ROLE}}</div>
+        <h3 data-rg-field="event_speaker">{{SPEAKER_NAME}}</h3>
+        <p>{{SPEAKER_BIO}}</p>
+      </div>
+    </div>
+  </div>
+</section>
+<!--BLOCK:speaker:end-->
+
+<!--BLOCK:registration_form:start-->
+<section id="daftar" class="section-alt">
+  <div class="wrap">
+    <div class="center"><span class="tag">Langkah Terakhir</span></div>
+    <h2 class="section-title" style="margin-top:14px;">Amankan Kursimu Sekarang</h2>
+    <p class="section-lede">Isi data di bawah ini. Tim kami akan kirim konfirmasi langsung ke WhatsApp kamu — gratis, tanpa syarat tersembunyi.</p>
+
+    <div class="form-shell">
+      <div class="capacity-note">
+        <span data-rg-field="event_location">Online</span>
+        <span>Data aman &amp; tidak dibagikan</span>
+      </div>
+
       <div data-rg-message style="display:none;"></div>
+
       <form data-rg-form>
         <div class="field">
-          <label>Nama Lengkap</label>
+          <label>Nama Lengkap <span class="req">*</span></label>
           <input type="text" name="name" placeholder="Nama lengkap kamu" required minlength="3">
         </div>
         <div class="field">
-          <label>Email</label>
+          <label>Email <span class="req">*</span></label>
           <input type="email" name="email" placeholder="email@kamu.com" required>
         </div>
         <div class="field">
-          <label>Nomor WhatsApp</label>
+          <label>Nomor WhatsApp <span class="req">*</span></label>
           <input type="tel" name="whatsapp" placeholder="08xxxxxxxxxx" required minlength="9">
         </div>
         <div class="field">
-          <label>Kota Domisili</label>
+          <label>Kota Domisili <span class="req">*</span></label>
           <input type="text" name="kota" placeholder="Kota kamu" required minlength="2">
         </div>
         <button type="submit" class="submit-btn">{{CTA_TEXT}}</button>
+        <p class="microcopy">Dengan mendaftar, kamu akan menerima info acara &amp; follow-up terkait via WhatsApp.</p>
       </form>
     </div>
   </div>
 </section>
+<!--BLOCK:registration_form:end-->
+
+<!--BLOCK:faq:start-->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag">Pertanyaan Umum</span></div>
+    <h2 class="section-title" style="margin-top:14px;">{{FAQ_TITLE}}</h2>
+    <div class="faq-list">
+      <!--LOOP:faq-->
+      <div class="faq-item">
+        <div class="faq-q">{{ITEM.q}} <span class="chev">&#8964;</span></div>
+        <div class="faq-a">{{ITEM.a}}</div>
+      </div>
+      <!--/LOOP:faq-->
+    </div>
+  </div>
+</section>
+<!--BLOCK:faq:end-->
 
 <footer>
-  <div class="wrap">{{BRAND_NAME}} — <span data-rg-field="event_name">{{EVENT_NAME}}</span></div>
+  <div class="wrap">
+    <div class="brand"><img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}"></div>
+    <p class="disclaimer">Materi acara ini bersifat edukasi umum untuk meningkatkan literasi keuangan dan bukan merupakan jasa perencanaan keuangan personal maupun jaminan hasil finansial tertentu. Sesuaikan setiap keputusan keuangan dengan kondisi pribadi Anda.</p>
+    <p class="copyright">&copy; <span id="rgYear"></span> {{BRAND_NAME}} — Seluruh hak cipta dilindungi.</p>
+  </div>
 </footer>
 
+<div class="floating-cta">
+  <a class="btn btn-primary" href="#daftar">{{CTA_TEXT}}</a>
+</div>
+
 <script src="/assets/event-sdk.js" defer></script>
+<script>
+  document.getElementById('rgYear').textContent = new Date().getFullYear();
+
+  document.querySelectorAll('.faq-item').forEach(function (item) {
+    var q = item.querySelector('.faq-q');
+    if (!q) return;
+    q.addEventListener('click', function () {
+      var wasOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(function (i) { i.classList.remove('open'); });
+      if (!wasOpen) item.classList.add('open');
+    });
+  });
+
+  (function () {
+    var floatingCta = document.querySelector('.floating-cta');
+    var daftarSection = document.getElementById('daftar');
+    if (!floatingCta || !daftarSection) return;
+    var toggleFloating = function () {
+      var rect = daftarSection.getBoundingClientRect();
+      var isNear = rect.top <= window.innerHeight * 0.75 && rect.bottom > 0;
+      floatingCta.classList.toggle('show', !isNear && window.scrollY > 260);
+    };
+    document.addEventListener('scroll', toggleFloating, { passive: true });
+    toggleFloating();
+  })();
+</script>
 </body>
 </html>

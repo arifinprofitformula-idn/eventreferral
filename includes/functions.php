@@ -209,6 +209,76 @@ function render_landing_description(string $description): string {
     return $html;
 }
 
+/**
+ * Render blok berulang (list) yang ditandai <!--LOOP:key--> ... <!--/LOOP:key--> di template,
+ * satu kali per item di $items, dengan token {{ITEM.field}} diganti nilai per-item (di-escape HTML).
+ * Item berupa array asosiatif field => value (mis. ['title'=>..., 'desc'=>...]) atau, untuk list
+ * string sederhana (chip/benefit), array ['value' => $string].
+ * Jika $items kosong, seluruh blok (termasuk marker) dihapus.
+ */
+function render_landing_loop(string $html, string $loopKey, array $items): string {
+    $pattern = '/<!--LOOP:' . preg_quote($loopKey, '/') . '-->(.*?)<!--\/LOOP:' . preg_quote($loopKey, '/') . '-->/s';
+
+    return preg_replace_callback($pattern, static function ($matches) use ($items) {
+        $itemTemplate = $matches[1];
+        $rendered = '';
+        foreach ($items as $item) {
+            $itemHtml = $itemTemplate;
+            foreach ($item as $field => $value) {
+                $itemHtml = str_replace(
+                    '{{ITEM.' . $field . '}}',
+                    htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'),
+                    $itemHtml
+                );
+            }
+            $rendered .= $itemHtml;
+        }
+        return $rendered;
+    }, $html) ?? $html;
+}
+
+/** Bungkus list string polos (mis. chip/benefit) jadi array asosiatif ['value' => $string] untuk render_landing_loop(). */
+function wrap_landing_string_list(array $strings): array {
+    return array_map(static fn ($s) => ['value' => (string)$s], $strings);
+}
+
+/**
+ * Susun ulang section landing page sesuai urutan/pilihan AI ("layout"), supaya setiap event bisa
+ * punya kombinasi & urutan section yang berbeda-beda — bukan struktur kaku yang selalu sama.
+ *
+ * Template menandai tiap section yang boleh dipilih/diurutkan AI dengan:
+ *   <!--BLOCK:key:start--> ... <!--BLOCK:key:end-->
+ * Semua blok diekstrak dari $html, lalu disusun ulang sesuai urutan $layout (blok yang tidak
+ * disebut di $layout tidak ikut ditampilkan). Section yang TIDAK dibungkus BLOCK marker (hero,
+ * header, footer) tetap di posisi aslinya — tidak pernah ikut diacak.
+ */
+function render_landing_blocks(string $html, array $layout): string {
+    $blocks = [];
+    $isFirst = true;
+
+    $html = preg_replace_callback(
+        '/<!--BLOCK:([a-z_]+):start-->(.*?)<!--BLOCK:\1:end-->/s',
+        static function ($matches) use (&$blocks, &$isFirst) {
+            $blocks[$matches[1]] = $matches[2];
+            if ($isFirst) {
+                $isFirst = false;
+                return '{{BLOCKS_HERE}}';
+            }
+            return '';
+        },
+        $html
+    ) ?? $html;
+
+    $assembled = '';
+    foreach ($layout as $key) {
+        if (isset($blocks[$key])) {
+            $assembled .= $blocks[$key];
+        }
+    }
+
+    return str_replace('{{BLOCKS_HERE}}', $assembled, $html);
+}
+
 /** Hapus atau simpan blok section opsional yang ditandai <!--SECTION:key:start--> ... <!--SECTION:key:end--> di template. */
 function strip_landing_template_section(string $html, string $sectionKey, bool $keep): string {
     $pattern = '/<!--SECTION:' . preg_quote($sectionKey, '/') . ':start-->(.*?)<!--SECTION:' . preg_quote($sectionKey, '/') . ':end-->/s';
@@ -218,12 +288,27 @@ function strip_landing_template_section(string $html, string $sectionKey, bool $
     }, $html) ?? $html;
 }
 
+/** Ambil satu field string dari $blocks[$blockKey][$field], escaped HTML. Default string kosong kalau tidak ada. */
+function landing_block_field(array $blocks, string $blockKey, string $field): string {
+    $value = $blocks[$blockKey][$field] ?? '';
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+}
+
+/** Ambil satu field string dari $blocks[$blockKey][$subKey][$field] (nested, mis. formula_steps.plus.title), escaped HTML. */
+function landing_nested_block_field(array $blocks, string $blockKey, string $subKey, string $field): string {
+    $value = $blocks[$blockKey][$subKey][$field] ?? '';
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+}
+
 /**
  * Render HTML landing page dari template AI + konten yang sudah diisi (hasil generate_ai_landing_page()).
  * Dipakai untuk preview DAN untuk publish, supaya hasil publish identik dengan yang di-preview admin.
  *
- * @param array $filled Hasil generate_ai_landing_page(): template_key, accent_color, eyebrow, headline,
- *                       subheadline, description, cta_text, sections.
+ * AI bebas memilih KOMBINASI dan URUTAN section lewat $filled['layout'] (lihat render_landing_blocks()) —
+ * bukan struktur section yang selalu sama persis di setiap event. Hanya hero, form pendaftaran (dipaksa
+ * ikut lewat 'registration_form'), dan footer yang jaminan tampil, supaya alur sistem referral tetap utuh.
+ *
+ * @param array $filled Hasil generate_ai_landing_page(): template_key, accent_color, hero fields, layout, blocks.
  * @param array $eventBrief Data brief event: name, dan field detail acara lainnya (dipakai untuk {{EVENT_NAME}}).
  */
 function render_landing_template(array $filled, array $brand, array $eventBrief): string {
@@ -249,9 +334,33 @@ function render_landing_template(array $filled, array $brand, array $eventBrief)
     $brandName = $brand['name'] ?? ($brand['slug'] ?? 'rahasiaemas.id');
     $logoUrl = !empty($brand['logo_path']) ? $brand['logo_path'] : '/assets/logo.png';
 
-    $sections = is_array($filled['sections'] ?? null) ? $filled['sections'] : [];
-    $showTestimonial = !empty($sections['show_testimonial']);
-    $html = strip_landing_template_section($html, 'testimonial', $showTestimonial);
+    $blocks = is_array($filled['blocks'] ?? null) ? $filled['blocks'] : [];
+    $layout = is_array($filled['layout'] ?? null) ? $filled['layout'] : [];
+
+    // Susun ulang section sesuai pilihan/urutan AI SEBELUM loop & token diproses.
+    $html = render_landing_blocks($html, $layout);
+
+    // Blok berulang (list) per section — aman dipanggil walau blok tsb tidak terpilih (tidak ada match, no-op).
+    $html = render_landing_loop($html, 'stats', $blocks['stat_grid']['stats'] ?? []);
+    $html = render_landing_loop($html, 'formula_steps', $blocks['formula_steps']['steps'] ?? []);
+    $html = render_landing_loop(
+        $html,
+        'formula_plus_points',
+        wrap_landing_string_list($blocks['formula_steps']['plus']['points'] ?? [])
+    );
+    $html = render_landing_loop($html, 'why_cards', $blocks['why_now']['cards'] ?? []);
+    $html = render_landing_loop($html, 'audience_cards', $blocks['audience_cards']['cards'] ?? []);
+    $html = render_landing_loop(
+        $html,
+        'audience_chips',
+        wrap_landing_string_list($blocks['audience_chips']['chips'] ?? [])
+    );
+    $html = render_landing_loop($html, 'roadmap', $blocks['roadmap']['steps'] ?? []);
+    $html = render_landing_loop($html, 'benefits', wrap_landing_string_list($blocks['benefits']['items'] ?? []));
+    $html = render_landing_loop($html, 'faq', $blocks['faq']['items'] ?? []);
+
+    $showFormulaPlus = trim((string)($blocks['formula_steps']['plus']['title'] ?? '')) !== '';
+    $html = strip_landing_template_section($html, 'formula_plus', $showFormulaPlus);
 
     $replacements = [
         '{{EVENT_NAME}}' => htmlspecialchars((string)($eventBrief['name'] ?? ''), ENT_QUOTES, 'UTF-8'),
@@ -264,8 +373,37 @@ function render_landing_template(array $filled, array $brand, array $eventBrief)
         '{{SUBHEADLINE}}' => htmlspecialchars((string)($filled['subheadline'] ?? ''), ENT_QUOTES, 'UTF-8'),
         '{{DESCRIPTION}}' => render_landing_description((string)($filled['description'] ?? '')),
         '{{CTA_TEXT}}' => htmlspecialchars((string)($filled['cta_text'] ?? ''), ENT_QUOTES, 'UTF-8'),
-        '{{TESTIMONIAL_QUOTE}}' => htmlspecialchars((string)($sections['testimonial_quote'] ?? ''), ENT_QUOTES, 'UTF-8'),
-        '{{TESTIMONIAL_NAME}}' => htmlspecialchars((string)($sections['testimonial_name'] ?? ''), ENT_QUOTES, 'UTF-8'),
+        '{{SPEAKER_NAME}}' => htmlspecialchars((string)($eventBrief['event_speaker'] ?? ''), ENT_QUOTES, 'UTF-8'),
+
+        '{{STAT_TITLE}}' => landing_block_field($blocks, 'stat_grid', 'title'),
+        '{{STAT_LEDE}}' => landing_block_field($blocks, 'stat_grid', 'lede'),
+        '{{STAT_QUOTE}}' => landing_block_field($blocks, 'stat_grid', 'quote'),
+
+        '{{FORMULA_TITLE}}' => landing_block_field($blocks, 'formula_steps', 'title'),
+        '{{FORMULA_LEDE}}' => landing_block_field($blocks, 'formula_steps', 'lede'),
+        '{{FORMULA_PLUS_BADGE}}' => landing_nested_block_field($blocks, 'formula_steps', 'plus', 'badge'),
+        '{{FORMULA_PLUS_TITLE}}' => landing_nested_block_field($blocks, 'formula_steps', 'plus', 'title'),
+        '{{FORMULA_PLUS_DESC}}' => landing_nested_block_field($blocks, 'formula_steps', 'plus', 'desc'),
+
+        '{{WHY_NOW_TITLE}}' => landing_block_field($blocks, 'why_now', 'title'),
+        '{{WHY_NOW_LEDE}}' => landing_block_field($blocks, 'why_now', 'lede'),
+
+        '{{AUDIENCE_CARDS_TITLE}}' => landing_block_field($blocks, 'audience_cards', 'title'),
+        '{{AUDIENCE_CHIPS_TITLE}}' => landing_block_field($blocks, 'audience_chips', 'title'),
+        '{{AUDIENCE_CHIPS_FOOTNOTE}}' => landing_block_field($blocks, 'audience_chips', 'footnote'),
+
+        '{{ROADMAP_TITLE}}' => landing_block_field($blocks, 'roadmap', 'title'),
+        '{{ROADMAP_LEDE}}' => landing_block_field($blocks, 'roadmap', 'lede'),
+
+        '{{SPEAKER_ROLE}}' => landing_block_field($blocks, 'speaker', 'role'),
+        '{{SPEAKER_BIO}}' => landing_block_field($blocks, 'speaker', 'bio'),
+
+        '{{BENEFITS_TITLE}}' => landing_block_field($blocks, 'benefits', 'title'),
+
+        '{{TESTIMONIAL_QUOTE}}' => landing_block_field($blocks, 'testimonial', 'quote'),
+        '{{TESTIMONIAL_NAME}}' => landing_block_field($blocks, 'testimonial', 'name'),
+
+        '{{FAQ_TITLE}}' => landing_block_field($blocks, 'faq', 'title'),
     ];
 
     return strtr($html, $replacements);
