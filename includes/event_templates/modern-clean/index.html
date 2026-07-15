@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{EVENT_NAME}} — {{BRAND_NAME}}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#101317; --surface:#161B21; --accent:{{ACCENT_COLOR}}; --accent-soft:{{ACCENT_COLOR_SOFT}}; --white:#F5F7FA; --muted:#8A93A0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--white); font-family: 'Inter', system-ui, sans-serif; line-height: 1.65; }
+  h1, h2 { font-weight: 800; letter-spacing: -0.02em; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 56px 0; }
+
+  .hero { min-height: 90svh; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding: 40px 28px; max-width: 640px; margin: 0 auto; }
+  .hero img { width: 64px; height: 64px; object-fit: contain; margin-bottom: 24px; border-radius: 14px; background: var(--surface); padding: 8px; }
+  .eyebrow { display: inline-flex; align-items: center; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 6px 12px; margin-bottom: 18px; }
+  .hero h1 { color: var(--white); font-size: clamp(30px, 5.4vw, 46px); line-height: 1.12; margin-bottom: 16px; }
+  .hero h1 strong { color: var(--accent); }
+  .hero p { color: var(--muted); max-width: 480px; margin-bottom: 30px; font-size: 15.5px; }
+  .invited-by { color: var(--accent-soft); font-size: 14px; margin-bottom: 14px; }
+
+  .btn-accent { display: inline-block; background: var(--accent); color: #0B0D10; font-weight: 800; padding: 16px 30px; border-radius: 12px; text-decoration: none; border: none; cursor: pointer; font-size: 15.5px; }
+
+  .event-card { background: var(--surface); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 26px; max-width: 480px; margin: 0 auto; }
+  .event-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 14px; }
+  .event-row:last-child { border-bottom: none; }
+  .event-row .label { color: var(--muted); }
+
+  .testimonial { max-width: 480px; margin: 0 auto; background: var(--surface); border-radius: 18px; padding: 24px; }
+  .testimonial p { opacity: .92; margin-bottom: 10px; font-size: 15px; }
+  .testimonial span { color: var(--accent); font-size: 13px; font-weight: 700; }
+
+  .form-card { background: var(--surface); border: 1px solid rgba(255,255,255,0.08); border-radius: 22px; padding: 28px 24px; max-width: 440px; margin: 0 auto; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; color: var(--white); margin-bottom: 6px; font-weight: 600; }
+  .field input { width: 100%; background: var(--bg); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 13px 15px; color: var(--white); font-size: 15px; font-family: inherit; outline: none; }
+  .field input:focus { border-color: var(--accent); }
+  .submit-btn { width: 100%; background: var(--accent); color: #0B0D10; font-weight: 800; font-size: 15.5px; padding: 15px; border: none; border-radius: 12px; cursor: pointer; margin-top: 4px; }
+
+  [data-rg-message] { text-align: center; padding: 14px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; }
+
+  h2.section-title { text-align: center; margin-bottom: 28px; font-size: 24px; color: var(--white); }
+  footer { text-align: center; padding: 40px 0 56px; color: var(--muted); font-size: 12.5px; }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}">
+  <div data-rg-invited-by style="display:none;">
+    <span class="invited-by">Kamu diundang oleh <strong data-rg-referrer-name></strong></span>
+  </div>
+  <span class="eyebrow">{{EYEBROW}}</span>
+  <h1>{{HEADLINE}}</h1>
+  <p>{{SUBHEADLINE}}</p>
+  <a href="#daftar" class="btn-accent">{{CTA_TEXT}}</a>
+</section>
+
+<section>
+  <div class="wrap">
+    {{DESCRIPTION}}
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2 class="section-title">Detail Acara</h2>
+    <div class="event-card">
+      <div class="event-row"><span class="label">Hari & Tanggal</span><span data-rg-field="event_day">—</span></div>
+      <div class="event-row"><span class="label">Waktu</span><span data-rg-field="event_time">—</span></div>
+      <div class="event-row"><span class="label">Lokasi</span><span data-rg-field="event_location">—</span></div>
+      <div class="event-row"><span class="label">Pembicara</span><span data-rg-field="event_speaker">—</span></div>
+      <div class="event-row"><span class="label">Kapasitas</span><span data-rg-field="event_capacity">—</span></div>
+    </div>
+  </div>
+</section>
+
+<!--SECTION:testimonial:start-->
+<section>
+  <div class="wrap">
+    <div class="testimonial">
+      <p>"{{TESTIMONIAL_QUOTE}}"</p>
+      <span>— {{TESTIMONIAL_NAME}}</span>
+    </div>
+  </div>
+</section>
+<!--SECTION:testimonial:end-->
+
+<section id="daftar">
+  <div class="wrap">
+    <h2 class="section-title">Daftar Sekarang</h2>
+    <div class="form-card">
+      <div data-rg-message style="display:none;"></div>
+      <form data-rg-form>
+        <div class="field">
+          <label>Nama Lengkap</label>
+          <input type="text" name="name" placeholder="Nama lengkap kamu" required minlength="3">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="email@kamu.com" required>
+        </div>
+        <div class="field">
+          <label>Nomor WhatsApp</label>
+          <input type="tel" name="whatsapp" placeholder="08xxxxxxxxxx" required minlength="9">
+        </div>
+        <div class="field">
+          <label>Kota Domisili</label>
+          <input type="text" name="kota" placeholder="Kota kamu" required minlength="2">
+        </div>
+        <button type="submit" class="submit-btn">{{CTA_TEXT}}</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">{{BRAND_NAME}} — <span data-rg-field="event_name">{{EVENT_NAME}}</span></div>
+</footer>
+
+<script src="/assets/event-sdk.js" defer></script>
+</body>
+</html>

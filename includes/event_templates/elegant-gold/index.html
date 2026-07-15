@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{EVENT_NAME}} — {{BRAND_NAME}}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --charcoal:#1A1A1A; --gold:{{ACCENT_COLOR}}; --gold-soft:{{ACCENT_COLOR_SOFT}}; --white:#FAFAFA; --muted:#9C9992; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--charcoal); color: var(--white); font-family: 'Poppins', sans-serif; line-height: 1.6; }
+  h1, h2 { font-family: 'Playfair Display', serif; font-weight: 800; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 64px 0; }
+
+  .hero { min-height: 100svh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px 24px; }
+  .hero img { width: 80px; margin-bottom: 24px; border-radius: 10px; }
+  .eyebrow { display: inline-block; color: var(--gold-soft); font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 14px; }
+  .hero h1 { color: var(--gold); font-size: clamp(28px, 6vw, 42px); margin-bottom: 16px; max-width: 560px; }
+  .hero p { opacity: 0.85; max-width: 460px; margin-bottom: 30px; }
+  .invited-by { color: var(--gold-soft); font-size: 14px; margin-bottom: 14px; }
+
+  .btn-gold { display: inline-block; background: var(--gold); color: var(--charcoal); font-weight: 700; padding: 16px 32px; border-radius: 12px; text-decoration: none; border: none; cursor: pointer; font-size: 16px; }
+
+  .event-card { border: 1px solid var(--gold); border-radius: 16px; padding: 28px; max-width: 480px; margin: 0 auto; }
+  .event-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 14.5px; }
+  .event-row:last-child { border-bottom: none; }
+  .event-row .label { color: var(--muted); }
+
+  .testimonial { max-width: 480px; margin: 0 auto; text-align: center; border-left: 3px solid var(--gold); padding: 4px 0 4px 22px; text-align: left; }
+  .testimonial p { font-style: italic; opacity: .9; margin-bottom: 10px; }
+  .testimonial span { color: var(--gold-soft); font-size: 13px; font-weight: 600; }
+
+  .form-card { background: rgba(255,255,255,0.03); border: 1px solid color-mix(in srgb, var(--gold) 20%, transparent); border-radius: 20px; padding: 28px 24px; max-width: 440px; margin: 0 auto; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; color: var(--gold-soft); margin-bottom: 6px; font-weight: 600; }
+  .field input { width: 100%; background: var(--charcoal); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 13px 15px; color: var(--white); font-size: 15px; font-family: inherit; outline: none; }
+  .field input:focus { border-color: var(--gold); }
+  .submit-btn { width: 100%; background: var(--gold); color: var(--charcoal); font-weight: 700; font-size: 15.5px; padding: 15px; border: none; border-radius: 12px; cursor: pointer; margin-top: 4px; }
+
+  [data-rg-message] { text-align: center; padding: 14px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; }
+
+  footer { text-align: center; padding: 40px 0 56px; color: var(--muted); font-size: 12.5px; }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}">
+  <div data-rg-invited-by style="display:none;">
+    <span class="invited-by">Kamu diundang oleh <strong data-rg-referrer-name></strong></span>
+  </div>
+  <span class="eyebrow">{{EYEBROW}}</span>
+  <h1>{{HEADLINE}}</h1>
+  <p>{{SUBHEADLINE}}</p>
+  <a href="#daftar" class="btn-gold">{{CTA_TEXT}}</a>
+</section>
+
+<section>
+  <div class="wrap">
+    {{DESCRIPTION}}
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2 style="color:var(--gold); text-align:center; margin-bottom:32px; font-size:26px;">Detail Acara</h2>
+    <div class="event-card">
+      <div class="event-row"><span class="label">Hari & Tanggal</span><span data-rg-field="event_day">—</span></div>
+      <div class="event-row"><span class="label">Waktu</span><span data-rg-field="event_time">—</span></div>
+      <div class="event-row"><span class="label">Lokasi</span><span data-rg-field="event_location">—</span></div>
+      <div class="event-row"><span class="label">Pembicara</span><span data-rg-field="event_speaker">—</span></div>
+      <div class="event-row"><span class="label">Kapasitas</span><span data-rg-field="event_capacity">—</span></div>
+    </div>
+  </div>
+</section>
+
+<!--SECTION:testimonial:start-->
+<section>
+  <div class="wrap">
+    <div class="testimonial">
+      <p>"{{TESTIMONIAL_QUOTE}}"</p>
+      <span>— {{TESTIMONIAL_NAME}}</span>
+    </div>
+  </div>
+</section>
+<!--SECTION:testimonial:end-->
+
+<section id="daftar">
+  <div class="wrap">
+    <h2 style="color:var(--gold); text-align:center; margin-bottom:28px; font-size:26px;">Daftar Sekarang</h2>
+    <div class="form-card">
+      <div data-rg-message style="display:none;"></div>
+      <form data-rg-form>
+        <div class="field">
+          <label>Nama Lengkap</label>
+          <input type="text" name="name" placeholder="Nama lengkap kamu" required minlength="3">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="email@kamu.com" required>
+        </div>
+        <div class="field">
+          <label>Nomor WhatsApp</label>
+          <input type="tel" name="whatsapp" placeholder="08xxxxxxxxxx" required minlength="9">
+        </div>
+        <div class="field">
+          <label>Kota Domisili</label>
+          <input type="text" name="kota" placeholder="Kota kamu" required minlength="2">
+        </div>
+        <button type="submit" class="submit-btn">{{CTA_TEXT}}</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">{{BRAND_NAME}} — <span data-rg-field="event_name">{{EVENT_NAME}}</span></div>
+</footer>
+
+<script src="/assets/event-sdk.js" defer></script>
+</body>
+</html>

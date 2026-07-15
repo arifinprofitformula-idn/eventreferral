@@ -3,7 +3,7 @@ DirectoryIndex index.php
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule !^(?:$|index\.php|login\.php|dashboard\.php|logout\.php|export\.php|events\.php|rewards\.php|tracking\.php|visitor-analytics\.php|marketing-content\.php|setup-brand\.php|admin-users\.php|documentation\.php|generate-password-hash\.php|event-settings\.php|email-settings\.php|integrations\.php|migrate-legacy\.php)$ - [F,L,NC]
+  RewriteRule !^(?:$|index\.php|login\.php|dashboard\.php|logout\.php|export\.php|events\.php|rewards\.php|tracking\.php|visitor-analytics\.php|marketing-content\.php|setup-brand\.php|admin-users\.php|documentation\.php|generate-password-hash\.php|event-settings\.php|email-settings\.php|integrations\.php|migrate-legacy\.php|ai-settings\.php)$ - [F,L,NC]
 </IfModule>
 
 <FilesMatch "\.(?:sql|bak|backup|old|orig|save|swp|ini|log|md|yml|yaml|json|lock|sh|ps1|bat|cmd)$">

@@ -719,6 +719,10 @@ function whatsapp_link(?string $number): ?string
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m19-11-2 2-2-2m2 2V5m-9 2a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Kelola Admin
       </a>
+      <a href="ai-settings.php">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2a5 5 0 0 0-5 5v2a3 3 0 0 0-2 2.83V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7.17A3 3 0 0 0 17 9V7a5 5 0 0 0-5-5Zm-3 7V7a3 3 0 1 1 6 0v2H9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Pengaturan AI
+      </a>
       <?php endif; ?>
       <a class="logout icon-only" href="logout.php" title="Keluar" aria-label="Keluar">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 17 15 12l-5-5M15 12H3m8-9h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>

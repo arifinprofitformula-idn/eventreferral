@@ -268,6 +268,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
       <a href="dashboard.php">Dashboard</a>
       <a href="events.php">Kelola Event</a>
       <a class="active" href="admin-users.php">Kelola Admin</a>
+      <a href="ai-settings.php">Pengaturan AI</a>
       <a href="logout.php">Keluar</a>
     </nav>
   </div>

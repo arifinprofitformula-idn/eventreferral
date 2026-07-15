@@ -1,0 +1,8 @@
+{
+  "key": "elegant-gold",
+  "label": "Elegant Gold",
+  "description": "Vibe eksklusif, mewah, terpercaya. Layout satu kolom: hero besar dengan logo, judul, CTA; lalu detail acara dalam kartu; lalu form pendaftaran. Cocok untuk event edukasi finansial premium/high-value.",
+  "vibe_tags": ["eksklusif", "premium", "terpercaya", "formal"],
+  "default_accent": "#C9A84C",
+  "optional_sections": ["testimonial"]
+}

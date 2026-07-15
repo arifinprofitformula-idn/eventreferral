@@ -85,26 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($_SESSION['csrf_token'
                                     inject_sdk_script($targetDir . '/index.html');
 
                                     // Upsert ke tabel events (brand_id sudah divalidasi di atas milik brand ini)
-                                    $stmt = $pdo->prepare('
-                                        INSERT INTO events (brand_id, slug, name, status, whatsapp_default, event_day, event_time, event_location, event_speaker, event_capacity)
-                                        VALUES (?, ?, ?, "active", ?, ?, ?, ?, ?, ?)
-                                        ON DUPLICATE KEY UPDATE
-                                            name = VALUES(name), status = "active", whatsapp_default = VALUES(whatsapp_default),
-                                            event_day = VALUES(event_day), event_time = VALUES(event_time),
-                                            event_location = VALUES(event_location), event_speaker = VALUES(event_speaker),
-                                            event_capacity = VALUES(event_capacity)
-                                    ');
-                                    $stmt->execute([
-                                        $brandId,
-                                        $slug,
-                                        clean($cfg['name']),
-                                        normalize_whatsapp(clean($cfg['whatsapp'] ?? '')),
-                                        clean($cfg['event_day'] ?? ''),
-                                        clean($cfg['event_time'] ?? ''),
-                                        clean($cfg['event_location'] ?? ''),
-                                        clean($cfg['event_speaker'] ?? ''),
-                                        clean($cfg['event_capacity'] ?? ''),
-                                    ]);
+                                    upsert_event_record($pdo, $brandId, $slug, $cfg);
 
                                     if (!empty($_POST['set_as_default'])) {
                                         $stmt = $pdo->prepare('UPDATE brands SET default_event_slug = ? WHERE id = ?');
@@ -685,6 +666,108 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     margin: 18px 0 0;
     padding: 14px;
   }
+  .field textarea {
+    width: 100%;
+    min-height: 96px;
+    color: var(--text);
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    font: inherit;
+    font-size: 13.5px;
+    line-height: 1.55;
+    outline: none;
+    padding: 12px 14px;
+    resize: vertical;
+  }
+  .field textarea:focus {
+    border-color: color-mix(in srgb, var(--gold-soft) 42%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 10%, transparent);
+  }
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .source-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+  .source-tab {
+    color: var(--muted);
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 11px 16px;
+  }
+  .source-tab.active {
+    color: #111;
+    background: linear-gradient(135deg, var(--gold), var(--gold-soft));
+    border-color: transparent;
+  }
+  .source-panel { display: none; }
+  .source-panel.active { display: block; }
+  .ai-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, .85fr) minmax(340px, 1.15fr);
+    gap: 24px;
+  }
+  .ai-preview-frame {
+    width: 100%;
+    min-height: 480px;
+    height: 60vh;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    background: #0d0d0c;
+  }
+  .ai-preview-wrap { display: flex; flex-direction: column; gap: 14px; }
+  .ai-preview-empty {
+    display: grid;
+    place-items: center;
+    min-height: 480px;
+    height: 60vh;
+    border: 1px dashed color-mix(in srgb, var(--gold-soft) 40%, transparent);
+    border-radius: 16px;
+    background: rgba(11,11,10,0.42);
+    color: var(--muted);
+    font-size: 13.5px;
+    text-align: center;
+    padding: 24px;
+  }
+  .ai-preview-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .ai-template-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--gold-soft);
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
+    border: 1px solid var(--border-gold);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 7px 12px;
+  }
+  .ai-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .ai-status {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 18px;
+  }
+  .ai-status.error { color: #FCA5A5; }
+  .ai-status.success { color: #A7F3D0; }
   .events-toolbar {
     display: flex;
     align-items: center;
@@ -1125,69 +1208,164 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
       <div>
         <h2>
           <span class="icon-badge" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-          Upload Event Baru
+          Buat Event Baru
         </h2>
-        <p class="desc">Upload file ZIP berisi <strong>index.html</strong>, <strong>config.json</strong>, dan folder <strong>assets</strong> sesuai struktur yang ditentukan.</p>
-      </div>
-      <div class="steps" aria-label="Langkah upload">
-        <span class="step"><span class="step-num">1</span>Pilih ZIP</span>
-        <span class="step-arrow">→</span>
-        <span class="step"><span class="step-num">2</span>Atur Slug</span>
-        <span class="step-arrow">→</span>
-        <span class="step"><span class="step-num">3</span>Publikasikan</span>
+        <p class="desc">Buat landing page otomatis dengan AI, atau upload ZIP sendiri jika ingin desain manual.</p>
       </div>
     </div>
-    <form method="POST" enctype="multipart/form-data">
-      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
-      <div class="upload-layout">
-        <div>
-          <label class="file-drop">
-            <input id="eventZip" type="file" name="event_zip" accept=".zip" required>
-            <span>
-              <span class="upload-icon" aria-hidden="true">
-                <svg width="42" height="42" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m14-7-5-5-5 5m5-5v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </span>
-              <span class="file-title">Pilih file ZIP event</span>
-              <span class="file-subtitle">atau seret dan lepas file di sini</span>
-              <span class="file-subtitle">Format: .zip · Maks. <?= htmlspecialchars((string)$maxZipMb) ?>MB</span>
-              <span class="file-name" id="fileName"></span>
-            </span>
-          </label>
-          <button type="submit" class="btn btn-gold" style="margin-top:16px;">Upload & Publikasikan</button>
-        </div>
+
+    <div class="source-tabs" role="tablist" aria-label="Sumber landing page">
+      <button type="button" class="source-tab active" data-source-tab="ai">✨ Buat dengan AI</button>
+      <button type="button" class="source-tab" data-source-tab="zip">Upload ZIP</button>
+    </div>
+
+    <div class="source-panel active" id="source-panel-ai">
+      <div class="ai-layout">
         <div>
           <div class="field">
-            <label for="slug_override">Slug URL</label>
-            <input id="slug_override" type="text" name="slug_override" placeholder="contoh: rahasia-investasi-emas">
-            <div class="helper">Hasil akhir: <strong><?= htmlspecialchars($brand['domain']) ?>/e/contoh-slug</strong></div>
+            <label for="ai_name">Nama Event</label>
+            <input id="ai_name" type="text" placeholder="Contoh: Rahasia Cuan Emas — Strategi Anti Inflasi 2026">
+          </div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="ai_slug">Slug URL (opsional)</label>
+              <input id="ai_slug" type="text" placeholder="contoh: rahasia-investasi-emas">
+            </div>
+            <div class="field">
+              <label for="ai_whatsapp">WhatsApp Fallback</label>
+              <input id="ai_whatsapp" type="text" placeholder="08xxxxxxxxxx">
+            </div>
+          </div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="ai_event_day">Hari/Tanggal</label>
+              <input id="ai_event_day" type="text" placeholder="Jumat, 25 Juli 2026">
+            </div>
+            <div class="field">
+              <label for="ai_event_time">Waktu</label>
+              <input id="ai_event_time" type="text" placeholder="19.30 WIB">
+            </div>
+          </div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="ai_event_location">Lokasi</label>
+              <input id="ai_event_location" type="text" placeholder="Online via Zoom">
+            </div>
+            <div class="field">
+              <label for="ai_event_capacity">Kapasitas</label>
+              <input id="ai_event_capacity" type="text" placeholder="100 Peserta">
+            </div>
+          </div>
+          <div class="field">
+            <label for="ai_event_speaker">Pembicara</label>
+            <input id="ai_event_speaker" type="text" placeholder="Coach Arifin">
+          </div>
+          <div class="field">
+            <label for="ai_context">Konteks Tambahan (opsional)</label>
+            <textarea id="ai_context" maxlength="500" placeholder="Contoh: acara untuk pemula, tekankan sisi edukasi, kuota terbatas 100 orang."></textarea>
           </div>
           <div class="switch-row">
             <div>
               <span class="switch-label">Timpa event yang sudah ada</span>
               <span class="helper">Aktifkan jika slug sudah dipakai dan ingin memperbarui landing page.</span>
             </div>
-            <label class="switch" for="allow_overwrite">
-              <input type="checkbox" name="allow_overwrite" id="allow_overwrite">
+            <label class="switch" for="ai_allow_overwrite">
+              <input type="checkbox" id="ai_allow_overwrite">
               <span class="switch-slider"></span>
             </label>
           </div>
           <div class="switch-row">
             <div>
               <span class="switch-label">Jadikan event utama domain</span>
-              <span class="helper">Jika aktif, root domain brand ini akan langsung menampilkan event yang diupload.</span>
+              <span class="helper">Jika aktif, root domain brand ini akan langsung menampilkan event ini.</span>
             </div>
-            <label class="switch" for="set_as_default">
-              <input type="checkbox" name="set_as_default" id="set_as_default">
+            <label class="switch" for="ai_set_as_default">
+              <input type="checkbox" id="ai_set_as_default">
               <span class="switch-slider"></span>
             </label>
           </div>
-          <div class="info-box">
-            <span aria-hidden="true">ⓘ</span>
-            <span>Pastikan ZIP memiliki file <strong>index.html</strong> dan <strong>config.json</strong> di root folder.</span>
+          <div class="ai-actions">
+            <button type="button" class="btn btn-gold" id="aiGenerateBtn">✨ Generate Landing Page dengan AI</button>
+          </div>
+          <div class="ai-status" id="aiStatus"></div>
+        </div>
+
+        <div class="ai-preview-wrap">
+          <div class="ai-preview-meta" id="aiPreviewMeta" style="display:none;">
+            <span class="ai-template-badge" id="aiTemplateBadge"></span>
+            <div class="ai-actions">
+              <button type="button" class="btn btn-outline" id="aiRegenerateBtn">↻ Generate Ulang</button>
+              <button type="button" class="btn btn-gold" id="aiPublishBtn">Publikasikan</button>
+            </div>
+          </div>
+          <iframe class="ai-preview-frame" id="aiPreviewFrame" style="display:none;" sandbox="allow-same-origin" title="Preview landing page"></iframe>
+          <div class="ai-preview-empty" id="aiPreviewEmpty">
+            Isi brief event di sebelah kiri, lalu klik "Generate Landing Page dengan AI" untuk melihat preview di sini sebelum dipublikasikan.
           </div>
         </div>
       </div>
-    </form>
+    </div>
+
+    <div class="source-panel" id="source-panel-zip">
+      <div class="steps" aria-label="Langkah upload" style="margin-bottom:20px;">
+        <span class="step"><span class="step-num">1</span>Pilih ZIP</span>
+        <span class="step-arrow">→</span>
+        <span class="step"><span class="step-num">2</span>Atur Slug</span>
+        <span class="step-arrow">→</span>
+        <span class="step"><span class="step-num">3</span>Publikasikan</span>
+      </div>
+      <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+        <div class="upload-layout">
+          <div>
+            <label class="file-drop">
+              <input id="eventZip" type="file" name="event_zip" accept=".zip" required>
+              <span>
+                <span class="upload-icon" aria-hidden="true">
+                  <svg width="42" height="42" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m14-7-5-5-5 5m5-5v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <span class="file-title">Pilih file ZIP event</span>
+                <span class="file-subtitle">atau seret dan lepas file di sini</span>
+                <span class="file-subtitle">Format: .zip · Maks. <?= htmlspecialchars((string)$maxZipMb) ?>MB</span>
+                <span class="file-name" id="fileName"></span>
+              </span>
+            </label>
+            <button type="submit" class="btn btn-gold" style="margin-top:16px;">Upload & Publikasikan</button>
+          </div>
+          <div>
+            <div class="field">
+              <label for="slug_override">Slug URL</label>
+              <input id="slug_override" type="text" name="slug_override" placeholder="contoh: rahasia-investasi-emas">
+              <div class="helper">Hasil akhir: <strong><?= htmlspecialchars($brand['domain']) ?>/e/contoh-slug</strong></div>
+            </div>
+            <div class="switch-row">
+              <div>
+                <span class="switch-label">Timpa event yang sudah ada</span>
+                <span class="helper">Aktifkan jika slug sudah dipakai dan ingin memperbarui landing page.</span>
+              </div>
+              <label class="switch" for="allow_overwrite">
+                <input type="checkbox" name="allow_overwrite" id="allow_overwrite">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="switch-row">
+              <div>
+                <span class="switch-label">Jadikan event utama domain</span>
+                <span class="helper">Jika aktif, root domain brand ini akan langsung menampilkan event yang diupload.</span>
+              </div>
+              <label class="switch" for="set_as_default">
+                <input type="checkbox" name="set_as_default" id="set_as_default">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="info-box">
+              <span aria-hidden="true">ⓘ</span>
+              <span>Pastikan ZIP memiliki file <strong>index.html</strong> dan <strong>config.json</strong> di root folder.</span>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
   </section>
 
   <section class="panel" id="event-list">
@@ -1312,6 +1490,157 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
       fileName.textContent = zipInput.files.length ? zipInput.files[0].name : '';
     });
   }
+
+  // ---- Toggle sumber landing page: AI vs Upload ZIP ----
+  const sourceTabs = Array.from(document.querySelectorAll('.source-tab[data-source-tab]'));
+  sourceTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      sourceTabs.forEach((t) => t.classList.toggle('active', t === tab));
+      document.querySelectorAll('.source-panel').forEach((panel) => {
+        panel.classList.toggle('active', panel.id === 'source-panel-' + tab.dataset.sourceTab);
+      });
+    });
+  });
+
+  // ---- Buat Landing Page dengan AI ----
+  (function () {
+    const csrfToken = <?= json_encode($_SESSION['csrf_token']) ?>;
+
+    const nameInput = document.getElementById('ai_name');
+    const slugInput = document.getElementById('ai_slug');
+    const whatsappInput = document.getElementById('ai_whatsapp');
+    const dayInput = document.getElementById('ai_event_day');
+    const timeInput = document.getElementById('ai_event_time');
+    const locationInput = document.getElementById('ai_event_location');
+    const speakerInput = document.getElementById('ai_event_speaker');
+    const capacityInput = document.getElementById('ai_event_capacity');
+    const contextInput = document.getElementById('ai_context');
+    const allowOverwriteInput = document.getElementById('ai_allow_overwrite');
+    const setAsDefaultInput = document.getElementById('ai_set_as_default');
+
+    const generateBtn = document.getElementById('aiGenerateBtn');
+    const regenerateBtn = document.getElementById('aiRegenerateBtn');
+    const publishBtn = document.getElementById('aiPublishBtn');
+    const statusEl = document.getElementById('aiStatus');
+    const previewFrame = document.getElementById('aiPreviewFrame');
+    const previewEmpty = document.getElementById('aiPreviewEmpty');
+    const previewMeta = document.getElementById('aiPreviewMeta');
+    const templateBadge = document.getElementById('aiTemplateBadge');
+
+    if (!generateBtn) return;
+
+    let lastResult = null;
+
+    function setStatus(message, type) {
+      statusEl.textContent = message || '';
+      statusEl.className = 'ai-status' + (type ? ' ' + type : '');
+    }
+
+    function buildEventBrief() {
+      return {
+        name: nameInput.value.trim(),
+        event_day: dayInput.value.trim(),
+        event_time: timeInput.value.trim(),
+        event_location: locationInput.value.trim(),
+        event_speaker: speakerInput.value.trim(),
+        event_capacity: capacityInput.value.trim(),
+      };
+    }
+
+    async function generateLanding() {
+      const eventBrief = buildEventBrief();
+      if (!eventBrief.name) {
+        setStatus('Nama Event wajib diisi.', 'error');
+        nameInput.focus();
+        return;
+      }
+
+      generateBtn.disabled = true;
+      if (regenerateBtn) regenerateBtn.disabled = true;
+      setStatus('AI sedang menyusun landing page...', '');
+
+      try {
+        const res = await fetch('../api/generate_ai_landing.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            csrf_token: csrfToken,
+            context: contextInput.value.trim(),
+            ...eventBrief,
+          }),
+        });
+        const result = await res.json();
+
+        if (!result.success) {
+          setStatus(result.message || 'Gagal generate landing page. Coba lagi.', 'error');
+          return;
+        }
+
+        lastResult = result;
+        previewFrame.srcdoc = result.html;
+        previewFrame.style.display = '';
+        previewEmpty.style.display = 'none';
+        previewMeta.style.display = '';
+        templateBadge.textContent = 'Template: ' + (result.template_label || result.template_key);
+        setStatus('Landing page berhasil dibuat. Periksa preview, lalu klik Publikasikan.', 'success');
+      } catch (err) {
+        setStatus('Gagal terhubung ke server. Periksa koneksi dan coba lagi.', 'error');
+      } finally {
+        generateBtn.disabled = false;
+        if (regenerateBtn) regenerateBtn.disabled = false;
+      }
+    }
+
+    async function publishLanding() {
+      if (!lastResult) {
+        setStatus('Generate landing page terlebih dahulu sebelum publikasi.', 'error');
+        return;
+      }
+
+      publishBtn.disabled = true;
+      setStatus('Mempublikasikan landing page...', '');
+
+      try {
+        const res = await fetch('../api/publish_ai_landing.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            csrf_token: csrfToken,
+            html: lastResult.html,
+            slug_override: slugInput.value.trim(),
+            allow_overwrite: allowOverwriteInput.checked,
+            set_as_default: setAsDefaultInput.checked,
+            config: {
+              name: lastResult.event_brief.name,
+              whatsapp: whatsappInput.value.trim(),
+              event_day: lastResult.event_brief.event_day,
+              event_time: lastResult.event_brief.event_time,
+              event_location: lastResult.event_brief.event_location,
+              event_speaker: lastResult.event_brief.event_speaker,
+              event_capacity: lastResult.event_brief.event_capacity,
+            },
+          }),
+        });
+        const result = await res.json();
+
+        if (!result.success) {
+          setStatus(result.message || 'Gagal mempublikasikan landing page.', 'error');
+          publishBtn.disabled = false;
+          return;
+        }
+
+        setStatus('Event "' + result.name + '" berhasil dipublikasikan! Memuat ulang halaman...', 'success');
+        setTimeout(() => window.location.reload(), 900);
+      } catch (err) {
+        setStatus('Gagal terhubung ke server. Periksa koneksi dan coba lagi.', 'error');
+        publishBtn.disabled = false;
+      }
+    }
+
+    generateBtn.addEventListener('click', generateLanding);
+    if (regenerateBtn) regenerateBtn.addEventListener('click', generateLanding);
+    if (publishBtn) publishBtn.addEventListener('click', publishLanding);
+  })();
 
   const eventSearch = document.getElementById('eventSearch');
   const eventCards = Array.from(document.querySelectorAll('.event-card'));

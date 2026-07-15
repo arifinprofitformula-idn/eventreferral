@@ -150,6 +150,127 @@ function inject_sdk_script($indexHtmlPath) {
     return true;
 }
 
+/** Upsert satu baris tabel `events`, dipakai bersama oleh alur upload ZIP dan alur landing page AI. */
+function upsert_event_record(PDO $pdo, int $brandId, string $slug, array $cfg): void {
+    $stmt = $pdo->prepare('
+        INSERT INTO events (brand_id, slug, name, status, whatsapp_default, event_day, event_time, event_location, event_speaker, event_capacity)
+        VALUES (?, ?, ?, "active", ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+            name = VALUES(name), status = "active", whatsapp_default = VALUES(whatsapp_default),
+            event_day = VALUES(event_day), event_time = VALUES(event_time),
+            event_location = VALUES(event_location), event_speaker = VALUES(event_speaker),
+            event_capacity = VALUES(event_capacity)
+    ');
+    $stmt->execute([
+        $brandId,
+        $slug,
+        clean($cfg['name']),
+        normalize_whatsapp(clean($cfg['whatsapp'] ?? '')),
+        clean($cfg['event_day'] ?? ''),
+        clean($cfg['event_time'] ?? ''),
+        clean($cfg['event_location'] ?? ''),
+        clean($cfg['event_speaker'] ?? ''),
+        clean($cfg['event_capacity'] ?? ''),
+    ]);
+}
+
+/** Ubah warna hex jadi versi lebih terang (blend ke putih) untuk variabel CSS "*-soft". */
+function lighten_hex_color(string $hex, float $ratio): string {
+    if (!preg_match('/^#([0-9a-fA-F]{6})$/', $hex, $m)) {
+        return '#F4D27A';
+    }
+    $ratio = max(0.0, min(1.0, $ratio));
+    $rgb = str_split($m[1], 2);
+    $blended = array_map(static function ($channel) use ($ratio) {
+        $value = hexdec($channel);
+        $value = (int)round($value + (255 - $value) * $ratio);
+        return str_pad(dechex(max(0, min(255, $value))), 2, '0', STR_PAD_LEFT);
+    }, $rgb);
+    return '#' . implode('', $blended);
+}
+
+/** Konversi **bold** markdown jadi <strong>, dengan sisa teks di-escape HTML terlebih dahulu. */
+function convert_landing_markdown_bold(string $text): string {
+    $escaped = htmlspecialchars(trim($text), ENT_QUOTES, 'UTF-8');
+    return preg_replace('/\*\*(.+?)\*\*/s', '<strong>$1</strong>', $escaped);
+}
+
+/** Render deskripsi AI (paragraf dipisah newline ganda) jadi tag <p> yang aman dari HTML/script injection. */
+function render_landing_description(string $description): string {
+    $paragraphs = preg_split('/\n{2,}/', trim($description)) ?: [];
+    $html = '';
+    foreach ($paragraphs as $paragraph) {
+        $paragraph = trim($paragraph);
+        if ($paragraph === '') {
+            continue;
+        }
+        $html .= '<p style="margin-bottom:16px;">' . nl2br(htmlspecialchars($paragraph, ENT_QUOTES, 'UTF-8')) . '</p>' . "\n";
+    }
+    return $html;
+}
+
+/** Hapus atau simpan blok section opsional yang ditandai <!--SECTION:key:start--> ... <!--SECTION:key:end--> di template. */
+function strip_landing_template_section(string $html, string $sectionKey, bool $keep): string {
+    $pattern = '/<!--SECTION:' . preg_quote($sectionKey, '/') . ':start-->(.*?)<!--SECTION:' . preg_quote($sectionKey, '/') . ':end-->/s';
+
+    return preg_replace_callback($pattern, static function ($matches) use ($keep) {
+        return $keep ? $matches[1] : '';
+    }, $html) ?? $html;
+}
+
+/**
+ * Render HTML landing page dari template AI + konten yang sudah diisi (hasil generate_ai_landing_page()).
+ * Dipakai untuk preview DAN untuk publish, supaya hasil publish identik dengan yang di-preview admin.
+ *
+ * @param array $filled Hasil generate_ai_landing_page(): template_key, accent_color, eyebrow, headline,
+ *                       subheadline, description, cta_text, sections.
+ * @param array $eventBrief Data brief event: name, dan field detail acara lainnya (dipakai untuk {{EVENT_NAME}}).
+ */
+function render_landing_template(array $filled, array $brand, array $eventBrief): string {
+    $templates = get_ai_landing_templates();
+    $templateKey = $filled['template_key'] ?? '';
+    if (!isset($templates[$templateKey])) {
+        throw new RuntimeException('Template landing page tidak ditemukan.');
+    }
+
+    $templateDir = __DIR__ . '/event_templates/' . $templateKey;
+    $html = file_get_contents($templateDir . '/index.html');
+    if ($html === false) {
+        throw new RuntimeException('Gagal membaca file template landing page.');
+    }
+
+    $templateMeta = $templates[$templateKey];
+    $accentColor = (string)($filled['accent_color'] ?? '');
+    if (!preg_match('/^#[0-9a-fA-F]{6}$/', $accentColor)) {
+        $accentColor = $templateMeta['default_accent'] ?? '#C9A84C';
+    }
+    $accentSoft = lighten_hex_color($accentColor, 0.4);
+
+    $brandName = $brand['name'] ?? ($brand['slug'] ?? 'rahasiaemas.id');
+    $logoUrl = !empty($brand['logo_path']) ? $brand['logo_path'] : '/assets/logo.png';
+
+    $sections = is_array($filled['sections'] ?? null) ? $filled['sections'] : [];
+    $showTestimonial = !empty($sections['show_testimonial']);
+    $html = strip_landing_template_section($html, 'testimonial', $showTestimonial);
+
+    $replacements = [
+        '{{EVENT_NAME}}' => htmlspecialchars((string)($eventBrief['name'] ?? ''), ENT_QUOTES, 'UTF-8'),
+        '{{BRAND_NAME}}' => htmlspecialchars($brandName, ENT_QUOTES, 'UTF-8'),
+        '{{BRAND_LOGO_URL}}' => htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8'),
+        '{{ACCENT_COLOR}}' => $accentColor,
+        '{{ACCENT_COLOR_SOFT}}' => $accentSoft,
+        '{{EYEBROW}}' => htmlspecialchars((string)($filled['eyebrow'] ?? ''), ENT_QUOTES, 'UTF-8'),
+        '{{HEADLINE}}' => convert_landing_markdown_bold((string)($filled['headline'] ?? '')),
+        '{{SUBHEADLINE}}' => htmlspecialchars((string)($filled['subheadline'] ?? ''), ENT_QUOTES, 'UTF-8'),
+        '{{DESCRIPTION}}' => render_landing_description((string)($filled['description'] ?? '')),
+        '{{CTA_TEXT}}' => htmlspecialchars((string)($filled['cta_text'] ?? ''), ENT_QUOTES, 'UTF-8'),
+        '{{TESTIMONIAL_QUOTE}}' => htmlspecialchars((string)($sections['testimonial_quote'] ?? ''), ENT_QUOTES, 'UTF-8'),
+        '{{TESTIMONIAL_NAME}}' => htmlspecialchars((string)($sections['testimonial_name'] ?? ''), ENT_QUOTES, 'UTF-8'),
+    ];
+
+    return strtr($html, $replacements);
+}
+
 /** Ambil data event dari database berdasarkan slug. Return null jika tidak ada. */
 function get_event_by_slug($slug) {
     $pdo = get_db();

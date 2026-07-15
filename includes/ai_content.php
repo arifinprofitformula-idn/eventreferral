@@ -195,28 +195,87 @@ Balas HANYA JSON valid, struktur persis:
 PROMPT;
 }
 
+/**
+ * Ambil pengaturan provider AI aktif (provider, api_key, model).
+ * Sumber utama: tabel `ai_settings` (dikelola lewat admin/ai-settings.php).
+ * Jika tabel/baris belum ada, fallback ke konstanta di config.php supaya
+ * instalasi lama yang belum menjalankan migrate_v16_ai_settings.sql tetap jalan.
+ */
+function get_ai_provider_settings(): array
+{
+    static $settings = null;
+    if ($settings !== null) {
+        return $settings;
+    }
+
+    $defaults = [
+        'provider' => strtolower((string)(defined('AI_CONTENT_PROVIDER') ? AI_CONTENT_PROVIDER : 'groq')),
+        'api_key' => '',
+        'model' => '',
+    ];
+
+    try {
+        $pdo = get_db(false);
+        if ($pdo && table_exists($pdo, 'ai_settings')) {
+            $stmt = $pdo->prepare('SELECT provider, api_key, model FROM ai_settings WHERE id = 1');
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $settings = [
+                    'provider' => $row['provider'] !== '' ? strtolower($row['provider']) : $defaults['provider'],
+                    'api_key' => (string)$row['api_key'],
+                    'model' => (string)$row['model'],
+                ];
+                return $settings;
+            }
+        }
+    } catch (Throwable $e) {
+        // Tabel belum ada / query gagal — pakai fallback config.php di bawah.
+    }
+
+    $settings = $defaults;
+    return $settings;
+}
+
+/** Simpan pengaturan provider AI (upsert baris tunggal id=1) ke tabel `ai_settings`. */
+function save_ai_provider_settings(string $provider, string $apiKey, string $model): void
+{
+    $pdo = get_db();
+    $stmt = $pdo->prepare('
+        INSERT INTO ai_settings (id, provider, api_key, model) VALUES (1, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE provider = VALUES(provider), api_key = VALUES(api_key), model = VALUES(model)
+    ');
+    $stmt->execute([strtolower($provider), $apiKey, $model]);
+}
+
 function call_ai_content_provider(string $prompt): string
 {
-    $provider = strtolower((string)(defined('AI_CONTENT_PROVIDER') ? AI_CONTENT_PROVIDER : 'groq'));
+    $settings = get_ai_provider_settings();
+    $provider = $settings['provider'] !== '' ? $settings['provider'] : 'groq';
 
     if ($provider === 'gemini') {
-        return call_gemini_api($prompt);
+        return call_gemini_api($prompt, $settings['api_key'], $settings['model']);
+    }
+
+    if ($provider === 'sumopod') {
+        return call_sumopod_api($prompt, $settings['api_key'], $settings['model']);
     }
 
     if ($provider === 'groq' || $provider === '') {
-        return call_groq_api($prompt);
+        return call_groq_api($prompt, $settings['api_key'], $settings['model']);
     }
 
-    throw new RuntimeException('AI_CONTENT_PROVIDER tidak dikenal. Gunakan "groq" atau "gemini".');
+    throw new RuntimeException('Provider AI "' . $provider . '" tidak dikenal. Gunakan "groq", "gemini", atau "sumopod".');
 }
 
-function call_groq_api(string $prompt): string
+function call_groq_api(string $prompt, string $apiKey = '', string $model = ''): string
 {
-    if (!defined('GROQ_API_KEY') || GROQ_API_KEY === '') {
-        throw new RuntimeException('GROQ_API_KEY belum diisi di config.php.');
+    $apiKey = $apiKey !== '' ? $apiKey : (defined('GROQ_API_KEY') ? GROQ_API_KEY : '');
+    if ($apiKey === '') {
+        throw new RuntimeException('API key Groq belum diisi. Atur di halaman Pengaturan AI.');
     }
 
-    $model = defined('GROQ_MODEL') && GROQ_MODEL !== '' ? GROQ_MODEL : 'llama-3.3-70b-versatile';
+    $model = $model !== '' ? $model : (defined('GROQ_MODEL') && GROQ_MODEL !== '' ? GROQ_MODEL : 'llama-3.3-70b-versatile');
     $payload = [
         'model' => $model,
         'messages' => [
@@ -238,7 +297,7 @@ function call_groq_api(string $prompt): string
         $payload,
         [
             'Content-Type: application/json',
-            'Authorization: Bearer ' . GROQ_API_KEY,
+            'Authorization: Bearer ' . $apiKey,
         ],
         'Groq'
     );
@@ -251,14 +310,57 @@ function call_groq_api(string $prompt): string
     return $text;
 }
 
-function call_gemini_api(string $prompt): string
+function call_sumopod_api(string $prompt, string $apiKey = '', string $model = ''): string
 {
-    if (!defined('GEMINI_API_KEY') || GEMINI_API_KEY === '') {
-        throw new RuntimeException('GEMINI_API_KEY belum diisi di config.php.');
+    $apiKey = $apiKey !== '' ? $apiKey : (defined('SUMOPOD_API_KEY') ? SUMOPOD_API_KEY : '');
+    if ($apiKey === '') {
+        throw new RuntimeException('API key SumoPod belum diisi. Atur di halaman Pengaturan AI.');
     }
 
-    $model = defined('GEMINI_MODEL') && GEMINI_MODEL !== '' ? GEMINI_MODEL : 'gemini-2.5-flash';
-    $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . GEMINI_API_KEY;
+    $model = $model !== '' ? $model : (defined('SUMOPOD_MODEL') && SUMOPOD_MODEL !== '' ? SUMOPOD_MODEL : 'gpt-4o-mini');
+    $payload = [
+        'model' => $model,
+        'messages' => [
+            [
+                'role' => 'system',
+                'content' => 'Kamu membalas HANYA dalam format JSON valid, tanpa markdown, tanpa teks tambahan.',
+            ],
+            [
+                'role' => 'user',
+                'content' => $prompt,
+            ],
+        ],
+        'temperature' => 0.9,
+        'response_format' => ['type' => 'json_object'],
+    ];
+
+    $data = ai_post_json(
+        'https://ai.sumopod.com/v1/chat/completions',
+        $payload,
+        [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $apiKey,
+        ],
+        'SumoPod'
+    );
+
+    $text = $data['choices'][0]['message']['content'] ?? '';
+    if ($text === '') {
+        throw new RuntimeException('Respons AI kosong.');
+    }
+
+    return $text;
+}
+
+function call_gemini_api(string $prompt, string $apiKey = '', string $model = ''): string
+{
+    $apiKey = $apiKey !== '' ? $apiKey : (defined('GEMINI_API_KEY') ? GEMINI_API_KEY : '');
+    if ($apiKey === '') {
+        throw new RuntimeException('API key Gemini belum diisi. Atur di halaman Pengaturan AI.');
+    }
+
+    $model = $model !== '' ? $model : (defined('GEMINI_MODEL') && GEMINI_MODEL !== '' ? GEMINI_MODEL : 'gemini-2.5-flash');
+    $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . $apiKey;
 
     $payload = [
         'contents' => [[ 'parts' => [[ 'text' => $prompt ]] ]],
@@ -431,6 +533,152 @@ function generate_single_style_copy(array $brand, array $event, string $eventTit
         'subheadline' => (string)($v['subheadline'] ?? ''),
         'description' => (string)($v['description'] ?? ''),
         'cta_text' => (string)$v['cta_text'],
+    ];
+}
+
+/**
+ * Baca semua template landing page AI yang tersedia dari includes/event_templates/{key}/meta.json.
+ * Hasil di-cache secara statis (hanya dibaca sekali per request).
+ */
+function get_ai_landing_templates(): array
+{
+    static $templates = null;
+    if ($templates !== null) {
+        return $templates;
+    }
+
+    $templates = [];
+    $baseDir = __DIR__ . '/event_templates';
+    foreach (glob($baseDir . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
+        $metaPath = $dir . '/meta.json';
+        if (!is_file($metaPath)) {
+            continue;
+        }
+        $meta = json_decode((string)file_get_contents($metaPath), true);
+        if (!is_array($meta) || empty($meta['key'])) {
+            continue;
+        }
+        $templates[$meta['key']] = $meta;
+    }
+
+    return $templates;
+}
+
+function is_valid_ai_landing_template(string $key): bool
+{
+    return array_key_exists($key, get_ai_landing_templates());
+}
+
+function build_landing_page_prompt(array $brand, array $eventBrief, string $customContext): string
+{
+    $brandName = $brand['name'] ?? $brand['slug'];
+    $themeVibe = ($brand['theme_preset'] ?? 'gold') === 'silver'
+        ? 'bersih, modern, accessible, entry point cerdas'
+        : 'eksklusif, terpercaya, powerful, high-value';
+
+    $eventName = $eventBrief['name'] ?? '';
+    $eventDay = $eventBrief['event_day'] ?? '';
+    $eventTime = $eventBrief['event_time'] ?? '';
+    $eventLoc = $eventBrief['event_location'] ?? '';
+    $eventSpeaker = $eventBrief['event_speaker'] ?? '';
+    $eventCapacity = $eventBrief['event_capacity'] ?? '';
+    $context = trim($customContext) !== ''
+        ? "Konteks tambahan dari admin: " . trim($customContext)
+        : "Tidak ada konteks tambahan khusus.";
+
+    $templateList = '';
+    foreach (get_ai_landing_templates() as $tpl) {
+        $templateList .= "- \"{$tpl['key']}\" ({$tpl['label']}): {$tpl['description']}\n";
+    }
+
+    return <<<PROMPT
+Kamu adalah AI perancang landing page untuk brand edukasi finansial "{$brandName}" (vibe: {$themeVibe}).
+
+JUDUL EVENT (WAJIB JADI ACUAN UTAMA): "{$eventName}"
+
+Detail acara:
+Hari/Tanggal: {$eventDay}
+Waktu: {$eventTime}
+Lokasi: {$eventLoc}
+Pembicara: {$eventSpeaker}
+Kapasitas: {$eventCapacity}
+{$context}
+
+Tugasmu: pilih SATU template landing page yang paling cocok dari daftar berikut, lalu isi kontennya:
+{$templateList}
+
+Aturan konten:
+- Bahasa Indonesia, action-oriented, optimis, tidak boleh membuat klaim keuntungan finansial berlebihan atau menjanjikan hasil pasti.
+- "headline" WAJIB dibungkus markdown bold dengan dua bintang, contoh: **Mulai dari Satu Link Referral**.
+- "eyebrow" adalah label pendek (maks 4 kata) di atas headline, contoh: "EVENT EKSKLUSIF" atau "KUOTA TERBATAS".
+- "description" adalah 1-3 paragraf pendek promosi acara, pisahkan paragraf dengan newline "\\n\\n".
+- "cta_text" adalah teks tombol pendaftaran, maksimal 6 kata, action-oriented (contoh: "Daftar Sekarang — Gratis").
+- "accent_color" WAJIB kode hex 6-digit (contoh "#C9A84C") yang cocok dengan vibe template terpilih.
+- WAJIB relevan dengan judul event, jangan keluar tema.
+- Untuk "sections.show_testimonial": isi true HANYA jika konteks tambahan dari admin menyebutkan testimoni/social proof spesifik yang bisa dipakai; jika tidak yakin, isi false dan kosongkan testimonial_quote/testimonial_name.
+
+Balas HANYA dalam format JSON valid (tanpa markdown, tanpa teks lain), dengan struktur persis:
+{
+  "template_key": "salah satu key template di atas",
+  "accent_color": "#RRGGBB",
+  "eyebrow": "...",
+  "headline": "**...**",
+  "subheadline": "...",
+  "description": "...",
+  "cta_text": "...",
+  "sections": {
+    "show_testimonial": false,
+    "testimonial_quote": "",
+    "testimonial_name": ""
+  }
+}
+PROMPT;
+}
+
+function generate_ai_landing_page(array $brand, array $eventBrief, string $customContext): array
+{
+    $templates = get_ai_landing_templates();
+    if (empty($templates)) {
+        throw new RuntimeException('Belum ada template landing page AI yang tersedia.');
+    }
+
+    $prompt = build_landing_page_prompt($brand, $eventBrief, $customContext);
+    $rawText = strip_json_fence(call_ai_content_provider($prompt));
+
+    $parsed = json_decode($rawText, true);
+    if (!is_array($parsed) || empty($parsed['headline']) || empty($parsed['cta_text'])) {
+        throw new RuntimeException('Format hasil AI tidak valid. Coba generate ulang.');
+    }
+
+    $templateKey = (string)($parsed['template_key'] ?? '');
+    if (!is_valid_ai_landing_template($templateKey)) {
+        $templateKey = array_key_first($templates);
+    }
+    $templateMeta = $templates[$templateKey];
+
+    $accentColor = (string)($parsed['accent_color'] ?? '');
+    if (!preg_match('/^#[0-9a-fA-F]{6}$/', $accentColor)) {
+        $accentColor = $templateMeta['default_accent'] ?? '#C9A84C';
+    }
+
+    $sections = is_array($parsed['sections'] ?? null) ? $parsed['sections'] : [];
+    $showTestimonial = !empty($sections['show_testimonial'])
+        && in_array('testimonial', $templateMeta['optional_sections'] ?? [], true)
+        && trim((string)($sections['testimonial_quote'] ?? '')) !== '';
+
+    return [
+        'template_key' => $templateKey,
+        'accent_color' => $accentColor,
+        'eyebrow' => (string)($parsed['eyebrow'] ?? ''),
+        'headline' => (string)$parsed['headline'],
+        'subheadline' => (string)($parsed['subheadline'] ?? ''),
+        'description' => (string)($parsed['description'] ?? ''),
+        'cta_text' => (string)$parsed['cta_text'],
+        'sections' => [
+            'show_testimonial' => $showTestimonial,
+            'testimonial_quote' => $showTestimonial ? (string)$sections['testimonial_quote'] : '',
+            'testimonial_name' => $showTestimonial ? (string)($sections['testimonial_name'] ?? '') : '',
+        ],
     ];
 }
 

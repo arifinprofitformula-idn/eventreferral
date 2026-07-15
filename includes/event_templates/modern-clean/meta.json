@@ -1,0 +1,8 @@
+{
+  "key": "modern-clean",
+  "label": "Modern Clean",
+  "description": "Vibe bersih, modern, accessible. Hero rata kiri dengan tipografi tegas (Inter), kartu-kartu netral, dan aksen warna tunggal. Cocok untuk brand dengan theme silver atau audiens yang lebih muda/tech-savvy.",
+  "vibe_tags": ["modern", "bersih", "accessible", "netral"],
+  "default_accent": "#4F9DFF",
+  "optional_sections": ["testimonial"]
+}

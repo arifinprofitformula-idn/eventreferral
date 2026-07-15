@@ -8,6 +8,28 @@ Webflow export, coding manual, dsb) — selama mengikuti 3 aturan kontrak
 di bawah ini. Setelah itu, sistem otomatis mengurus: database, form
 pendaftaran, link referral, dan redirect WhatsApp.
 
+## 0. Alternatif: Buat dengan AI (tanpa upload ZIP)
+
+Di `admin/events.php`, tab **"Buat dengan AI"** memungkinkan admin membuat
+landing page tanpa menyiapkan file ZIP sama sekali. Admin cukup isi brief
+acara (nama, hari/tanggal, waktu, lokasi, pembicara, kapasitas, dan konteks
+tambahan bebas), lalu AI akan:
+
+1. Memilih salah satu template siap-pakai (`includes/event_templates/`) yang
+   paling cocok dengan brief (mis. vibe eksklusif, modern-clean, atau
+   urgent/FOMO).
+2. Mengisi konten (headline, subheadline, deskripsi, CTA, warna aksen, dan
+   section opsional seperti testimoni) ke dalam template tersebut.
+3. Menampilkan **preview** hasilnya di halaman admin — admin bisa "Generate
+   Ulang" untuk variasi lain sebelum menekan **Publikasikan**.
+
+Karena template HTML-nya sudah baku (bukan ditulis bebas oleh AI), hasilnya
+otomatis patuh seluruh kontrak SDK di bagian 3 dokumen ini (form pendaftaran,
+`data-rg-field`, dsb) — sama seperti hasil upload ZIP.
+
+Upload ZIP di bawah ini tetap tersedia sebagai jalur alternatif/manual bagi
+admin yang ingin mendesain landing page sendiri di luar template yang tersedia.
+
 ---
 
 ## 1. Struktur ZIP yang Wajib
