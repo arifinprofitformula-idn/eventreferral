@@ -502,6 +502,28 @@ function event_field_class(array $errors, string $key): string
     font-size: 12.5px;
     line-height: 1.5;
   }
+  .attendance-link-card {
+    padding-bottom: 24px;
+  }
+  .copy-link-body {
+    margin: 0 24px;
+  }
+  .copy-link-row {
+    margin-bottom: 10px;
+  }
+  .copy-link-row input {
+    width: 100%;
+    min-height: 46px;
+    color: var(--gold-soft);
+    background: #111110;
+    border: 1px solid rgba(255,255,255,0.13);
+    border-radius: 12px;
+    padding: 0 14px;
+    font: inherit;
+    font-size: 12.5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    outline: none;
+  }
   .field input[type="text"],
   .field input[type="number"],
   .field input[type="date"] {
@@ -882,14 +904,14 @@ function event_field_class(array $errors, string $key): string
               <span class="field-icon">QR</span>
               <div>
                 <label for="attendance_code">Kode Kehadiran</label>
-                <?php $hadirBaseLink = '/hadir/' . $eventSlug; ?>
-                <p class="helper">
-                  Dibagikan ke peserta saat acara agar bisa konfirmasi hadir sendiri di <code><?= htmlspecialchars($hadirBaseLink) ?></code>.
-                  <?php if (!empty($formValues['attendance_code'])): ?>
-                    Link siap-pakai (kode sudah otomatis terisi di peserta): <code><?= htmlspecialchars($hadirBaseLink . '?code=' . $formValues['attendance_code']) ?></code>
-                  <?php endif; ?>
-                  Kosongkan untuk menonaktifkan konfirmasi kehadiran.
-                </p>
+                <?php
+                  $hadirBaseLink = '/hadir/' . $eventSlug;
+                  $hadirProtocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                  $hadirHost = $_SERVER['HTTP_HOST'] ?? ($brand['domain'] ?? '');
+                  $hadirFullLink = $hadirProtocol . '://' . $hadirHost . $hadirBaseLink
+                      . (!empty($formValues['attendance_code']) ? '?code=' . rawurlencode($formValues['attendance_code']) : '');
+                ?>
+                <p class="helper">Dibagikan ke peserta saat acara agar bisa konfirmasi hadir sendiri. Kosongkan untuk menonaktifkan konfirmasi kehadiran.</p>
               </div>
             </div>
             <div>
@@ -977,9 +999,59 @@ function event_field_class(array $errors, string $key): string
             <p>Setelah Anda menyimpan perubahan, informasi ini akan langsung diperbarui di landing page event.</p>
           </div>
         </section>
+
+        <?php if ($attendanceCodeReady): ?>
+        <section class="panel attendance-link-card">
+          <div class="panel-head">
+            <span class="icon-badge">QR</span>
+            <div>
+              <h2>Link Konfirmasi Kehadiran</h2>
+              <p class="desc">Bagikan link ini ke peserta saat acara supaya mereka bisa konfirmasi hadir sendiri.</p>
+            </div>
+          </div>
+          <?php if (!empty($formValues['attendance_code'])): ?>
+            <div class="copy-link-body">
+              <div class="copy-link-row">
+                <input type="text" id="hadirLinkCopy" readonly value="<?= htmlspecialchars($hadirFullLink) ?>" onclick="this.select()">
+              </div>
+              <button type="button" class="btn btn-primary" id="hadirLinkCopyBtn" style="width:100%;">Salin Link Kehadiran</button>
+              <p class="helper" id="hadirLinkCopyStatus" style="min-height:16px;margin-top:8px;"></p>
+            </div>
+          <?php else: ?>
+            <p class="helper" style="margin: 0 24px;">Isi &amp; simpan Kode Kehadiran terlebih dahulu supaya link-nya muncul di sini.</p>
+          <?php endif; ?>
+        </section>
+        <?php endif; ?>
       </aside>
     </div>
   <?php endif; ?>
 </main>
+<script>
+(function () {
+  var copyBtn = document.getElementById('hadirLinkCopyBtn');
+  if (!copyBtn) return;
+
+  var copyInput = document.getElementById('hadirLinkCopy');
+  var statusEl = document.getElementById('hadirLinkCopyStatus');
+
+  copyBtn.addEventListener('click', function () {
+    copyInput.select();
+    copyInput.setSelectionRange(0, copyInput.value.length);
+
+    var done = function (ok) {
+      statusEl.textContent = ok ? 'Link disalin ke clipboard.' : 'Gagal menyalin. Salin manual dari kolom di atas.';
+      setTimeout(function () { statusEl.textContent = ''; }, 2500);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(copyInput.value).then(function () { done(true); }).catch(function () {
+        try { done(document.execCommand('copy')); } catch (e) { done(false); }
+      });
+    } else {
+      try { done(document.execCommand('copy')); } catch (e) { done(false); }
+    }
+  });
+})();
+</script>
 </body>
 </html>
