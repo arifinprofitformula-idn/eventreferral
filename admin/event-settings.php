@@ -505,6 +505,14 @@ function event_field_class(array $errors, string $key): string
   .attendance-link-card {
     padding-bottom: 24px;
   }
+  .lucky-draw-card {
+    padding-bottom: 24px;
+  }
+  .lucky-draw-card .btn {
+    width: 100%;
+    justify-content: center;
+    text-decoration: none;
+  }
   .copy-link-body {
     margin: 0 24px;
   }
@@ -1022,6 +1030,19 @@ function event_field_class(array $errors, string $key): string
           <?php endif; ?>
         </section>
         <?php endif; ?>
+
+        <section class="panel lucky-draw-card">
+          <div class="panel-head">
+            <span class="icon-badge">DRAW</span>
+            <div>
+              <h2>Undian Kehadiran</h2>
+              <p class="desc">Buka console admin untuk menjalankan lucky draw dari peserta yang sudah konfirmasi hadir.</p>
+            </div>
+          </div>
+          <div class="copy-link-body">
+            <a class="btn btn-primary" href="/admin/lucky-draw-control.php?event=<?= urlencode($event['slug']) ?>">Buka Console Lucky Draw</a>
+          </div>
+        </section>
       </aside>
     </div>
   <?php endif; ?>
