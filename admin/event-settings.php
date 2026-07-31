@@ -34,7 +34,21 @@ $formValues = $event ?: [
     'event_speaker' => '',
     'event_capacity' => '',
     'event_date' => '',
+    'attendance_code' => '',
 ];
+
+// ---- Kode Kehadiran (fitur Konfirmasi Kehadiran self-service) ----
+// Kolom opsional (butuh migrate_v19_alter_events_add_attendance_code.sql). Cek dulu supaya
+// halaman ini tetap jalan normal di server yang belum menjalankan migrasi tsb.
+$attendanceCodeReady = false;
+if (!$eventNotFound) {
+    try {
+        $columnStmt = $pdo->query("SHOW COLUMNS FROM events LIKE 'attendance_code'");
+        $attendanceCodeReady = (bool)$columnStmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $attendanceCodeReady = false;
+    }
+}
 
 if (!$eventNotFound && defined('MAX_EVENT_FLYER_SIZE') && defined('ALLOWED_EVENT_FLYER_EXT') && function_exists('save_event_flyer') && function_exists('delete_event_flyer')) {
     try {
@@ -55,6 +69,7 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
         'event_speaker' => trim($_POST['event_speaker'] ?? ''),
         'event_capacity' => trim($_POST['event_capacity'] ?? ''),
         'event_date' => trim($_POST['event_date'] ?? ''),
+        'attendance_code' => strtoupper(trim($_POST['attendance_code'] ?? '')),
     ]);
 
     if (!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
@@ -82,6 +97,9 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $fieldErrors['event_date'] = 'Format tanggal tidak valid.';
             }
         }
+        if ($attendanceCodeReady && $formValues['attendance_code'] !== '' && !preg_match('/^[A-Z0-9]{4,20}$/', $formValues['attendance_code'])) {
+            $fieldErrors['attendance_code'] = 'Kode kehadiran hanya boleh huruf/angka, 4-20 karakter.';
+        }
 
         if (!empty($fieldErrors)) {
             $notice = 'Mohon periksa kembali detail acara yang ditandai.';
@@ -91,6 +109,14 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_POST['event_capacity'] = (string)(int)$formValues['event_capacity'];
                 $updated = update_event_settings($eventSlug, $_POST);
                 $event = array_merge($event, $updated);
+
+                // ---- Kode Kehadiran (dipakai halaman publik /hadir/{slug}) ----
+                if ($attendanceCodeReady) {
+                    $attendanceCodeValue = $formValues['attendance_code'] !== '' ? $formValues['attendance_code'] : null;
+                    $stmt = $pdo->prepare('UPDATE events SET attendance_code = ? WHERE slug = ? AND brand_id = ?');
+                    $stmt->execute([$attendanceCodeValue, $eventSlug, (int)$brand['id']]);
+                    $event['attendance_code'] = $attendanceCodeValue;
+                }
 
                 // ---- Hapus flyer jika diminta ----
                 if ($eventFlyerReady && isset($_POST['remove_flyer']) && !empty($event['flyer_path'])) {
@@ -848,6 +874,31 @@ function event_field_class(array $errors, string $key): string
             <div>
               <input class="<?= event_field_class($fieldErrors, 'event_capacity') ?>" type="number" min="1" step="1" id="event_capacity" name="event_capacity" value="<?= htmlspecialchars($formValues['event_capacity'] ?? '') ?>" required>
               <?php if (isset($fieldErrors['event_capacity'])): ?><div class="error-message"><?= htmlspecialchars($fieldErrors['event_capacity']) ?></div><?php endif; ?>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-meta">
+              <span class="field-icon">QR</span>
+              <div>
+                <label for="attendance_code">Kode Kehadiran</label>
+                <?php $hadirBaseLink = '/hadir/' . $eventSlug; ?>
+                <p class="helper">
+                  Dibagikan ke peserta saat acara agar bisa konfirmasi hadir sendiri di <code><?= htmlspecialchars($hadirBaseLink) ?></code>.
+                  <?php if (!empty($formValues['attendance_code'])): ?>
+                    Link siap-pakai (kode sudah otomatis terisi di peserta): <code><?= htmlspecialchars($hadirBaseLink . '?code=' . $formValues['attendance_code']) ?></code>
+                  <?php endif; ?>
+                  Kosongkan untuk menonaktifkan konfirmasi kehadiran.
+                </p>
+              </div>
+            </div>
+            <div>
+              <?php if (!$attendanceCodeReady): ?>
+                <p class="helper">Fitur konfirmasi kehadiran belum aktif di server ini. Jalankan migrasi <code>migrate_v19_alter_events_add_attendance_code.sql</code>. Detail acara lain tetap bisa disimpan.</p>
+              <?php else: ?>
+                <input class="<?= event_field_class($fieldErrors, 'attendance_code') ?>" type="text" id="attendance_code" name="attendance_code" maxlength="20" placeholder="Contoh: HADIR2026" value="<?= htmlspecialchars($formValues['attendance_code'] ?? '') ?>" style="text-transform:uppercase;">
+                <?php if (isset($fieldErrors['attendance_code'])): ?><div class="error-message"><?= htmlspecialchars($fieldErrors['attendance_code']) ?></div><?php endif; ?>
+              <?php endif; ?>
             </div>
           </div>
 

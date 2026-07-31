@@ -12,6 +12,7 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/mailketing.php';
+require_once __DIR__ . '/../includes/attendance.php';
 header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -124,6 +125,18 @@ try {
         $stmt->execute([$brandId, $name, $email, $waNormalized, $kota, ($refCode !== '' ? $refCode : null), $eventSlug]);
     }
     // == END EXTRA FIELDS ==
+
+    // == EVENT ATTENDANCE HOOK == — buat baris check-in (qr_token) untuk registrant baru ini.
+    // Tidak mengubah logic pendaftaran di atas; kegagalan di sini tidak menggagalkan pendaftaran.
+    create_event_attendance_record(
+        $pdo,
+        (int)$event['id'],
+        (int)$pdo->lastInsertId(),
+        ($refCode !== '' ? $refCode : null),
+        $brandId,
+        $eventSlug
+    );
+    // == END EVENT ATTENDANCE HOOK ==
 
     $eventName = $event['name'] ?? 'Rahasia Emas';
     $waMessage = "Halo" . ($targetName ? " {$targetName}" : "") . "! 👋\n"
