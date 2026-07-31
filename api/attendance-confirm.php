@@ -161,8 +161,18 @@ if ($action === 'confirm') {
         exit;
     }
 
-    // Kolom baru butuh migrate_v22 — cek dulu supaya endpoint tetap jalan (tanpa nyimpan field
-    // tambahan) di server yang belum menjalankan migrasi tsb, bukan error mentah.
+    // Kolom-kolom ini butuh migrate_v18 (attendance_source, confirmation_code_valid) dan
+    // migrate_v22 (info_source, participant_status, feedback_notes) — cek dulu satu-satu supaya
+    // endpoint tetap jalan (skip kolom yang belum ada) di server yang migrasinya belum lengkap/
+    // belum berurutan, bukan 500 mentah dari "Unknown column".
+    $attendanceSourceReady = false;
+    try {
+        $columnCheck = $pdo->query("SHOW COLUMNS FROM event_attendance LIKE 'attendance_source'");
+        $attendanceSourceReady = (bool)$columnCheck->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $attendanceSourceReady = false;
+    }
+
     $extraFieldsReady = false;
     try {
         $columnCheck = $pdo->query("SHOW COLUMNS FROM event_attendance LIKE 'info_source'");
@@ -208,24 +218,25 @@ if ($action === 'confirm') {
                 exit;
             }
 
-            if ($extraFieldsReady) {
-                $stmt = $pdo->prepare("
-                    UPDATE event_attendance
-                    SET attendance_status = 'hadir', check_in_time = NOW(), check_in_method = 'self_checkin',
-                        attendance_source = ?, confirmation_code_valid = 1,
-                        info_source = ?, participant_status = ?, feedback_notes = ?
-                    WHERE id = ?
-                ");
-                $stmt->execute([$attendanceSource, $extra['info_source'], $extra['participant_status'], $extra['feedback'], (int)$attendance['id']]);
-            } else {
-                $stmt = $pdo->prepare("
-                    UPDATE event_attendance
-                    SET attendance_status = 'hadir', check_in_time = NOW(), check_in_method = 'self_checkin',
-                        attendance_source = ?, confirmation_code_valid = 1
-                    WHERE id = ?
-                ");
-                $stmt->execute([$attendanceSource, (int)$attendance['id']]);
+            $setParts = ["attendance_status = 'hadir'", "check_in_time = NOW()", "check_in_method = 'self_checkin'"];
+            $updateParams = [];
+            if ($attendanceSourceReady) {
+                $setParts[] = 'attendance_source = ?';
+                $setParts[] = 'confirmation_code_valid = 1';
+                $updateParams[] = $attendanceSource;
             }
+            if ($extraFieldsReady) {
+                $setParts[] = 'info_source = ?';
+                $setParts[] = 'participant_status = ?';
+                $setParts[] = 'feedback_notes = ?';
+                $updateParams[] = $extra['info_source'];
+                $updateParams[] = $extra['participant_status'];
+                $updateParams[] = $extra['feedback'];
+            }
+            $updateParams[] = (int)$attendance['id'];
+
+            $stmt = $pdo->prepare('UPDATE event_attendance SET ' . implode(', ', $setParts) . ' WHERE id = ?');
+            $stmt->execute($updateParams);
         } else {
             // ---- Jalur TIDAK TERDAFTAR (walk-in) ----
             $name = (string)($input['name'] ?? '');
@@ -272,24 +283,31 @@ if ($action === 'confirm') {
             $attendanceSource = 'tidak_terdaftar';
 
             $qrToken = generate_attendance_qr_token($pdo);
-            if ($extraFieldsReady) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO event_attendance
-                        (event_id, registrant_id, referral_id, attendance_source, qr_token,
-                         attendance_status, check_in_time, check_in_method, confirmation_code_valid,
-                         info_source, participant_status, feedback_notes)
-                    VALUES (?, ?, ?, ?, ?, 'hadir', NOW(), 'self_checkin', 1, ?, ?, ?)
-                ");
-                $stmt->execute([$eventId, $registrantId, $referralId, $attendanceSource, $qrToken, $extra['info_source'], $extra['participant_status'], $extra['feedback']]);
-            } else {
-                $stmt = $pdo->prepare("
-                    INSERT INTO event_attendance
-                        (event_id, registrant_id, referral_id, attendance_source, qr_token,
-                         attendance_status, check_in_time, check_in_method, confirmation_code_valid)
-                    VALUES (?, ?, ?, ?, ?, 'hadir', NOW(), 'self_checkin', 1)
-                ");
-                $stmt->execute([$eventId, $registrantId, $referralId, $attendanceSource, $qrToken]);
+
+            $insertCols = ['event_id', 'registrant_id', 'referral_id', 'qr_token', 'attendance_status', 'check_in_time', 'check_in_method'];
+            $insertPlaceholders = ['?', '?', '?', '?', "'hadir'", 'NOW()', "'self_checkin'"];
+            $insertParams = [$eventId, $registrantId, $referralId, $qrToken];
+            if ($attendanceSourceReady) {
+                $insertCols[] = 'attendance_source';
+                $insertPlaceholders[] = '?';
+                $insertParams[] = $attendanceSource;
+                $insertCols[] = 'confirmation_code_valid';
+                $insertPlaceholders[] = '1';
             }
+            if ($extraFieldsReady) {
+                $insertCols[] = 'info_source';
+                $insertPlaceholders[] = '?';
+                $insertParams[] = $extra['info_source'];
+                $insertCols[] = 'participant_status';
+                $insertPlaceholders[] = '?';
+                $insertParams[] = $extra['participant_status'];
+                $insertCols[] = 'feedback_notes';
+                $insertPlaceholders[] = '?';
+                $insertParams[] = $extra['feedback'];
+            }
+
+            $stmt = $pdo->prepare('INSERT INTO event_attendance (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $insertPlaceholders) . ')');
+            $stmt->execute($insertParams);
         }
 
         $pdo->commit();
