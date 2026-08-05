@@ -1,4 +1,8 @@
 <?php
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: Wed, 11 Jan 1984 05:00:00 GMT');
+
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/bootstrap.php';
 
@@ -50,6 +54,66 @@ if ($defaultEventSlug !== '' && $defaultEventIsActive) {
             exit;
         }
     }
+
+    // Prevent stale hardcoded fallback landing page from appearing when admin has
+    // selected an active default event but the event HTML has not been published yet.
+    http_response_code(503);
+    ?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><?= htmlspecialchars($brand['name']) ?> — Landing Page Sedang Diperbarui</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: #11100c;
+    color: #f8f4e8;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 24px;
+  }
+  .card {
+    width: min(100%, 560px);
+    text-align: center;
+    border: 1px solid rgba(201,168,76,.35);
+    border-radius: 22px;
+    padding: 36px 28px;
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.025));
+    box-shadow: 0 24px 80px rgba(0,0,0,.35);
+  }
+  .badge {
+    display: inline-block;
+    margin-bottom: 18px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(201,168,76,.65);
+    color: #d8bd63;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  h1 { margin: 0 0 12px; color: #d8bd63; font-size: clamp(28px, 6vw, 42px); line-height: 1.1; }
+  p { margin: 0 auto 10px; color: rgba(248,244,232,.82); line-height: 1.65; max-width: 460px; }
+  code { color: #fff2a8; }
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="badge">Landing Page Sedang Diperbarui</div>
+    <h1>Halaman Event Akan Segera Tampil</h1>
+    <p>Event default <code><?= htmlspecialchars($defaultEventSlug) ?></code> sudah aktif, tetapi file landing page-nya belum dipublish di server.</p>
+    <p>Silakan publish ulang landing page dari dashboard admin.</p>
+  </main>
+</body>
+</html>
+    <?php
+    exit;
 }
 
 $refCode = isset($_GET['ref']) ? clean($_GET['ref']) : DEFAULT_REF_CODE;
