@@ -354,13 +354,17 @@ function challenge_page_url(int $page, string $eventSlug): string
   .select-event {
     width: 100%;
     min-height: 44px;
-    color: var(--text);
-    background: rgba(255,255,255,0.04);
+    color: #111111;
+    background: #ffffff;
     border: 1px solid rgba(214,165,54,0.24);
     border-radius: 13px;
     font: inherit;
     font-size: 13.5px;
     padding: 0 12px;
+  }
+  .select-event option {
+    color: #111111;
+    background: #ffffff;
   }
   .rewards-layout {
     display: grid;

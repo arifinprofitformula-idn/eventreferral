@@ -26,10 +26,8 @@ exports/
 *.csv
 
 # Public runtime content generated from the admin panel.
-# Keep placeholder/security files tracked, ignore uploaded event/reward content.
-e/*
-!e/.htaccess
-!e/README.txt
+# Keep root security/readme files tracked, ignore generated event folders only.
+e/*/
 assets/rewards/*
 !assets/rewards/default.png
 
