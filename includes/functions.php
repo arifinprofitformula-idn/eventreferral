@@ -469,7 +469,7 @@ function update_event_settings($slug, array $data) {
 /** Ambil daftar hadiah per peringkat untuk sebuah event, terurut dari peringkat 1. */
 function get_event_rewards($slug) {
     $pdo = get_db();
-    $stmt = $pdo->prepare('SELECT rank, reward_text FROM event_rewards WHERE event_slug = ? ORDER BY rank ASC');
+    $stmt = $pdo->prepare('SELECT `rank`, reward_text FROM event_rewards WHERE event_slug = ? ORDER BY `rank` ASC');
     $stmt->execute([$slug]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
