@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/attendance.php';
 start_secure_session();
 
 $brand = require_admin_for_brand(get_current_brand());
@@ -11,6 +12,29 @@ if (empty($_SESSION['csrf_token'])) {
 }
 
 $pdo = get_db();
+
+// Field tambahan (attendance_source dari migrate_v18; info_source/participant_status/feedback_notes
+// dari migrate_v22) mungkin belum ada di server yang migrasinya belum lengkap — cek dulu satu-satu
+// supaya halaman tetap jalan (skip kolom yang belum ada), bukan 500 mentah "Unknown column".
+$attendanceSourceReady = false;
+try {
+    $columnCheck = $pdo->query("SHOW COLUMNS FROM event_attendance LIKE 'attendance_source'");
+    $attendanceSourceReady = (bool)$columnCheck->fetch(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $attendanceSourceReady = false;
+}
+$extraFieldsReady = false;
+try {
+    $columnCheck = $pdo->query("SHOW COLUMNS FROM event_attendance LIKE 'info_source'");
+    $extraFieldsReady = (bool)$columnCheck->fetch(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $extraFieldsReady = false;
+}
+
+$infoSourceLabel = attendance_info_source_options();
+$participantStatusLabel = attendance_participant_status_options();
+$attendanceSourceLabel = ['terdaftar' => 'Terdaftar', 'tidak_terdaftar' => 'Walk-in (Tidak Terdaftar)'];
+$checkinMethodLabel = ['qr_scan' => 'Scan QR', 'manual_admin' => 'Manual Admin', 'self_checkin' => 'Konfirmasi Mandiri'];
 
 // ==================== EVENT AKTIF ====================
 $stmt = $pdo->prepare('SELECT slug, name FROM events WHERE brand_id = ? ORDER BY (slug = ?) DESC, created_at DESC');
@@ -41,11 +65,18 @@ if ($eventSlug !== '') {
 
         // LEFT JOIN ke event_attendance — pendaftar lama tanpa qr_token (sebelum fitur ini ada)
         // TETAP tampil, ditandai attendance_status NULL ("belum di-generate"), bukan error.
+        $extraSelect = '';
+        if ($attendanceSourceReady) {
+            $extraSelect .= ', ea.attendance_source';
+        }
+        if ($extraFieldsReady) {
+            $extraSelect .= ', ea.info_source, ea.participant_status, ea.feedback_notes';
+        }
         $stmt = $pdo->prepare('
-            SELECT l.id AS registrant_id, l.name, l.whatsapp, l.kota,
+            SELECT l.id AS registrant_id, l.name, l.whatsapp, l.email, l.kota,
                 r.name AS referrer_name, r.ref_code,
                 ea.attendance_status, ea.check_in_time, ea.check_in_method, ea.duplicate_flag,
-                ea.is_reward_eligible, ea.qr_token IS NOT NULL AS has_qr
+                ea.is_reward_eligible, ea.qr_token IS NOT NULL AS has_qr' . $extraSelect . '
             FROM leads l
             LEFT JOIN referrers r ON r.event_slug = l.event_slug AND r.ref_code = l.ref_code AND r.brand_id = l.brand_id
             LEFT JOIN event_attendance ea ON ea.registrant_id = l.id AND ea.event_id = ?
@@ -269,8 +300,34 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
   }
   .row-item:first-child { border-top: 0; }
   .row-item:nth-child(even) { background: rgba(255,255,255,0.02); }
-  .row-name { font-weight: 800; font-size: 14px; overflow-wrap: anywhere; }
+  .row-name { font-weight: 800; font-size: 14px; overflow-wrap: anywhere; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .row-meta { color: var(--muted); font-size: 12px; margin-top: 3px; overflow-wrap: anywhere; }
+  .row-meta + .row-meta { margin-top: 2px; }
+  .row-feedback {
+    color: var(--text);
+    font-size: 12px;
+    font-style: italic;
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.035);
+    border-left: 2px solid var(--border-gold);
+    border-radius: 6px;
+    overflow-wrap: anywhere;
+  }
+  .mini-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .03em;
+    padding: 3px 8px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .mini-badge.reward { color: #FDE68A; background: rgba(245,158,11,0.14); border: 1px solid rgba(245,158,11,0.3); }
+  .mini-badge.duplicate { color: #FECACA; background: rgba(239,68,68,0.14); border: 1px solid rgba(239,68,68,0.3); }
+  .mini-badge.walkin { color: var(--muted); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); }
   .status-badge {
     display: inline-flex;
     align-items: center;
@@ -386,19 +443,53 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
         <?php
           $status = $r['attendance_status'] ?: 'tidak_hadir';
           $waLink = whatsapp_link_att($r['whatsapp'] ?? '');
-          $searchBlob = strtolower($r['name'] . ' ' . $r['whatsapp']);
+          $searchBlob = strtolower($r['name'] . ' ' . $r['whatsapp'] . ' ' . ($r['email'] ?? '') . ' ' . ($r['kota'] ?? ''));
+
+          $infoSourceText = !empty($r['info_source']) ? ($infoSourceLabel[$r['info_source']] ?? $r['info_source']) : null;
+          $participantStatusText = !empty($r['participant_status']) ? ($participantStatusLabel[$r['participant_status']] ?? $r['participant_status']) : null;
+          $checkinMethodText = !empty($r['check_in_method']) ? ($checkinMethodLabel[$r['check_in_method']] ?? $r['check_in_method']) : null;
+          $attendanceSourceText = !empty($r['attendance_source']) ? ($attendanceSourceLabel[$r['attendance_source']] ?? $r['attendance_source']) : null;
         ?>
         <div class="row-item" data-registrant-id="<?= (int)$r['registrant_id'] ?>" data-search="<?= htmlspecialchars($searchBlob) ?>">
           <div>
-            <div class="row-name"><?= htmlspecialchars($r['name']) ?></div>
+            <div class="row-name">
+              <?= htmlspecialchars($r['name']) ?>
+              <?php if (!empty($r['is_reward_eligible'])): ?>
+                <span class="mini-badge reward">Reward Eligible</span>
+              <?php endif; ?>
+              <?php if (!empty($r['duplicate_flag'])): ?>
+                <span class="mini-badge duplicate">Duplikat</span>
+              <?php endif; ?>
+              <?php if ($attendanceSourceText === $attendanceSourceLabel['tidak_terdaftar']): ?>
+                <span class="mini-badge walkin">Walk-in</span>
+              <?php endif; ?>
+            </div>
             <div class="row-meta">
               <?php if ($waLink): ?>
                 <a href="<?= htmlspecialchars($waLink) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($r['whatsapp']) ?></a>
               <?php else: ?>
                 <?= htmlspecialchars($r['whatsapp']) ?>
               <?php endif; ?>
+              <?= !empty($r['email']) ? ' · ' . htmlspecialchars($r['email']) : '' ?>
+              <?= !empty($r['kota']) ? ' · ' . htmlspecialchars($r['kota']) : '' ?>
               <?= $r['referrer_name'] ? ' · Diundang oleh ' . htmlspecialchars($r['referrer_name']) : '' ?>
             </div>
+            <?php if ($infoSourceText || $participantStatusText): ?>
+              <div class="row-meta">
+                <?= $infoSourceText ? 'Sumber: ' . htmlspecialchars($infoSourceText) : '' ?>
+                <?= $infoSourceText && $participantStatusText ? ' · ' : '' ?>
+                <?= $participantStatusText ? 'Status: ' . htmlspecialchars($participantStatusText) : '' ?>
+              </div>
+            <?php endif; ?>
+            <?php if (!empty($r['check_in_time'])): ?>
+              <div class="row-meta">
+                Check-in: <?= htmlspecialchars(date('d M Y H:i', strtotime($r['check_in_time']))) ?>
+                <?= $checkinMethodText ? ' via ' . htmlspecialchars($checkinMethodText) : '' ?>
+              </div>
+            <?php endif; ?>
+            <?php if (!empty($r['feedback_notes'])): ?>
+              <div class="row-feedback">&ldquo;<?= nl2br(htmlspecialchars($r['feedback_notes'])) ?>&rdquo;</div>
+            <?php endif; ?>
           </div>
           <div>
             <span class="status-badge <?= htmlspecialchars($status) ?>" data-status-badge><?= htmlspecialchars($statusLabel[$status] ?? $status) ?></span>
