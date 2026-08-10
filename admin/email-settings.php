@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/mailketing.php';
+require_once __DIR__ . '/../includes/admin_nav.php';
 start_secure_session();
 
 $brand = require_admin_for_brand(get_current_brand());
@@ -521,12 +522,7 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     <a class="brand-link" href="dashboard.php" aria-label="<?= htmlspecialchars($previewBrandName) ?> Admin">
       <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($previewBrandName) ?>">
     </a>
-    <nav class="nav" aria-label="Navigasi admin">
-      <a href="dashboard.php">Dashboard</a>
-      <a href="events.php">Kelola Event</a>
-      <a class="active" href="<?= $eventNotFound ? 'events.php' : 'email-settings.php?event=' . urlencode($eventSlug) ?>">Pengaturan Email</a>
-      <a class="logout" href="logout.php">Keluar</a>
-    </nav>
+    <?php render_admin_nav('email-settings'); ?>
   </div>
 </header>
 

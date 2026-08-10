@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/admin_nav.php';
 start_secure_session();
 
 $brand = require_admin_for_brand(get_current_brand());
@@ -686,12 +687,7 @@ function tracking_status_badge(bool $active): string
     <a class="brand" href="dashboard.php" aria-label="<?= htmlspecialchars($brand['name']) ?> Admin">
       <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($brand['name']) ?>">
     </a>
-    <nav class="nav" aria-label="Navigasi admin">
-      <a href="dashboard.php">Dashboard</a>
-      <a class="active" href="events.php">Kelola Event</a>
-      <a href="visitor-analytics.php">Analitik Pengunjung</a>
-      <a class="logout" href="logout.php">Keluar</a>
-    </nav>
+    <?php render_admin_nav('tracking'); ?>
   </div>
 </header>
 

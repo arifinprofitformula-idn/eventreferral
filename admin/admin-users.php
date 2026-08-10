@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/admin_nav.php';
 start_secure_session();
 
 $brand = require_superadmin_for_brand(get_current_brand());
@@ -264,13 +265,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     <a class="brand" href="dashboard.php" aria-label="<?= admin_user_h($brand['name']) ?> Dashboard">
       <img src="<?= admin_user_h($logoPath) ?>" alt="<?= admin_user_h($brand['name']) ?>">
     </a>
-    <nav class="nav" aria-label="Navigasi superadmin">
-      <a href="dashboard.php">Dashboard</a>
-      <a href="events.php">Kelola Event</a>
-      <a class="active" href="admin-users.php">Kelola Admin</a>
-      <a href="ai-settings.php">Pengaturan AI</a>
-      <a href="logout.php">Keluar</a>
-    </nav>
+    <?php render_admin_nav('admin-users'); ?>
   </div>
 </header>
 

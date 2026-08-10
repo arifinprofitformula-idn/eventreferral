@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/admin_nav.php';
 start_secure_session();
 
 $brand = require_admin_for_brand(get_current_brand());
@@ -638,12 +639,7 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
     <a class="brand" href="dashboard.php" aria-label="<?= htmlspecialchars($brand['name']) ?> Admin">
       <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($brand['name']) ?>">
     </a>
-    <nav class="nav" aria-label="Navigasi admin">
-      <a href="dashboard.php">Dashboard</a>
-      <a href="events.php">Kelola Event</a>
-      <a class="active" href="marketing-content.php<?= !$eventNotFound ? '?event=' . htmlspecialchars(rawurlencode($eventSlug)) : '' ?>">Marketing Content</a>
-      <a class="logout" href="logout.php">Keluar</a>
-    </nav>
+    <?php render_admin_nav('marketing-content'); ?>
   </div>
 </header>
 

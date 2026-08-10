@@ -7,6 +7,7 @@
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/admin_nav.php';
 start_secure_session();
 
 $brand = require_admin_for_brand(get_current_brand());
@@ -49,9 +50,10 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
 
   .topbar {
     position: sticky; top: 0; z-index: 20;
-    height: 72px;
+    min-height: 72px;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0 32px;
+    gap: 16px; flex-wrap: wrap;
+    padding: 12px 32px;
     background: rgba(16,16,15,0.82);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -76,7 +78,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
   }
 
   .layout { max-width: 1320px; margin: 0 auto; padding: 32px; display: grid; grid-template-columns: 240px 1fr; gap: 32px; align-items: start; }
-  @media (max-width: 640px) { .layout { padding: 16px; } .topbar { padding: 0 16px; } }
+  @media (max-width: 640px) { .layout { padding: 16px; } .topbar { padding: 12px 16px; } }
   @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .toc { display: none; } }
 
   .toc { position: sticky; top: 96px; }
@@ -194,6 +196,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
     <div class="topbar-emblem"><?= htmlspecialchars($brandInitials ?: 'RE') ?></div>
     <span class="topbar-label">Dokumentasi Sistem</span>
   </div>
+  <?php render_admin_nav('documentation'); ?>
   <span class="badge-secure">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2 4 5v6c0 5 3.4 8.6 8 11 4.6-2.4 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
     Admin Terverifikasi
@@ -337,12 +340,12 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
         <p class="card-subtitle">Alur operasional lewat <code>admin/setup-brand.php</code> — hanya Coach yang menjalankan ini.</p>
 
         <ol class="steps">
-          <li><strong>Siapkan domain.</strong> Domain baru sudah diarahkan sebagai Addon Domain di cPanel ke folder <code>public_html</code> yang sama dengan brand lain.</li>
-          <li><strong>Buka <code>admin/setup-brand.php?key=...</code></strong> memakai <code>MASTER_SETUP_KEY</code> dari <code>config.php</code> — bukan PIN/password admin brand manapun.</li>
-          <li><strong>Isi identitas brand</strong> — slug, domain, nama, tagline, logo, WhatsApp default, disclaimer, preset tema (atau warna custom).</li>
-          <li><strong>Isi kredensial admin brand ini</strong> — username dan password terpisah dari brand lain.</li>
-          <li><strong>Simpan.</strong> Sistem otomatis membuat baris <code>brands</code> baru dan satu event root domain dengan slug <code>{brand_slug}-default</code>.</li>
-          <li><strong>Aktifkan SSL</strong> untuk domain baru lewat cPanel (Let's Encrypt).</li>
+          <li><span><strong>Siapkan domain.</strong> Domain baru sudah diarahkan sebagai Addon Domain di cPanel ke folder <code>public_html</code> yang sama dengan brand lain.</span></li>
+          <li><span><strong>Buka <code>admin/setup-brand.php?key=...</code></strong> memakai <code>MASTER_SETUP_KEY</code> dari <code>config.php</code> — bukan PIN/password admin brand manapun.</span></li>
+          <li><span><strong>Isi identitas brand</strong> — slug, domain, nama, tagline, logo, WhatsApp default, disclaimer, preset tema (atau warna custom).</span></li>
+          <li><span><strong>Isi kredensial admin brand ini</strong> — username dan password terpisah dari brand lain.</span></li>
+          <li><span><strong>Simpan.</strong> Sistem otomatis membuat baris <code>brands</code> baru dan satu event root domain dengan slug <code>{brand_slug}-default</code>.</span></li>
+          <li><span><strong>Aktifkan SSL</strong> untuk domain baru lewat cPanel (Let's Encrypt).</span></li>
         </ol>
 
         <div class="callout warn"><strong>Catatan —</strong> slug event tetap unik secara global. Jika slug yang diinginkan sudah dipakai brand lain, sistem akan menolak saat validasi domain/slug brand (bukan slug event, yang dibuat otomatis).</div>

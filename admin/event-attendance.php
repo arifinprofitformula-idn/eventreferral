@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/attendance.php';
+require_once __DIR__ . '/../includes/admin_nav.php';
 start_secure_session();
 
 $brand = require_admin_for_brand(get_current_brand());
@@ -435,10 +436,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="dashboard.php"><img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($brand['name']) ?>"></a>
-    <span style="display:flex;gap:14px;align-items:center;">
-      <a class="back-link" href="event-attendance-report.php">Rekap Kehadiran →</a>
-      <a class="back-link" href="dashboard.php">← Dashboard</a>
-    </span>
+    <?php render_admin_nav('event-attendance'); ?>
   </div>
 </header>
 

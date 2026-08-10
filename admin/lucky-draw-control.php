@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/admin_nav.php';
 start_secure_session();
 
 $brand = require_admin_for_brand(get_current_brand());
@@ -69,11 +70,10 @@ $displayUrl = $event ? '/lucky-draw-display.php?event=' . urlencode($event['slug
       <img src="<?= htmlspecialchars($logoPath, ENT_QUOTES, 'UTF-8') ?>" alt="">
       <div><strong><?= htmlspecialchars($brand['name'], ENT_QUOTES, 'UTF-8') ?></strong><span>Kontrol Undian Kehadiran</span></div>
     </div>
-    <nav class="nav">
-      <a href="/admin/dashboard.php">Dashboard</a>
-      <a href="/admin/event-attendance.php<?= $event ? '?event=' . urlencode($event['slug']) : '' ?>">Kehadiran</a>
-      <a href="<?= htmlspecialchars($displayUrl, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">Buka Display</a>
-    </nav>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <?php render_admin_nav('lucky-draw'); ?>
+      <a href="<?= htmlspecialchars($displayUrl, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:13px;font-weight:800;background:rgba(255,255,255,.04);white-space:nowrap;">Buka Display</a>
+    </div>
   </div>
 </header>
 <main>

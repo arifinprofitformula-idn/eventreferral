@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/admin_nav.php';
 start_secure_session();
 
 $brand = require_admin_for_brand(get_current_brand());
@@ -117,12 +118,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="dashboard.php"><img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($brand['name']) ?>"></a>
-    <nav class="nav">
-      <a href="dashboard.php">Dashboard</a>
-      <a href="events.php">Kelola Event</a>
-      <a href="event-attendance.php">Kehadiran Event</a>
-      <a class="active" href="event-attendance-report.php">Rekap Kehadiran</a>
-    </nav>
+    <?php render_admin_nav('event-attendance-report'); ?>
   </div>
 </header>
 
