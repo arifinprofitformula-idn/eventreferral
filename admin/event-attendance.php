@@ -98,6 +98,32 @@ if ($eventSlug !== '') {
     }
 }
 
+// ==================== RANGKUMAN KEHADIRAN (report cards) ====================
+$statusCounts = ['hadir' => 0, 'tidak_hadir' => 0, 'terlambat' => 0, 'batal' => 0];
+$totalWalkin = 0;
+$totalRewardEligible = 0;
+$totalDuplicate = 0;
+$participantStatusCounts = [];
+foreach ($registrants as $row) {
+    $status = $row['attendance_status'] ?: 'tidak_hadir';
+    if (isset($statusCounts[$status])) {
+        $statusCounts[$status]++;
+    }
+    if (($row['attendance_source'] ?? null) === 'tidak_terdaftar') {
+        $totalWalkin++;
+    }
+    if (!empty($row['is_reward_eligible'])) {
+        $totalRewardEligible++;
+    }
+    if (!empty($row['duplicate_flag'])) {
+        $totalDuplicate++;
+    }
+    if (!empty($row['participant_status'])) {
+        $key = $row['participant_status'];
+        $participantStatusCounts[$key] = ($participantStatusCounts[$key] ?? 0) + 1;
+    }
+}
+
 function whatsapp_link_att(?string $number): ?string
 {
     $digits = preg_replace('/\D+/', '', (string)$number);
@@ -206,6 +232,26 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     border-color: color-mix(in srgb, var(--gold-soft) 42%, transparent);
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 10%, transparent);
   }
+  .report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .report-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 14px 16px;
+  }
+  .report-card .report-num { font-size: 24px; font-weight: 900; line-height: 1; color: var(--text); }
+  .report-card .report-label { color: var(--muted); font-size: 11.5px; margin-top: 5px; text-transform: uppercase; letter-spacing: .03em; font-weight: 700; }
+  .report-card.accent { border-color: var(--border-gold); }
+  .report-card.accent .report-num { color: var(--gold-soft); }
+  .report-card.success .report-num { color: var(--success); }
+  .report-card.warning .report-num { color: var(--warning); }
+  .report-card.danger .report-num { color: var(--danger); }
+  .report-section-title { color: var(--muted); font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; margin: 4px 0 8px; }
   .counter-bar {
     display: flex;
     align-items: center;
@@ -415,6 +461,57 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
   <?php if ($eventSlug === ''): ?>
     <p class="empty">Belum ada event untuk brand ini. Buat event terlebih dahulu di halaman Kelola Event.</p>
   <?php else: ?>
+
+  <div class="report-grid">
+    <div class="report-card accent">
+      <div class="report-num"><?= (int)$totalRegistrants ?></div>
+      <div class="report-label">Total Terdaftar</div>
+    </div>
+    <div class="report-card success">
+      <div class="report-num"><?= (int)$statusCounts['hadir'] ?></div>
+      <div class="report-label">Hadir</div>
+    </div>
+    <div class="report-card">
+      <div class="report-num"><?= (int)$statusCounts['tidak_hadir'] ?></div>
+      <div class="report-label">Belum Hadir</div>
+    </div>
+    <div class="report-card warning">
+      <div class="report-num"><?= (int)$statusCounts['terlambat'] ?></div>
+      <div class="report-label">Terlambat</div>
+    </div>
+    <div class="report-card danger">
+      <div class="report-num"><?= (int)$statusCounts['batal'] ?></div>
+      <div class="report-label">Batal</div>
+    </div>
+    <?php if ($attendanceSourceReady): ?>
+    <div class="report-card">
+      <div class="report-num"><?= (int)$totalWalkin ?></div>
+      <div class="report-label">Walk-in</div>
+    </div>
+    <?php endif; ?>
+    <div class="report-card accent">
+      <div class="report-num"><?= (int)$totalRewardEligible ?></div>
+      <div class="report-label">Reward Eligible</div>
+    </div>
+    <?php if ($totalDuplicate > 0): ?>
+    <div class="report-card danger">
+      <div class="report-num"><?= (int)$totalDuplicate ?></div>
+      <div class="report-label">Duplikat</div>
+    </div>
+    <?php endif; ?>
+  </div>
+
+  <?php if ($extraFieldsReady && !empty($participantStatusCounts)): ?>
+  <div class="report-section-title">Status Peserta</div>
+  <div class="report-grid">
+    <?php foreach ($participantStatusCounts as $psKey => $psCount): ?>
+      <div class="report-card">
+        <div class="report-num"><?= (int)$psCount ?></div>
+        <div class="report-label"><?= htmlspecialchars($participantStatusLabel[$psKey] ?? $psKey) ?></div>
+      </div>
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
 
   <section class="counter-bar" aria-live="polite">
     <div>
