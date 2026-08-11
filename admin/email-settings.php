@@ -31,6 +31,41 @@ if (!$eventNotFound && isset($_GET['saved'])) {
     $noticeType = 'success';
 }
 
+$activeEmailEvents = [];
+if ($eventNotFound) {
+    $emailPickerSchemaReady = false;
+    try {
+        $tableStmt = $pdo->query("SHOW TABLES LIKE 'event_email_settings'");
+        $emailPickerSchemaReady = (bool)$tableStmt->fetch(PDO::FETCH_NUM);
+    } catch (Throwable $e) {
+        $emailPickerSchemaReady = false;
+    }
+
+    $stmt = $pdo->prepare('
+        SELECT slug, name, event_day, event_time, event_location, event_date, flyer_path, created_at
+        FROM events
+        WHERE brand_id = ? AND status = "active"
+        ORDER BY (slug = ?) DESC, (event_date IS NULL) ASC, event_date ASC, created_at DESC
+    ');
+    $stmt->execute([(int)$brand['id'], (string)($brand['default_event_slug'] ?? '')]);
+    $activeEmailEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if ($emailPickerSchemaReady && !empty($activeEmailEvents)) {
+        $stmt = $pdo->prepare('SELECT event_slug, auto_send FROM event_email_settings WHERE brand_id = ?');
+        $stmt->execute([(int)$brand['id']]);
+        $emailSettingsBySlug = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $emailSettingsBySlug[(string)$row['event_slug']] = $row;
+        }
+        foreach ($activeEmailEvents as &$activeEmailEvent) {
+            $emailSettings = $emailSettingsBySlug[(string)$activeEmailEvent['slug']] ?? null;
+            $activeEmailEvent['email_configured'] = $emailSettings !== null;
+            $activeEmailEvent['auto_send'] = $emailSettings ? (int)$emailSettings['auto_send'] : null;
+        }
+        unset($activeEmailEvent);
+    }
+}
+
 if (!$eventNotFound) {
     try {
         $stmt = $pdo->prepare('SELECT * FROM event_email_settings WHERE brand_id = ? AND event_slug = ?');
@@ -139,7 +174,7 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Email Automation Studio - ' . $event['name'];
+$pageTitle = $eventNotFound ? 'Pilih Event Email' : 'Email Automation Studio - ' . $event['name'];
 $previewBrandName = $brand['name'] ?? $brand['slug'];
 $previewLogoPath = !empty($brand['logo_path']) ? '..' . $brand['logo_path'] : '../assets/logo.png';
 $previewDisclaimer = $brand['disclaimer_text'] ?? '';
@@ -492,6 +527,41 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
   .toast { position: fixed; right: 24px; bottom: 24px; z-index: 60; transform: translateY(20px); opacity: 0; pointer-events: none; color: #111; background: linear-gradient(135deg, var(--gold), var(--gold-soft)); border-radius: 14px; font-size: 13px; font-weight: 850; padding: 12px 16px; transition: opacity 180ms ease, transform 180ms ease; }
   .toast.show { opacity: 1; transform: translateY(0); }
   .empty-state { display: grid; place-items: center; min-height: 360px; text-align: center; }
+  .email-picker { width: min(100%, 980px); text-align: left; }
+  .email-picker-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 22px; }
+  .email-picker-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .email-picker-card { display: grid; gap: 12px; min-height: 170px; color: inherit; text-decoration: none; border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; background: rgba(255,255,255,0.025); padding: 18px; transition: transform 180ms ease, border-color 180ms ease, background 180ms ease; }
+  .email-picker-card:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--gold-soft) 38%, transparent); background: color-mix(in srgb, var(--gold) 6%, transparent); }
+  .email-picker-thumb {
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 14px;
+    background: rgba(0,0,0,0.22);
+  }
+  .email-picker-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .email-picker-thumb.is-empty {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 800;
+  }
+  .email-picker-title { color: var(--text); font-size: 16px; font-weight: 900; line-height: 1.35; }
+  .email-picker-meta { display: grid; gap: 6px; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+  .email-picker-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .email-picker-badge { border-radius: 999px; font-size: 11.5px; font-weight: 850; padding: 6px 9px; }
+  .email-picker-badge.good { color: #BBF7D0; background: rgba(34,197,94,0.14); border: 1px solid rgba(34,197,94,0.24); }
+  .email-picker-badge.warn { color: #FDE68A; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.24); }
+  .email-picker-badge.neutral { color: var(--gold-soft); background: color-mix(in srgb, var(--gold) 10%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 20%, transparent); }
+  .email-picker-action { color: var(--gold-soft); font-size: 13px; font-weight: 900; margin-top: auto; }
+  .email-picker-empty { color: var(--muted); border: 1px dashed color-mix(in srgb, var(--gold-soft) 34%, transparent); border-radius: 18px; background: rgba(255,255,255,0.018); line-height: 1.65; padding: 20px; text-align: center; }
   @media (max-width: 1080px) {
     .studio-grid { grid-template-columns: 1fr; }
     .preview-stack { position: static; }
@@ -510,6 +580,8 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
     .btn, .save-actions .btn { width: 100%; }
     .panel { border-radius: 20px; padding: 18px; }
     .field-row, .test-grid, .status-grid { grid-template-columns: 1fr; }
+    .email-picker-list { grid-template-columns: 1fr; }
+    .email-picker-head { flex-direction: column; }
     textarea { min-height: 180px; }
     .save-bar { align-items: stretch; flex-direction: column; bottom: 10px; }
     .toast { left: 16px; right: 16px; bottom: 16px; text-align: center; }
@@ -529,12 +601,48 @@ $eventUrl = $eventNotFound ? '#' : (($event['slug'] === ($brand['default_event_s
 <main class="studio-wrap">
   <?php if ($eventNotFound): ?>
     <section class="panel empty-state">
-      <div>
-        <span class="badge">Email Automation</span>
-        <h1>Event Tidak Ditemukan</h1>
-        <p>Silakan kembali ke daftar event dan pilih event yang valid untuk mengatur email otomatis.</p>
-        <div class="hero-actions" style="justify-content:center;">
-          <a class="btn btn-primary" href="events.php">Kembali ke Kelola Event</a>
+      <div class="email-picker">
+        <div class="email-picker-head">
+          <span class="badge">Email Automation</span>
+          <div>
+            <h1>Pilih Event untuk Email</h1>
+            <p><?= $eventSlug !== '' ? 'Event yang Anda cari tidak tersedia atau bukan milik brand ini. Pilih event aktif di bawah untuk mengatur email otomatis.' : 'Pilih event aktif yang ingin diatur email otomatisnya.' ?></p>
+          </div>
+        </div>
+
+        <?php if (!empty($activeEmailEvents)): ?>
+          <div class="email-picker-list">
+            <?php foreach ($activeEmailEvents as $activeEvent): ?>
+              <?php
+                $configured = !empty($activeEvent['email_configured']);
+                $autoSend = isset($activeEvent['auto_send']) ? (int)$activeEvent['auto_send'] === 1 : false;
+              ?>
+              <a class="email-picker-card" href="email-settings.php?event=<?= urlencode($activeEvent['slug']) ?>">
+                <?php if (!empty($activeEvent['flyer_path'])): ?>
+                  <div class="email-picker-thumb"><img src="<?= htmlspecialchars($activeEvent['flyer_path']) ?>" alt="Flyer <?= htmlspecialchars($activeEvent['name']) ?>"></div>
+                <?php else: ?>
+                  <div class="email-picker-thumb is-empty">Flyer belum tersedia</div>
+                <?php endif; ?>
+                <div class="email-picker-title"><?= htmlspecialchars($activeEvent['name']) ?></div>
+                <div class="email-picker-badges">
+                  <span class="email-picker-badge <?= $configured ? 'good' : 'warn' ?>"><?= $configured ? 'Sudah diatur' : 'Belum diatur' ?></span>
+                  <span class="email-picker-badge <?= $autoSend ? 'good' : 'neutral' ?>"><?= $autoSend ? 'Auto-send aktif' : 'Auto-send nonaktif' ?></span>
+                </div>
+                <div class="email-picker-meta">
+                  <span><strong>Slug:</strong> <?= htmlspecialchars($activeEvent['slug']) ?></span>
+                  <span><strong>Jadwal:</strong> <?= htmlspecialchars(trim((string)($activeEvent['event_day'] ?? '')) ?: '-') ?><?= !empty($activeEvent['event_time']) ? ' · ' . htmlspecialchars($activeEvent['event_time']) : '' ?></span>
+                  <span><strong>Lokasi:</strong> <?= htmlspecialchars(trim((string)($activeEvent['event_location'] ?? '')) ?: '-') ?></span>
+                </div>
+                <div class="email-picker-action">Atur Email Otomatis</div>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <div class="email-picker-empty">Belum ada event aktif untuk brand ini. Upload ZIP event baru atau aktifkan kembali event dari halaman Kelola Event.</div>
+        <?php endif; ?>
+
+        <div class="hero-actions" style="justify-content:center;margin-top:22px;">
+          <a class="btn btn-secondary" href="events.php">Kembali ke Kelola Event</a>
         </div>
       </div>
     </section>

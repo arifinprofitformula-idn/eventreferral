@@ -10,12 +10,25 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
+$pdo = get_db();
+
 $eventSlug = clean($_GET['event'] ?? '');
 $event = $eventSlug !== '' ? get_event_by_slug($eventSlug) : null;
 if ($event && (int)$event['brand_id'] !== (int)$brand['id']) {
     $event = null;
 }
 $eventNotFound = !$event;
+$activeMarketingEvents = [];
+if ($eventNotFound) {
+    $stmt = $pdo->prepare('
+        SELECT slug, name, event_day, event_time, event_location, flyer_path, event_date, created_at
+        FROM events
+        WHERE brand_id = ? AND status = "active"
+        ORDER BY (slug = ?) DESC, (event_date IS NULL) ASC, event_date ASC, created_at DESC
+    ');
+    $stmt->execute([(int)$brand['id'], (string)($brand['default_event_slug'] ?? '')]);
+    $activeMarketingEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 $flyerAsset = null;
 $eventConfig = [];
@@ -37,7 +50,16 @@ if (!$eventNotFound) {
         }
     }
 
-    if ($realEventsDir && $realEventDir && $realAssetsDir
+    if (!empty($event['flyer_path'])) {
+        $extension = strtolower(pathinfo((string)$event['flyer_path'], PATHINFO_EXTENSION));
+        $flyerAsset = [
+            'filename' => basename((string)$event['flyer_path']),
+            'url' => (string)$event['flyer_path'],
+            'download' => $eventSlug . '-flyer.' . ($extension !== '' ? $extension : 'jpg'),
+        ];
+    }
+
+    if (!$flyerAsset && $realEventsDir && $realEventDir && $realAssetsDir
         && strpos($realEventDir, $realEventsDir) === 0
         && strpos($realAssetsDir, $realEventDir) === 0
         && is_dir($realAssetsDir)) {
@@ -48,7 +70,7 @@ if (!$eventNotFound) {
             }
 
             $extension = strtolower($fileInfo->getExtension());
-            if (!in_array($extension, ['jpg', 'jpeg', 'png'], true)) {
+            if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
                 continue;
             }
 
@@ -107,7 +129,7 @@ $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
 $host = $_SERVER['HTTP_HOST'] ?? $brand['domain'];
 $initialInviteLink = !$eventNotFound ? "{$protocol}://{$host}/buat-link.php?event=" . urlencode($eventSlug) : '';
 $challengeLink = !$eventNotFound ? "{$protocol}://{$host}/challenge" : '';
-$pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' . $event['name'];
+$pageTitle = $eventNotFound ? 'Pilih Event Marketing' : 'Konten Marketing — ' . $event['name'];
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -591,6 +613,41 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
     background: color-mix(in srgb, var(--gold) 8%, transparent);
   }
   .mkt-empty h2, .mkt-loading h2, .mkt-error h2 { color: var(--text); font-size: 20px; margin-bottom: 8px; }
+  .mkt-event-picker { text-align: left; padding: 30px; }
+  .mkt-event-picker-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 22px; }
+  .mkt-event-picker-head .mkt-empty-icon { margin: 0; }
+  .mkt-event-picker-head h2 { margin: 0 0 8px; }
+  .mkt-event-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .mkt-event-card { display: grid; gap: 12px; min-height: 170px; color: inherit; text-decoration: none; border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; background: rgba(0,0,0,0.16); padding: 18px; transition: transform 180ms ease, border-color 180ms ease, background 180ms ease; }
+  .mkt-event-card:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--gold-soft) 38%, transparent); background: color-mix(in srgb, var(--gold) 6%, rgba(0,0,0,0.16)); }
+  .mkt-event-thumb {
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 14px;
+    background: rgba(0,0,0,0.22);
+  }
+  .mkt-event-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .mkt-event-thumb.is-empty {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 800;
+  }
+  .mkt-event-title { color: var(--text); font-size: 16px; font-weight: 900; line-height: 1.35; }
+  .mkt-event-meta { display: grid; gap: 6px; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+  .mkt-event-meta span { overflow-wrap: anywhere; }
+  .mkt-event-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .mkt-event-badge { color: var(--gold-soft); border: 1px solid var(--border-gold); border-radius: 999px; background: color-mix(in srgb, var(--gold) 9%, transparent); font-size: 11.5px; font-weight: 850; padding: 6px 9px; }
+  .mkt-event-action { color: var(--gold-soft); font-size: 13px; font-weight: 900; margin-top: auto; }
+  .mkt-event-empty { color: var(--muted); border: 1px dashed color-mix(in srgb, var(--gold-soft) 34%, transparent); border-radius: 18px; background: rgba(0,0,0,0.14); line-height: 1.65; padding: 20px; text-align: center; }
   .mkt-error h2 { color: #FCA5A5; }
   .mkt-toast {
     position: fixed;
@@ -630,6 +687,8 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
     .mkt-grid { grid-template-columns: 1fr; }
     .mkt-readonly-link { align-items: stretch; flex-direction: column; }
     .mkt-format-tabs { grid-template-columns: 1fr; }
+    .mkt-event-list { grid-template-columns: 1fr; }
+    .mkt-event-picker-head { flex-direction: column; }
   }
 </style>
 </head>
@@ -646,14 +705,46 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
 <div class="mkt-wrap">
 
   <?php if ($eventNotFound): ?>
-    <div class="mkt-panel mkt-empty">
-      <span class="mkt-empty-icon" aria-hidden="true">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.3 3.7 2.5 17.2A2 2 0 0 0 4.2 20h15.6a2 2 0 0 0 1.7-2.8L13.7 3.7a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </span>
-      <h2>Event tidak ditemukan</h2>
-      <p>Silakan kembali ke daftar event dan pilih event yang valid untuk membuat konten marketing.</p>
-      <div class="mkt-actions" style="justify-content:center;margin-top:18px;">
-        <a class="mkt-btn mkt-btn-primary" href="events.php">Kembali ke Kelola Event</a>
+    <div class="mkt-panel mkt-empty mkt-event-picker">
+      <div class="mkt-event-picker-head">
+        <span class="mkt-empty-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 11v2a2 2 0 0 0 2 2h2l4 4v-4h2l8 4V5l-8 4H5a2 2 0 0 0-2 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <div>
+          <h2>Pilih Event untuk Konten Marketing</h2>
+          <p><?= $eventSlug !== '' ? 'Event yang Anda cari tidak tersedia atau bukan milik brand ini. Pilih event aktif di bawah untuk membuat konten marketing.' : 'Pilih event aktif yang ingin dibuatkan caption, broadcast, dan materi promosinya.' ?></p>
+        </div>
+      </div>
+
+      <?php if (!empty($activeMarketingEvents)): ?>
+        <div class="mkt-event-list">
+          <?php foreach ($activeMarketingEvents as $activeEvent): ?>
+            <a class="mkt-event-card" href="marketing-content.php?event=<?= urlencode($activeEvent['slug']) ?>">
+              <?php if (!empty($activeEvent['flyer_path'])): ?>
+                <div class="mkt-event-thumb"><img src="<?= htmlspecialchars($activeEvent['flyer_path']) ?>" alt="Flyer <?= htmlspecialchars($activeEvent['name']) ?>"></div>
+              <?php else: ?>
+                <div class="mkt-event-thumb is-empty">Flyer belum tersedia</div>
+              <?php endif; ?>
+              <div class="mkt-event-title"><?= htmlspecialchars($activeEvent['name']) ?></div>
+              <div class="mkt-event-badges">
+                <span class="mkt-event-badge"><?= !empty($activeEvent['flyer_path']) ? 'Flyer tersedia' : 'Flyer belum ada' ?></span>
+                <span class="mkt-event-badge">Aktif</span>
+              </div>
+              <div class="mkt-event-meta">
+                <span><strong>Slug:</strong> <?= htmlspecialchars($activeEvent['slug']) ?></span>
+                <span><strong>Jadwal:</strong> <?= htmlspecialchars($getEventValue($activeEvent, [], 'event_day') ?: '-') ?><?= !empty($activeEvent['event_time']) ? ' · ' . htmlspecialchars($activeEvent['event_time']) : '' ?></span>
+                <span><strong>Lokasi:</strong> <?= htmlspecialchars($getEventValue($activeEvent, [], 'event_location') ?: '-') ?></span>
+              </div>
+              <div class="mkt-event-action">Buat Konten Marketing</div>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?>
+        <div class="mkt-event-empty">Belum ada event aktif untuk brand ini. Upload ZIP event baru atau aktifkan kembali event dari halaman Kelola Event.</div>
+      <?php endif; ?>
+
+      <div class="mkt-actions" style="justify-content:center;margin-top:22px;">
+        <a class="mkt-btn mkt-btn-secondary" href="events.php">Kembali ke Kelola Event</a>
       </div>
     </div>
   <?php else: ?>
@@ -806,7 +897,7 @@ $pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : 'Konten Marketing — ' 
               <?php else: ?>
                 <div class="mkt-flyer-empty">
                   <strong>Gambar flyer tidak tersedia.</strong>
-                  Tambahkan file flyer format JPG, JPEG, atau PNG ke folder assets event ini agar pengguna bisa mendownloadnya dari halaman generator.
+                  Upload flyer saat membuat atau memperbarui event lewat halaman Kelola Event agar materi promosi tersedia di sini.
                 </div>
               <?php endif; ?>
             </div>

@@ -21,7 +21,6 @@ $eventNotFound = !$event;
 $notice = null;
 $noticeType = 'success'; // success | error
 $fieldErrors = [];
-$eventFlyerReady = false;
 
 if (!$eventNotFound && isset($_GET['saved'])) {
     $notice = 'Detail acara berhasil diperbarui.';
@@ -38,6 +37,70 @@ $formValues = $event ?: [
     'attendance_code' => '',
 ];
 
+$activeEventsForSettings = [];
+if ($eventNotFound) {
+    $stmt = $pdo->prepare('
+        SELECT slug, name, event_day, event_time, event_location, event_date, flyer_path, created_at
+        FROM events
+        WHERE brand_id = ? AND status = "active"
+        ORDER BY (slug = ?) DESC, (event_date IS NULL) ASC, event_date ASC, created_at DESC
+    ');
+    $stmt->execute([(int)$brand['id'], (string)$brand['default_event_slug']]);
+    $activeEventsForSettings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function event_settings_format_event_day(string $date): string
+{
+    $parsed = DateTime::createFromFormat('Y-m-d', $date);
+    if (!$parsed || $parsed->format('Y-m-d') !== $date) {
+        return '';
+    }
+
+    $days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    $months = [
+        1 => 'Januari',
+        2 => 'Februari',
+        3 => 'Maret',
+        4 => 'April',
+        5 => 'Mei',
+        6 => 'Juni',
+        7 => 'Juli',
+        8 => 'Agustus',
+        9 => 'September',
+        10 => 'Oktober',
+        11 => 'November',
+        12 => 'Desember',
+    ];
+
+    $dayName = $days[(int)$parsed->format('w')];
+    $monthName = $months[(int)$parsed->format('n')];
+
+    return $dayName . ', ' . (int)$parsed->format('j') . ' ' . $monthName . ' ' . $parsed->format('Y');
+}
+
+function event_settings_time_input_value(?string $value): string
+{
+    $value = trim((string)$value);
+    if ($value === '') {
+        return '';
+    }
+
+    if (preg_match('/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/', $value, $matches)) {
+        return str_pad($matches[1], 2, '0', STR_PAD_LEFT) . ':' . $matches[2];
+    }
+
+    return '';
+}
+
+function event_settings_format_event_time(string $value): string
+{
+    if (!preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $value, $matches)) {
+        return '';
+    }
+
+    return $matches[1] . '.' . $matches[2] . ' WIB';
+}
+
 // ---- Kode Kehadiran (fitur Konfirmasi Kehadiran self-service) ----
 // Kolom opsional (butuh migrate_v19_alter_events_add_attendance_code.sql). Cek dulu supaya
 // halaman ini tetap jalan normal di server yang belum menjalankan migrasi tsb.
@@ -51,25 +114,23 @@ if (!$eventNotFound) {
     }
 }
 
-if (!$eventNotFound && defined('MAX_EVENT_FLYER_SIZE') && defined('ALLOWED_EVENT_FLYER_EXT') && function_exists('save_event_flyer') && function_exists('delete_event_flyer')) {
-    try {
-        $columnStmt = $pdo->query("SHOW COLUMNS FROM events LIKE 'flyer_path'");
-        $eventFlyerReady = (bool)$columnStmt->fetch(PDO::FETCH_ASSOC);
-    } catch (Throwable $e) {
-        $eventFlyerReady = false;
-        error_log('[Event Settings] Fitur flyer belum siap: ' . $e->getMessage());
-    }
-}
-
 // ==================== HANDLE ACTIONS ====================
 if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $postedEventDate = trim($_POST['event_date'] ?? '');
+    $postedEventTime = trim($_POST['event_time_input'] ?? ($_POST['event_time'] ?? ''));
+    $derivedEventDay = event_settings_format_event_day($postedEventDate);
+    $derivedEventTime = event_settings_format_event_time($postedEventTime);
+
+    $_POST['event_day'] = $derivedEventDay;
+    $_POST['event_time'] = $derivedEventTime;
+
     $formValues = array_merge($formValues, [
-        'event_day' => trim($_POST['event_day'] ?? ''),
-        'event_time' => trim($_POST['event_time'] ?? ''),
+        'event_day' => $derivedEventDay,
+        'event_time' => $derivedEventTime,
         'event_location' => trim($_POST['event_location'] ?? ''),
         'event_speaker' => trim($_POST['event_speaker'] ?? ''),
         'event_capacity' => trim($_POST['event_capacity'] ?? ''),
-        'event_date' => trim($_POST['event_date'] ?? ''),
+        'event_date' => $postedEventDate,
         'attendance_code' => strtoupper(trim($_POST['attendance_code'] ?? '')),
     ]);
 
@@ -77,11 +138,13 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $notice = 'Sesi tidak valid. Silakan refresh halaman lalu coba lagi.';
         $noticeType = 'error';
     } else {
-        if ($formValues['event_day'] === '') {
-            $fieldErrors['event_day'] = 'Hari dan tanggal wajib diisi.';
+        if ($formValues['event_date'] === '') {
+            $fieldErrors['event_date'] = 'Hari dan tanggal acara wajib dipilih.';
         }
-        if ($formValues['event_time'] === '') {
-            $fieldErrors['event_time'] = 'Waktu acara wajib diisi.';
+        if ($postedEventTime === '') {
+            $fieldErrors['event_time'] = 'Waktu acara wajib dipilih.';
+        } elseif ($formValues['event_time'] === '') {
+            $fieldErrors['event_time'] = 'Format waktu tidak valid.';
         }
         if ($formValues['event_location'] === '') {
             $fieldErrors['event_location'] = 'Lokasi acara wajib diisi.';
@@ -119,33 +182,6 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $event['attendance_code'] = $attendanceCodeValue;
                 }
 
-                // ---- Hapus flyer jika diminta ----
-                if ($eventFlyerReady && isset($_POST['remove_flyer']) && !empty($event['flyer_path'])) {
-                    delete_event_flyer($event['flyer_path']);
-                    $stmt = $pdo->prepare('UPDATE events SET flyer_path = NULL WHERE slug = ? AND brand_id = ?');
-                    $stmt->execute([$eventSlug, (int)$brand['id']]);
-                    $event['flyer_path'] = null;
-                }
-
-                // ---- Upload flyer baru jika ada ----
-                if ($eventFlyerReady && isset($_FILES['flyer']) && $_FILES['flyer']['error'] === UPLOAD_ERR_OK) {
-                    $file = $_FILES['flyer'];
-                    if ($file['size'] > MAX_EVENT_FLYER_SIZE) {
-                        $notice = 'Ukuran flyer terlalu besar. Maksimal ' . (MAX_EVENT_FLYER_SIZE / 1024 / 1024) . ' MB.';
-                        $noticeType = 'error';
-                    } else {
-                        $flyerPath = save_event_flyer($file['tmp_name'], $file['name'], $eventSlug);
-                        if (!$flyerPath) {
-                            $notice = 'Gagal upload flyer. Pastikan file adalah gambar dengan format yang diizinkan.';
-                            $noticeType = 'error';
-                        } else {
-                            $stmt = $pdo->prepare('UPDATE events SET flyer_path = ? WHERE slug = ? AND brand_id = ?');
-                            $stmt->execute([$flyerPath, $eventSlug, (int)$brand['id']]);
-                            $event['flyer_path'] = $flyerPath;
-                        }
-                    }
-                }
-
                 if (!$notice) {
                     header('Location: event-settings.php?event=' . urlencode($eventSlug) . '&saved=1');
                     exit;
@@ -158,7 +194,7 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : $event['name'];
+$pageTitle = $eventNotFound ? 'Pilih Event Aktif' : $event['name'];
 $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.png';
 $eventUrl = $eventNotFound ? '#' : ($eventSlug === $brand['default_event_slug'] ? '/' : EVENTS_URL_BASE . '/' . rawurlencode($eventSlug) . '/');
 
@@ -535,7 +571,8 @@ function event_field_class(array $errors, string $key): string
   }
   .field input[type="text"],
   .field input[type="number"],
-  .field input[type="date"] {
+  .field input[type="date"],
+  .field input[type="time"] {
     width: 100%;
     min-height: 52px;
     color: var(--text);
@@ -559,33 +596,6 @@ function event_field_class(array $errors, string $key): string
     font-size: 12.5px;
     font-weight: 700;
     margin-top: 8px;
-  }
-  .flyer-field {
-    display: grid;
-    gap: 12px;
-  }
-  .flyer-current img {
-    max-width: 220px;
-    max-height: 160px;
-    width: auto;
-    height: auto;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.13);
-    display: block;
-    margin-bottom: 8px;
-  }
-  .flyer-remove {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--muted);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .flyer-field input[type="file"] {
-    color: var(--muted);
-    font-size: 13px;
   }
   .save-bar {
     position: sticky;
@@ -690,6 +700,102 @@ function event_field_class(array $errors, string $key): string
     line-height: 1.7;
     margin-bottom: 22px;
   }
+  .event-picker-card {
+    width: min(100%, 980px);
+    text-align: left;
+  }
+  .event-picker-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+  .event-picker-head .icon-badge {
+    margin: 0;
+  }
+  .event-picker-head h1 {
+    margin-bottom: 8px;
+  }
+  .event-picker-head p {
+    margin-bottom: 0;
+  }
+  .event-picker-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 20px;
+  }
+  .event-picker-item {
+    display: grid;
+    gap: 12px;
+    min-height: 156px;
+    color: inherit;
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 18px;
+    background: rgba(8,8,7,0.30);
+    padding: 18px;
+    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+  }
+  .event-picker-item:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--gold-soft) 38%, transparent);
+    background: color-mix(in srgb, var(--gold) 6%, transparent);
+    box-shadow: 0 16px 42px rgba(0,0,0,0.22);
+  }
+  .event-picker-thumb {
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 14px;
+    background: rgba(0,0,0,0.22);
+  }
+  .event-picker-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .event-picker-thumb.is-empty {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 800;
+  }
+  .event-picker-title {
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1.35;
+  }
+  .event-picker-meta {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .event-picker-meta span {
+    overflow-wrap: anywhere;
+  }
+  .event-picker-action {
+    color: var(--gold-soft);
+    font-size: 13px;
+    font-weight: 900;
+    margin-top: auto;
+  }
+  .event-picker-empty {
+    color: var(--muted);
+    border: 1px dashed color-mix(in srgb, var(--gold-soft) 34%, transparent);
+    border-radius: 18px;
+    background: rgba(8,8,7,0.24);
+    line-height: 1.65;
+    margin-top: 20px;
+    padding: 20px;
+    text-align: center;
+  }
   @media (max-width: 1040px) {
     .hero, .main-grid {
       grid-template-columns: 1fr;
@@ -739,6 +845,9 @@ function event_field_class(array $errors, string $key): string
     .main-grid {
       gap: 16px;
     }
+    .event-picker-list {
+      grid-template-columns: 1fr;
+    }
     .panel {
       border-radius: 20px;
     }
@@ -779,11 +888,43 @@ function event_field_class(array $errors, string $key): string
 
   <?php if ($eventNotFound): ?>
     <section class="empty-state">
-      <div class="empty-card">
-        <span class="icon-badge">EV</span>
-        <h1>Event Tidak Ditemukan</h1>
-        <p>Event yang Anda cari tidak tersedia atau sudah dihapus. Silakan kembali ke daftar event untuk memilih acara yang aktif.</p>
-        <a class="btn btn-primary" href="events.php">Kembali ke Kelola Event</a>
+      <div class="empty-card event-picker-card">
+        <div class="event-picker-head">
+          <span class="icon-badge">EV</span>
+          <div>
+            <h1>Pilih Event Aktif</h1>
+            <p><?= $eventSlug !== '' ? 'Event yang Anda cari tidak tersedia atau bukan milik brand ini. Pilih salah satu event aktif di bawah untuk mengatur detail acaranya.' : 'Pilih event aktif yang ingin Anda atur detail acaranya.' ?></p>
+          </div>
+        </div>
+
+        <?php if (!empty($activeEventsForSettings)): ?>
+          <div class="event-picker-list">
+            <?php foreach ($activeEventsForSettings as $activeEvent): ?>
+              <a class="event-picker-item" href="event-settings.php?event=<?= urlencode($activeEvent['slug']) ?>">
+                <?php if (!empty($activeEvent['flyer_path'])): ?>
+                  <div class="event-picker-thumb"><img src="<?= htmlspecialchars($activeEvent['flyer_path']) ?>" alt="Flyer <?= htmlspecialchars($activeEvent['name']) ?>"></div>
+                <?php else: ?>
+                  <div class="event-picker-thumb is-empty">Flyer belum tersedia</div>
+                <?php endif; ?>
+                <div class="event-picker-title"><?= htmlspecialchars($activeEvent['name']) ?></div>
+                <div class="event-picker-meta">
+                  <span><strong>Slug:</strong> <?= htmlspecialchars($activeEvent['slug']) ?></span>
+                  <span><strong>Jadwal:</strong> <?= htmlspecialchars(event_setting_value($activeEvent, 'event_day')) ?><?= !empty($activeEvent['event_time']) ? ' · ' . htmlspecialchars($activeEvent['event_time']) : '' ?></span>
+                  <span><strong>Lokasi:</strong> <?= htmlspecialchars(event_setting_value($activeEvent, 'event_location')) ?></span>
+                </div>
+                <div class="event-picker-action">Atur Detail Acara</div>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <div class="event-picker-empty">
+            Belum ada event aktif untuk brand ini. Upload ZIP event baru atau aktifkan kembali event yang sudah ada dari halaman Kelola Event.
+          </div>
+        <?php endif; ?>
+
+        <div style="margin-top:22px;">
+          <a class="btn btn-secondary" href="events.php">Kembali ke Kelola Event</a>
+        </div>
       </div>
     </section>
   <?php else: ?>
@@ -823,26 +964,13 @@ function event_field_class(array $errors, string $key): string
             <div class="field-meta">
               <span class="field-icon">TGL</span>
               <div>
-                <label for="event_day">Hari &amp; Tanggal</label>
-                <p class="helper">Contoh: Jumat, 3 Juli 2026</p>
+                <label for="event_date">Hari &amp; Tanggal</label>
+                <p class="helper">Pilih tanggal acara. Sistem otomatis menyimpan format teks untuk landing page dan tanggal asli untuk Kalender Publik.</p>
               </div>
             </div>
             <div>
-              <input class="<?= event_field_class($fieldErrors, 'event_day') ?>" type="text" id="event_day" name="event_day" value="<?= htmlspecialchars($formValues['event_day'] ?? '') ?>" required>
-              <?php if (isset($fieldErrors['event_day'])): ?><div class="error-message"><?= htmlspecialchars($fieldErrors['event_day']) ?></div><?php endif; ?>
-            </div>
-          </div>
-
-          <div class="field">
-            <div class="field-meta">
-              <span class="field-icon">DATE</span>
-              <div>
-                <label for="event_date">Tanggal Acara (untuk Kalender Publik)</label>
-                <p class="helper">Dipakai untuk mengurutkan event di halaman /kalender/. Opsional, tapi sangat disarankan diisi.</p>
-              </div>
-            </div>
-            <div>
-              <input class="<?= event_field_class($fieldErrors, 'event_date') ?>" type="date" id="event_date" name="event_date" value="<?= htmlspecialchars($formValues['event_date'] ?? '') ?>">
+              <input class="<?= event_field_class($fieldErrors, 'event_date') ?>" type="date" id="event_date" name="event_date" value="<?= htmlspecialchars($formValues['event_date'] ?? '') ?>" required>
+              <input type="hidden" id="event_day" name="event_day" value="<?= htmlspecialchars(event_setting_value($formValues, 'event_day', '')) ?>">
               <?php if (isset($fieldErrors['event_date'])): ?><div class="error-message"><?= htmlspecialchars($fieldErrors['event_date']) ?></div><?php endif; ?>
             </div>
           </div>
@@ -851,12 +979,13 @@ function event_field_class(array $errors, string $key): string
             <div class="field-meta">
               <span class="field-icon">JAM</span>
               <div>
-                <label for="event_time">Waktu</label>
-                <p class="helper">Contoh: 19.45 WIB</p>
+                <label for="event_time_input">Waktu</label>
+                <p class="helper">Pilih jam acara. Sistem menyimpan format jelas seperti 19.45 WIB.</p>
               </div>
             </div>
             <div>
-              <input class="<?= event_field_class($fieldErrors, 'event_time') ?>" type="text" id="event_time" name="event_time" value="<?= htmlspecialchars($formValues['event_time'] ?? '') ?>" required>
+              <input class="<?= event_field_class($fieldErrors, 'event_time') ?>" type="time" id="event_time_input" name="event_time_input" value="<?= htmlspecialchars(event_settings_time_input_value($formValues['event_time'] ?? '')) ?>" required>
+              <input type="hidden" id="event_time" name="event_time" value="<?= htmlspecialchars(event_setting_value($formValues, 'event_time', '')) ?>">
               <?php if (isset($fieldErrors['event_time'])): ?><div class="error-message"><?= htmlspecialchars($fieldErrors['event_time']) ?></div><?php endif; ?>
             </div>
           </div>
@@ -924,34 +1053,6 @@ function event_field_class(array $errors, string $key): string
               <?php else: ?>
                 <input class="<?= event_field_class($fieldErrors, 'attendance_code') ?>" type="text" id="attendance_code" name="attendance_code" maxlength="20" placeholder="Contoh: HADIR2026" value="<?= htmlspecialchars($formValues['attendance_code'] ?? '') ?>" style="text-transform:uppercase;">
                 <?php if (isset($fieldErrors['attendance_code'])): ?><div class="error-message"><?= htmlspecialchars($fieldErrors['attendance_code']) ?></div><?php endif; ?>
-              <?php endif; ?>
-            </div>
-          </div>
-
-          <div class="field">
-            <div class="field-meta">
-              <span class="field-icon">IMG</span>
-              <div>
-                <label for="flyer">Flyer Acara</label>
-                <p class="helper">Ditampilkan agar pengundang bisa unduh &amp; kirim ke calon peserta</p>
-              </div>
-            </div>
-            <div class="flyer-field">
-              <?php if (!$eventFlyerReady): ?>
-                <p class="helper">Fitur flyer belum aktif di server ini. Jalankan migrasi <code>migrate_v11_event_flyer.sql</code> dan pastikan config/fungsi flyer sudah ter-deploy. Detail acara tetap bisa disimpan.</p>
-              <?php elseif (!empty($event['flyer_path'])): ?>
-                <div class="flyer-current">
-                  <img src="<?= htmlspecialchars($event['flyer_path']) ?>" alt="Flyer acara saat ini">
-                  <label class="flyer-remove">
-                    <input type="checkbox" name="remove_flyer" value="1"> Hapus flyer saat ini
-                  </label>
-                </div>
-              <?php else: ?>
-                <p class="helper">Belum ada flyer. Upload gambar flyer/poster acara.</p>
-              <?php endif; ?>
-              <?php if ($eventFlyerReady): ?>
-                <input type="file" id="flyer" name="flyer" accept=".png,.jpg,.jpeg,.webp">
-                <p class="helper">PNG, JPG, JPEG, WEBP. Maksimal <?= (int)(MAX_EVENT_FLYER_SIZE / 1024 / 1024) ?> MB.</p>
               <?php endif; ?>
             </div>
           </div>

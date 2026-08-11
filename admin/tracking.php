@@ -27,6 +27,18 @@ if (!$eventNotFound && isset($_GET['saved'])) {
     $noticeType = 'success';
 }
 
+$activeTrackingEvents = [];
+if ($eventNotFound) {
+    $stmt = $pdo->prepare('
+        SELECT slug, name, event_day, event_time, event_location, event_date, flyer_path, meta_pixel_id, ga_measurement_id, created_at
+        FROM events
+        WHERE brand_id = ? AND status = "active"
+        ORDER BY (slug = ?) DESC, (event_date IS NULL) ASC, event_date ASC, created_at DESC
+    ');
+    $stmt->execute([(int)$brand['id'], (string)($brand['default_event_slug'] ?? '')]);
+    $activeTrackingEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
 $formValues = $event ?: [
     'meta_pixel_id' => '',
     'ga_measurement_id' => '',
@@ -74,7 +86,7 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$pageTitle = $eventNotFound ? 'Event Tidak Ditemukan' : $event['name'];
+$pageTitle = $eventNotFound ? 'Pilih Event Tracking' : $event['name'];
 $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.png';
 $eventUrl = $eventNotFound ? '#' : ($eventSlug === $brand['default_event_slug'] ? '/' : EVENTS_URL_BASE . '/' . rawurlencode($eventSlug) . '/');
 $metaActive = trim((string)($formValues['meta_pixel_id'] ?? '')) !== '';
@@ -621,6 +633,112 @@ function tracking_status_badge(bool $active): string
     line-height: 1.7;
     margin-bottom: 22px;
   }
+  .tracking-picker-card {
+    width: min(100%, 980px);
+    text-align: left;
+  }
+  .tracking-picker-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+  .tracking-picker-head .icon-badge {
+    margin: 0;
+  }
+  .tracking-picker-head h1 {
+    margin-bottom: 8px;
+  }
+  .tracking-picker-head p {
+    margin-bottom: 0;
+  }
+  .tracking-picker-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 20px;
+  }
+  .tracking-picker-item {
+    display: grid;
+    gap: 12px;
+    min-height: 170px;
+    color: inherit;
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 18px;
+    background: rgba(8,8,7,0.30);
+    padding: 18px;
+    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+  }
+  .tracking-picker-item:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--gold-soft) 38%, transparent);
+    background: color-mix(in srgb, var(--gold) 6%, transparent);
+    box-shadow: 0 16px 42px rgba(0,0,0,0.22);
+  }
+  .tracking-picker-thumb {
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 14px;
+    background: rgba(0,0,0,0.22);
+  }
+  .tracking-picker-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .tracking-picker-thumb.is-empty {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 800;
+  }
+  .tracking-picker-title {
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1.35;
+  }
+  .tracking-picker-meta {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .tracking-picker-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tracking-picker-badge {
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 850;
+    padding: 6px 9px;
+  }
+  .tracking-picker-badge.good { color: #BBF7D0; background: rgba(34,197,94,0.14); border: 1px solid rgba(34,197,94,0.24); }
+  .tracking-picker-badge.warn { color: #FDE68A; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.24); }
+  .tracking-picker-action {
+    color: var(--gold-soft);
+    font-size: 13px;
+    font-weight: 900;
+    margin-top: auto;
+  }
+  .tracking-picker-empty {
+    color: var(--muted);
+    border: 1px dashed color-mix(in srgb, var(--gold-soft) 34%, transparent);
+    border-radius: 18px;
+    background: rgba(8,8,7,0.24);
+    line-height: 1.65;
+    margin-top: 20px;
+    padding: 20px;
+    text-align: center;
+  }
   @media (max-width: 1040px) {
     .hero, .main-grid {
       grid-template-columns: 1fr;
@@ -674,6 +792,8 @@ function tracking_status_badge(bool $active): string
       padding-left: 18px;
       padding-right: 18px;
     }
+    .tracking-picker-list { grid-template-columns: 1fr; }
+    .tracking-picker-head { flex-direction: column; }
     .tracking-toggle, .status-row {
       align-items: flex-start;
       flex-direction: column;
@@ -700,11 +820,49 @@ function tracking_status_badge(bool $active): string
 
   <?php if ($eventNotFound): ?>
     <section class="empty-state">
-      <div class="empty-card">
-        <span class="icon-badge">EV</span>
-        <h1>Event Tidak Ditemukan</h1>
-        <p>Event yang Anda cari tidak tersedia atau sudah dihapus. Silakan kembali ke daftar event untuk memilih acara yang aktif.</p>
-        <a class="btn btn-primary" href="events.php">Kembali ke Kelola Event</a>
+      <div class="empty-card tracking-picker-card">
+        <div class="tracking-picker-head">
+          <span class="icon-badge">TRK</span>
+          <div>
+            <h1>Pilih Event untuk Tracking</h1>
+            <p><?= $eventSlug !== '' ? 'Event yang Anda cari tidak tersedia atau bukan milik brand ini. Pilih event aktif di bawah untuk mengatur tracking.' : 'Pilih event aktif yang ingin dihubungkan ke Meta Pixel atau Google Analytics.' ?></p>
+          </div>
+        </div>
+
+        <?php if (!empty($activeTrackingEvents)): ?>
+          <div class="tracking-picker-list">
+            <?php foreach ($activeTrackingEvents as $activeEvent): ?>
+              <?php
+                $hasMeta = trim((string)($activeEvent['meta_pixel_id'] ?? '')) !== '';
+                $hasGa = trim((string)($activeEvent['ga_measurement_id'] ?? '')) !== '';
+              ?>
+              <a class="tracking-picker-item" href="tracking.php?event=<?= urlencode($activeEvent['slug']) ?>">
+                <?php if (!empty($activeEvent['flyer_path'])): ?>
+                  <div class="tracking-picker-thumb"><img src="<?= htmlspecialchars($activeEvent['flyer_path']) ?>" alt="Flyer <?= htmlspecialchars($activeEvent['name']) ?>"></div>
+                <?php else: ?>
+                  <div class="tracking-picker-thumb is-empty">Flyer belum tersedia</div>
+                <?php endif; ?>
+                <div class="tracking-picker-title"><?= htmlspecialchars($activeEvent['name']) ?></div>
+                <div class="tracking-picker-badges">
+                  <span class="tracking-picker-badge <?= $hasMeta ? 'good' : 'warn' ?>">Meta <?= $hasMeta ? 'aktif' : 'belum' ?></span>
+                  <span class="tracking-picker-badge <?= $hasGa ? 'good' : 'warn' ?>">GA4 <?= $hasGa ? 'aktif' : 'belum' ?></span>
+                </div>
+                <div class="tracking-picker-meta">
+                  <span><strong>Slug:</strong> <?= htmlspecialchars($activeEvent['slug']) ?></span>
+                  <span><strong>Jadwal:</strong> <?= htmlspecialchars(trim((string)($activeEvent['event_day'] ?? '')) ?: '-') ?><?= !empty($activeEvent['event_time']) ? ' · ' . htmlspecialchars($activeEvent['event_time']) : '' ?></span>
+                  <span><strong>Lokasi:</strong> <?= htmlspecialchars(trim((string)($activeEvent['event_location'] ?? '')) ?: '-') ?></span>
+                </div>
+                <div class="tracking-picker-action">Atur Tracking</div>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <div class="tracking-picker-empty">Belum ada event aktif untuk brand ini. Upload ZIP event baru atau aktifkan kembali event dari halaman Kelola Event.</div>
+        <?php endif; ?>
+
+        <div style="margin-top:22px;">
+          <a class="btn btn-secondary" href="events.php">Kembali ke Kelola Event</a>
+        </div>
       </div>
     </section>
   <?php else: ?>

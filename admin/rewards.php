@@ -26,6 +26,103 @@ if (!$eventNotFound && isset($_GET['saved'])) {
     $noticeType = 'success';
 }
 
+$eventsWithWinnersForRewards = [];
+$winnerTableReady = false;
+if ($eventNotFound) {
+    try {
+        $tableStmt = $pdo->query("SHOW TABLES LIKE 'lucky_draw_winners'");
+        $winnerTableReady = (bool)$tableStmt->fetch(PDO::FETCH_NUM);
+    } catch (Throwable $e) {
+        $winnerTableReady = false;
+    }
+
+    $stmt = $pdo->prepare('
+        SELECT id, slug, name, status, event_day, event_time, event_location, event_date, flyer_path, created_at
+        FROM events
+        WHERE brand_id = ?
+        ORDER BY (slug = ?) DESC, (status = "active") DESC, (event_date IS NULL) ASC, event_date ASC, created_at DESC
+    ');
+    $stmt->execute([(int)$brand['id'], (string)$brand['default_event_slug']]);
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $row['invite_winners'] = [];
+        $row['lucky_winners'] = [];
+        $eventsWithWinnersForRewards[(int)$row['id']] = $row;
+    }
+
+    if (!empty($eventsWithWinnersForRewards)) {
+        $rewardTextByEventRank = [];
+        $stmt = $pdo->prepare('
+            SELECT er.event_slug, er.rank, er.reward_text
+            FROM event_rewards er
+            JOIN events e ON e.slug = er.event_slug
+            WHERE e.brand_id = ?
+            ORDER BY er.event_slug ASC, er.rank ASC
+        ');
+        $stmt->execute([(int)$brand['id']]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $rewardRow) {
+            $rewardTextByEventRank[(string)$rewardRow['event_slug']][(int)$rewardRow['rank']] = $rewardRow['reward_text'];
+        }
+
+        $eventIdBySlug = [];
+        foreach ($eventsWithWinnersForRewards as $eventId => $rewardEvent) {
+            $eventIdBySlug[(string)$rewardEvent['slug']] = (int)$eventId;
+        }
+
+        $stmt = $pdo->prepare('
+            SELECT r.event_slug, r.name, r.whatsapp, r.ref_code, COUNT(fl.id) AS total
+            FROM referrers r
+            LEFT JOIN (
+                SELECT l1.id, l1.event_slug, l1.ref_code
+                FROM leads l1
+                INNER JOIN (
+                    SELECT event_slug, whatsapp, MIN(id) AS first_id
+                    FROM leads
+                    WHERE brand_id = ? AND whatsapp IS NOT NULL AND whatsapp <> ""
+                    GROUP BY event_slug, whatsapp
+                ) first_lead ON first_lead.first_id = l1.id
+            ) fl ON fl.event_slug = r.event_slug AND fl.ref_code = r.ref_code
+            WHERE r.brand_id = ?
+            GROUP BY r.id
+            HAVING total > 0
+            ORDER BY r.event_slug ASC, total DESC, r.created_at ASC
+        ');
+        $stmt->execute([(int)$brand['id'], (int)$brand['id']]);
+        $rankBySlug = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $inviteWinner) {
+            $slug = (string)$inviteWinner['event_slug'];
+            if (!isset($eventIdBySlug[$slug])) {
+                continue;
+            }
+            $rankBySlug[$slug] = ($rankBySlug[$slug] ?? 0) + 1;
+            if ($rankBySlug[$slug] > 10) {
+                continue;
+            }
+            $rank = $rankBySlug[$slug];
+            $inviteWinner['rank'] = $rank;
+            $inviteWinner['reward_text'] = $rewardTextByEventRank[$slug][$rank] ?? '';
+            $eventsWithWinnersForRewards[$eventIdBySlug[$slug]]['invite_winners'][] = $inviteWinner;
+        }
+    }
+
+    if ($winnerTableReady && !empty($eventsWithWinnersForRewards)) {
+        $stmt = $pdo->prepare('
+            SELECT ldw.event_id, l.name, l.email, l.whatsapp, ldw.prize_name, ldw.drawn_at
+            FROM lucky_draw_winners ldw
+            JOIN events e ON e.id = ldw.event_id
+            LEFT JOIN leads l ON l.id = ldw.registrant_id
+            WHERE e.brand_id = ? AND ldw.status = "confirmed"
+            ORDER BY ldw.drawn_at DESC, ldw.id DESC
+        ');
+        $stmt->execute([(int)$brand['id']]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $winner) {
+            $eventId = (int)$winner['event_id'];
+            if (isset($eventsWithWinnersForRewards[$eventId])) {
+                $eventsWithWinnersForRewards[$eventId]['lucky_winners'][] = $winner;
+            }
+        }
+    }
+}
+
 // ==================== HANDLE ACTIONS ====================
 if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
@@ -110,6 +207,12 @@ function reward_preview_class(int $rank): string
     if ($rank === 2) return 'silver';
     if ($rank === 3) return 'bronze';
     return 'default';
+}
+
+function reward_event_value(array $values, string $key, string $fallback = '-'): string
+{
+    $value = trim((string)($values[$key] ?? ''));
+    return $value !== '' ? $value : $fallback;
 }
 ?>
 <!DOCTYPE html>
@@ -724,6 +827,170 @@ function reward_preview_class(int $rank): string
     line-height: 1.7;
     margin-bottom: 22px;
   }
+  .winner-dashboard-card {
+    width: min(100%, 1080px);
+    text-align: left;
+  }
+  .winner-dashboard-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+  .winner-dashboard-head .icon-badge {
+    margin: 0;
+  }
+  .winner-dashboard-head h1 {
+    margin-bottom: 8px;
+  }
+  .winner-dashboard-head p {
+    margin-bottom: 0;
+  }
+  .winner-event-list {
+    display: grid;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .winner-event-card {
+    display: grid;
+    grid-template-columns: minmax(150px, 200px) minmax(0, 1fr);
+    align-items: stretch;
+    gap: 14px;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 20px;
+    background: rgba(8,8,7,0.30);
+    padding: 14px;
+  }
+  .winner-event-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 0;
+  }
+  .winner-event-thumb {
+    grid-row: 1 / span 2;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    min-height: 188px;
+    max-height: 238px;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 14px;
+    background: rgba(0,0,0,0.22);
+  }
+  .winner-event-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .winner-event-thumb.is-empty {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 800;
+  }
+  .winner-event-title {
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 1000;
+    line-height: 1.35;
+    margin-bottom: 8px;
+  }
+  .winner-event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .winner-event-meta span {
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.025);
+    padding: 6px 9px;
+  }
+  .reward-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  .winner-category-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .winner-category {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    background: rgba(255,255,255,0.018);
+    padding: 12px;
+  }
+  .winner-category-title {
+    color: var(--gold-soft);
+    font-size: 13px;
+    font-weight: 1000;
+    letter-spacing: .02em;
+  }
+  .winner-list-mini {
+    display: grid;
+    gap: 8px;
+    max-height: 104px;
+    overflow: auto;
+    padding-right: 2px;
+  }
+  .winner-mini-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid color-mix(in srgb, var(--gold) 20%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--gold) 7%, rgba(255,255,255,0.02));
+    padding: 9px 11px;
+  }
+  .winner-name {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.35;
+  }
+  .winner-prize {
+    color: var(--gold-soft);
+    font-size: 12.5px;
+    font-weight: 800;
+    margin-top: 3px;
+  }
+  .winner-date {
+    color: var(--muted);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .winner-empty {
+    color: var(--muted);
+    border: 1px dashed color-mix(in srgb, var(--gold-soft) 30%, transparent);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.018);
+    line-height: 1.6;
+    padding: 14px;
+  }
+  .winner-dashboard-empty {
+    color: var(--muted);
+    border: 1px dashed color-mix(in srgb, var(--gold-soft) 34%, transparent);
+    border-radius: 18px;
+    background: rgba(8,8,7,0.24);
+    line-height: 1.65;
+    margin-top: 20px;
+    padding: 20px;
+    text-align: center;
+  }
   @media (max-width: 1060px) {
     .hero, .main-grid, .upload-layout {
       grid-template-columns: 1fr;
@@ -795,6 +1062,31 @@ function reward_preview_class(int $rank): string
     .preview-reward {
       grid-template-columns: 56px minmax(0, 1fr);
     }
+    .winner-event-card {
+      grid-template-columns: 1fr;
+      padding: 16px;
+    }
+    .winner-event-thumb {
+      grid-row: auto;
+      height: auto;
+      min-height: 0;
+      max-height: none;
+      aspect-ratio: 16 / 9;
+    }
+    .winner-dashboard-head, .winner-event-top, .winner-mini-row {
+      align-items: stretch;
+      flex-direction: column;
+      grid-template-columns: 1fr;
+    }
+    .reward-action-row {
+      justify-content: stretch;
+    }
+    .winner-category-grid {
+      grid-template-columns: 1fr;
+    }
+    .winner-date {
+      white-space: normal;
+    }
   }
 </style>
 </head>
@@ -817,11 +1109,91 @@ function reward_preview_class(int $rank): string
 
   <?php if ($eventNotFound): ?>
     <section class="empty-state">
-      <div class="empty-card">
-        <span class="icon-badge">EV</span>
-        <h1>Event Tidak Ditemukan</h1>
-        <p>Event yang Anda cari tidak tersedia atau sudah dihapus. Silakan kembali ke daftar event untuk memilih acara yang aktif.</p>
-        <a class="btn btn-primary" href="events.php">Kembali ke Kelola Event</a>
+      <div class="empty-card winner-dashboard-card">
+        <div class="winner-dashboard-head">
+          <span class="icon-badge">WIN</span>
+          <div>
+            <h1>Pemenang Hadiah per Event</h1>
+            <p><?= $eventSlug !== '' ? 'Event yang Anda cari tidak tersedia atau bukan milik brand ini. Berikut daftar event beserta dua kategori pemenang hadiah.' : 'Lihat dua kategori pemenang: pengundang terbanyak dan reward kehadiran/lucky draw untuk masing-masing event.' ?></p>
+          </div>
+        </div>
+
+        <?php if (!empty($eventsWithWinnersForRewards)): ?>
+          <div class="winner-event-list">
+            <?php foreach ($eventsWithWinnersForRewards as $rewardEvent): ?>
+              <article class="winner-event-card">
+                <?php if (!empty($rewardEvent['flyer_path'])): ?>
+                  <div class="winner-event-thumb"><img src="<?= htmlspecialchars($rewardEvent['flyer_path']) ?>" alt="Flyer <?= htmlspecialchars($rewardEvent['name']) ?>"></div>
+                <?php else: ?>
+                  <div class="winner-event-thumb is-empty">Flyer belum tersedia</div>
+                <?php endif; ?>
+                <div class="winner-event-top">
+                  <div>
+                    <div class="winner-event-title"><?= htmlspecialchars($rewardEvent['name']) ?></div>
+                    <div class="winner-event-meta">
+                      <span><?= htmlspecialchars($rewardEvent['slug']) ?></span>
+                      <span><?= ($rewardEvent['status'] ?? '') === 'active' ? 'Aktif' : 'Nonaktif' ?></span>
+                      <span><?= htmlspecialchars(reward_event_value($rewardEvent, 'event_day')) ?><?= !empty($rewardEvent['event_time']) ? ' · ' . htmlspecialchars($rewardEvent['event_time']) : '' ?></span>
+                      <span><?= htmlspecialchars(reward_event_value($rewardEvent, 'event_location')) ?></span>
+                    </div>
+                  </div>
+                  <div class="reward-action-row">
+                    <a class="btn btn-primary" href="rewards.php?event=<?= urlencode($rewardEvent['slug']) ?>">Atur Reward Pengundang</a>
+                    <a class="btn btn-secondary" href="lucky-draw-control.php?event=<?= urlencode($rewardEvent['slug']) ?>">Atur Lucky Draw</a>
+                  </div>
+                </div>
+
+                <div class="winner-category-grid">
+                  <section class="winner-category">
+                    <div class="winner-category-title">Pemenang Pengundang Terbanyak</div>
+                    <?php if (!empty($rewardEvent['invite_winners'])): ?>
+                      <div class="winner-list-mini">
+                        <?php foreach ($rewardEvent['invite_winners'] as $winner): ?>
+                          <div class="winner-mini-row">
+                            <div>
+                              <div class="winner-name">#<?= (int)$winner['rank'] ?> · <?= htmlspecialchars($winner['name'] ?: 'Nama tidak tersedia') ?></div>
+                              <div class="winner-prize"><?= htmlspecialchars($winner['reward_text'] ?: 'Reward pengundang') ?> · <?= (int)$winner['total'] ?> peserta unik</div>
+                            </div>
+                            <div class="winner-date"><?= htmlspecialchars($winner['ref_code'] ?: '-') ?></div>
+                          </div>
+                        <?php endforeach; ?>
+                      </div>
+                    <?php else: ?>
+                      <div class="winner-empty">Belum ada pemenang pengundang. Leaderboard akan muncul setelah ada pendaftar dari link referral.</div>
+                    <?php endif; ?>
+                  </section>
+
+                  <section class="winner-category">
+                    <div class="winner-category-title">Pemenang Reward Kehadiran / Lucky Draw</div>
+                    <?php if (!empty($rewardEvent['lucky_winners'])): ?>
+                      <div class="winner-list-mini">
+                        <?php foreach ($rewardEvent['lucky_winners'] as $winner): ?>
+                          <div class="winner-mini-row">
+                            <div>
+                              <div class="winner-name"><?= htmlspecialchars($winner['name'] ?: 'Nama tidak tersedia') ?></div>
+                              <div class="winner-prize"><?= htmlspecialchars($winner['prize_name'] ?: 'Hadiah undian') ?></div>
+                            </div>
+                            <div class="winner-date"><?= !empty($winner['drawn_at']) ? htmlspecialchars(date('d M Y, H:i', strtotime($winner['drawn_at']))) : '-' ?></div>
+                          </div>
+                        <?php endforeach; ?>
+                      </div>
+                    <?php else: ?>
+                      <div class="winner-empty">Belum ada pemenang undian kehadiran yang dikunci untuk event ini.</div>
+                    <?php endif; ?>
+                  </section>
+                </div>
+              </article>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <div class="winner-dashboard-empty">
+            Belum ada event untuk brand ini. Upload ZIP event baru dari halaman Kelola Event.
+          </div>
+        <?php endif; ?>
+
+        <div style="margin-top:22px;">
+          <a class="btn btn-secondary" href="events.php">Kembali ke Kelola Event</a>
+        </div>
       </div>
     </section>
   <?php else: ?>
