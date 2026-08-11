@@ -48,15 +48,15 @@ try {
             COALESCE(NULLIF(l.name, ''), 'Peserta Event') AS name,
             COALESCE(NULLIF(l.kota, ''), 'Indonesia') AS kota
         FROM event_attendance ea
-        INNER JOIN events e ON e.id = ea.event_id
+        LEFT JOIN events e ON e.id = ea.event_id
         LEFT JOIN leads l ON l.id = ea.registrant_id
-        WHERE e.brand_id = ?
+        WHERE (e.brand_id = ? OR l.brand_id = ?)
             AND ea.feedback_notes IS NOT NULL
             AND TRIM(ea.feedback_notes) <> ''
         ORDER BY COALESCE(ea.check_in_time, ea.updated_at, ea.created_at) DESC, ea.id DESC
         LIMIT 100
     ");
-    $stmt->execute([(int)$brand['id']]);
+    $stmt->execute([(int)$brand['id'], (int)$brand['id']]);
 
     $testimonials = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -81,4 +81,5 @@ try {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Terjadi kesalahan server.']);
 }
+
 

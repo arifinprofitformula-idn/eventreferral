@@ -28,6 +28,7 @@
           return '<button class="testimonial-dot' + (index === 0 ? ' is-active' : '') + '" type="button" tabindex="-1"></button>';
         }).join('');
 
+        section.hidden = false;
         section.classList.add('is-visible');
 
         var slides = viewport.querySelectorAll('.testimonial-slide');
@@ -52,3 +53,4 @@
     initEventTestimonials();
   }
 })();
+
