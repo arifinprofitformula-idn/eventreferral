@@ -51,6 +51,24 @@
 
   var API_BASE = '/api/';
 
+  function loadEventTestimonialsAssets() {
+    if (!document.querySelector('link[data-event-testimonials-css]')) {
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = '/assets/event-testimonials.css';
+      link.setAttribute('data-event-testimonials-css', '1');
+      document.head.appendChild(link);
+    }
+
+    if (!document.querySelector('script[data-event-testimonials-js]')) {
+      var script = document.createElement('script');
+      script.src = '/assets/event-testimonials.js';
+      script.defer = true;
+      script.setAttribute('data-event-testimonials-js', '1');
+      document.body.appendChild(script);
+    }
+  }
+
   function getEventSlug() {
     var parts = window.location.pathname.split('/').filter(Boolean);
     var idx = parts.indexOf('e');
@@ -325,6 +343,8 @@
   }
 
   function init() {
+    loadEventTestimonialsAssets();
+
     fetch(API_BASE + 'event_info.php?event=' + encodeURIComponent(eventSlug) + '&ref=' + encodeURIComponent(refCode))
       .then(function (res) { return res.json(); })
       .then(function (data) {

@@ -1,8 +1,36 @@
 (function () {
-  function initEventTestimonials() {
+  function ensureTestimonialsSection() {
     var section = document.querySelector('[data-event-testimonials-section]');
-    var viewport = document.querySelector('[data-event-testimonials]');
-    var dotsWrap = document.querySelector('[data-event-testimonial-dots]');
+    if (section) return section;
+
+    section = document.createElement('section');
+    section.className = 'event-testimonials';
+    section.setAttribute('data-event-testimonials-section', '');
+    section.hidden = true;
+    section.innerHTML = '<div class="wrap">' +
+      '<div class="testimonial-shell">' +
+        '<div class="testimonial-heading">' +
+          '<span class="tag">Apa kata mereka?</span>' +
+          '<h2>Testimoni Peserta Event</h2>' +
+        '</div>' +
+        '<div class="testimonial-viewport" data-event-testimonials></div>' +
+        '<div class="testimonial-dots" data-event-testimonial-dots aria-hidden="true"></div>' +
+      '</div>' +
+    '</div>';
+
+    var footer = document.querySelector('footer');
+    if (footer && footer.parentNode) {
+      footer.parentNode.insertBefore(section, footer);
+    } else {
+      document.body.appendChild(section);
+    }
+    return section;
+  }
+
+  function initEventTestimonials() {
+    var section = ensureTestimonialsSection();
+    var viewport = section.querySelector('[data-event-testimonials]');
+    var dotsWrap = section.querySelector('[data-event-testimonial-dots]');
     if (!section || !viewport || !dotsWrap || !window.fetch) return;
 
     function escapeHtml(value) {
