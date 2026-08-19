@@ -33,6 +33,7 @@ $formValues = $event ?: [
     'event_location' => '',
     'event_speaker' => '',
     'event_capacity' => '',
+    'whatsapp_default' => '',
     'event_date' => '',
     'attendance_code' => '',
 ];
@@ -120,6 +121,8 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $postedEventTime = trim($_POST['event_time_input'] ?? ($_POST['event_time'] ?? ''));
     $derivedEventDay = event_settings_format_event_day($postedEventDate);
     $derivedEventTime = event_settings_format_event_time($postedEventTime);
+    $postedWhatsappDefault = trim($_POST['whatsapp_default'] ?? '');
+    $normalizedWhatsappDefault = $postedWhatsappDefault !== '' ? normalize_whatsapp(clean($postedWhatsappDefault)) : '';
 
     $_POST['event_day'] = $derivedEventDay;
     $_POST['event_time'] = $derivedEventTime;
@@ -130,6 +133,7 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
         'event_location' => trim($_POST['event_location'] ?? ''),
         'event_speaker' => trim($_POST['event_speaker'] ?? ''),
         'event_capacity' => trim($_POST['event_capacity'] ?? ''),
+        'whatsapp_default' => $normalizedWhatsappDefault,
         'event_date' => $postedEventDate,
         'attendance_code' => strtoupper(trim($_POST['attendance_code'] ?? '')),
     ]);
@@ -155,6 +159,9 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!ctype_digit($formValues['event_capacity']) || (int)$formValues['event_capacity'] <= 0) {
             $fieldErrors['event_capacity'] = 'Kapasitas harus berupa angka positif.';
         }
+        if ($formValues['whatsapp_default'] !== '' && (strlen($formValues['whatsapp_default']) < 10 || strlen($formValues['whatsapp_default']) > 15)) {
+            $fieldErrors['whatsapp_default'] = 'Nomor WhatsApp default harus 10-15 digit setelah dinormalisasi.';
+        }
         if ($formValues['event_date'] !== '') {
             $parsedDate = DateTime::createFromFormat('Y-m-d', $formValues['event_date']);
             if (!$parsedDate || $parsedDate->format('Y-m-d') !== $formValues['event_date']) {
@@ -171,6 +178,7 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $_POST['event_capacity'] = (string)(int)$formValues['event_capacity'];
+                $_POST['whatsapp_default'] = $formValues['whatsapp_default'];
                 $updated = update_event_settings($eventSlug, $_POST);
                 $event = array_merge($event, $updated);
 
@@ -570,6 +578,7 @@ function event_field_class(array $errors, string $key): string
     outline: none;
   }
   .field input[type="text"],
+  .field input[type="tel"],
   .field input[type="number"],
   .field input[type="date"],
   .field input[type="time"] {
@@ -1031,6 +1040,20 @@ function event_field_class(array $errors, string $key): string
               <?php if (isset($fieldErrors['event_capacity'])): ?><div class="error-message"><?= htmlspecialchars($fieldErrors['event_capacity']) ?></div><?php endif; ?>
             </div>
           </div>
+          <div class="field">
+            <div class="field-meta">
+              <span class="field-icon">WA</span>
+              <div>
+                <label for="whatsapp_default">WhatsApp Default</label>
+                <p class="helper">Nomor tujuan jika pengunjung mendaftar tanpa link pengundang. Gunakan format 628xxxxxxxxxx.</p>
+              </div>
+            </div>
+            <div>
+              <input class="<?= event_field_class($fieldErrors, 'whatsapp_default') ?>" type="tel" id="whatsapp_default" name="whatsapp_default" inputmode="tel" autocomplete="tel" placeholder="6281234567890" value="<?= htmlspecialchars($formValues['whatsapp_default'] ?? '') ?>">
+              <?php if (isset($fieldErrors['whatsapp_default'])): ?><div class="error-message"><?= htmlspecialchars($fieldErrors['whatsapp_default']) ?></div><?php endif; ?>
+            </div>
+          </div>
+
 
           <div class="field">
             <div class="field-meta">
@@ -1093,6 +1116,10 @@ function event_field_class(array $errors, string $key): string
             <div class="preview-item">
               <span class="field-icon">CAP</span>
               <div><div class="preview-label">Kapasitas</div><div class="preview-value"><?= htmlspecialchars(event_setting_value($formValues, 'event_capacity')) ?> peserta</div></div>
+            </div>
+            <div class="preview-item">
+              <span class="field-icon">WA</span>
+              <div><div class="preview-label">WhatsApp Default</div><div class="preview-value"><?= htmlspecialchars(event_setting_value($formValues, 'whatsapp_default', 'Belum diatur')) ?></div></div>
             </div>
           </div>
         </section>

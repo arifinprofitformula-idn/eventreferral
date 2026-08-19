@@ -418,7 +418,7 @@ function get_event_by_slug($slug) {
     return $row ?: null;
 }
 
-/** Perbarui detail acara (hari, waktu, lokasi, pembicara, kapasitas, tanggal) milik sebuah event. */
+/** Perbarui detail acara (hari, waktu, lokasi, pembicara, kapasitas, tanggal, WhatsApp default) milik sebuah event. */
 function update_event_settings($slug, array $data) {
     $settings = [
         'event_day' => trim($data['event_day'] ?? ''),
@@ -426,15 +426,24 @@ function update_event_settings($slug, array $data) {
         'event_location' => trim($data['event_location'] ?? ''),
         'event_speaker' => trim($data['event_speaker'] ?? ''),
         'event_capacity' => trim($data['event_capacity'] ?? ''),
+        'whatsapp_default' => trim($data['whatsapp_default'] ?? ''),
     ];
 
-    foreach ($settings as $value) {
+    foreach (['event_day', 'event_time', 'event_location', 'event_speaker', 'event_capacity'] as $key) {
+        $value = $settings[$key];
         if ($value === '') {
             throw new InvalidArgumentException('Semua detail acara wajib diisi.');
         }
     }
 
-    // event_date bersifat OPSIONAL — tidak mengubah validasi field lama di atas.
+    if ($settings['whatsapp_default'] !== '') {
+        $settings['whatsapp_default'] = normalize_whatsapp($settings['whatsapp_default']);
+        if (strlen($settings['whatsapp_default']) < 10 || strlen($settings['whatsapp_default']) > 15) {
+            throw new InvalidArgumentException('Nomor WhatsApp default tidak valid.');
+        }
+    }
+
+    // event_date bersifat OPSIONAL - tidak mengubah validasi field lama di atas.
     // Dipakai khusus untuk sorting kronologis di /kalender/index.php.
     $eventDateRaw = trim($data['event_date'] ?? '');
     $eventDate = null;
@@ -449,7 +458,7 @@ function update_event_settings($slug, array $data) {
     $pdo = get_db();
     $stmt = $pdo->prepare('
         UPDATE events
-        SET event_day = ?, event_time = ?, event_location = ?, event_speaker = ?, event_capacity = ?, event_date = ?
+        SET event_day = ?, event_time = ?, event_location = ?, event_speaker = ?, event_capacity = ?, event_date = ?, whatsapp_default = ?
         WHERE slug = ?
     ');
     $stmt->execute([
@@ -459,6 +468,7 @@ function update_event_settings($slug, array $data) {
         $settings['event_speaker'],
         $settings['event_capacity'],
         $eventDate,
+        $settings['whatsapp_default'] !== '' ? $settings['whatsapp_default'] : null,
         $slug,
     ]);
 
