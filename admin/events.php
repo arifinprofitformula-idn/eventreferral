@@ -183,6 +183,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($_SESSION['csrf_token'
             $noticeType = 'error';
         }
     }
+
+    // ---- Hapus event secara permanen ----
+    if (isset($_POST['delete_event']) && isset($_POST['slug'])) {
+        $slug = clean($_POST['slug']);
+        $ev = get_event_by_slug($slug);
+        if (!$ev || (int)$ev['brand_id'] !== $brandId) {
+            $notice = 'Event tidak ditemukan atau bukan milik brand ini.';
+            $noticeType = 'error';
+        } elseif ($slug === $defaultEventSlug) {
+            $notice = 'Event utama (default) tidak bisa dihapus. Jadikan event lain sebagai utama terlebih dahulu.';
+            $noticeType = 'error';
+        } else {
+            try {
+                $pdo->beginTransaction();
+
+                $pdo->prepare('DELETE FROM leads WHERE event_slug = ? AND brand_id = ?')
+                    ->execute([$slug, $brandId]);
+                $pdo->prepare('DELETE FROM referrers WHERE event_slug = ? AND brand_id = ?')
+                    ->execute([$slug, $brandId]);
+                $pdo->prepare('DELETE FROM events WHERE slug = ? AND brand_id = ?')
+                    ->execute([$slug, $brandId]);
+
+                $pdo->commit();
+
+                $eventDir = EVENTS_DIR . '/' . $slug;
+                if (is_dir($eventDir)) {
+                    $files = new RecursiveIteratorIterator(
+                        new RecursiveDirectoryIterator($eventDir, FilesystemIterator::SKIP_DOTS),
+                        RecursiveIteratorIterator::CHILD_FIRST
+                    );
+                    foreach ($files as $fileinfo) {
+                        $path = $fileinfo->getRealPath();
+                        if ($fileinfo->isDir()) {
+                            @rmdir($path);
+                        } else {
+                            @unlink($path);
+                        }
+                    }
+                    @rmdir($eventDir);
+                }
+
+                $notice = 'Event "' . htmlspecialchars($ev['name']) . '" berhasil dihapus permanen.';
+                $noticeType = 'success';
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $notice = 'Gagal menghapus event. Silakan coba lagi.';
+                $noticeType = 'error';
+                error_log('[Events] delete failed for ' . $slug . ': ' . $e->getMessage());
+            }
+        }
+    }
 }
 
 // ==================== DATA UNTUK TAMPILAN ====================
@@ -1596,7 +1649,14 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
 
   if (deleteModalConfirm) {
     deleteModalConfirm.addEventListener('click', () => {
-      if (pendingDeleteForm) pendingDeleteForm.submit();
+      if (!pendingDeleteForm) return;
+      const form = pendingDeleteForm;
+      closeDeleteModal();
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
     });
   }
 
