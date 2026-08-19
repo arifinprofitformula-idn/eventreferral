@@ -433,9 +433,142 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     border-color: rgba(239,68,68,0.55);
     box-shadow: 0 12px 26px rgba(239,68,68,0.22);
   }
-  .btn-danger:hover, .event-action.danger:hover {
+  .event-action.danger:hover {
     border-color: rgba(248,113,113,0.72);
     box-shadow: 0 14px 30px rgba(239,68,68,0.30);
+  }
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.68);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+    animation: fadeIn 200ms ease;
+  }
+  .modal-backdrop.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-content {
+    background: linear-gradient(180deg, rgba(32,32,30,0.96), rgba(23,23,22,0.92));
+    border: 1px solid rgba(239,68,68,0.42);
+    border-radius: 24px;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.60);
+    max-width: 480px;
+    width: 90vw;
+    padding: 36px;
+    animation: slideIn 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 9999;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: scale(0.92) translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  .modal-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    background: rgba(239,68,68,0.16);
+    border: 2px solid rgba(239,68,68,0.34);
+    border-radius: 16px;
+    color: #ef4444;
+    margin: 0 auto 20px;
+  }
+  .modal-icon svg {
+    width: 32px;
+    height: 32px;
+  }
+  .modal-title {
+    color: #fff8e7;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1.3;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .modal-subtitle {
+    color: #A8A29A;
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  .modal-list {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(239,68,68,0.20);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #fff8e7;
+  }
+  .modal-list li {
+    margin-bottom: 8px;
+    list-style: none;
+    padding-left: 24px;
+    position: relative;
+  }
+  .modal-list li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: #ef4444;
+    font-weight: 900;
+  }
+  .modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+  .modal-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    border-radius: 12px;
+    font: inherit;
+    font-weight: 900;
+    font-size: 14px;
+    padding: 12px 24px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 180ms ease;
+  }
+  .modal-btn-delete {
+    color: #fff;
+    background: linear-gradient(135deg, rgba(239,68,68,0.96), rgba(185,28,28,0.96));
+    border-color: rgba(239,68,68,0.55);
+  }
+  .modal-btn-delete:hover {
+    border-color: rgba(248,113,113,0.72);
+    box-shadow: 0 12px 24px rgba(239,68,68,0.28);
+    transform: translateY(-2px);
+  }
+  .modal-btn-cancel {
+    color: #A8A29A;
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.12);
+  }
+  .modal-btn-cancel:hover {
+    color: #fff8e7;
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.20);
+    transform: translateY(-2px);
   }
   .notice {
     border: 1px solid var(--border-soft);
@@ -1365,6 +1498,27 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
 
   <div class="footer">© <?= date('Y') ?> <?= htmlspecialchars($brand['name']) ?> — All rights reserved.</div>
 </main>
+
+<div id="deleteModal" class="modal-backdrop" aria-hidden="true">
+  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M10 11v6m4-6v6M4 7h16M9 7V4h6v3m-7 0 1 13h8l1-13" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="modal-title" id="deleteModalTitle">Hapus event secara permanen?</div>
+    <div class="modal-subtitle" id="deleteModalSubtitle">Tindakan ini akan menghapus landing page dan seluruh data terkait event.</div>
+    <ul class="modal-list" id="deleteModalList">
+      <li>Landing page event</li>
+      <li>Data pendaftar (leads)</li>
+      <li>Data pengundang (referrers)</li>
+      <li>Folder file event di server</li>
+    </ul>
+    <div class="modal-footer">
+      <button type="button" class="modal-btn modal-btn-cancel" id="deleteModalCancel">Batal</button>
+      <button type="button" class="modal-btn modal-btn-delete" id="deleteModalConfirm">OK, Hapus</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const zipInput = document.getElementById('eventZip');
   const fileName = document.getElementById('fileName');
@@ -1407,18 +1561,54 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     eventSearch.addEventListener('input', filterEvents);
   }
 
-  function deleteEventConfirm(button, eventName) {
-    const msg = '⚠️  HAPUS EVENT PERMANEN\n\n' +
-                'Event: ' + eventName + '\n\n' +
-                'Setelah dihapus, data berikut akan HILANG:\n' +
-                '  • Landing page event\n' +
-                '  • Data pendaftar (leads)\n' +
-                '  • Data pengundang (referrers)\n' +
-                '  • Folder file di server\n\n' +
-                '❌ Aksi ini TIDAK BISA DIBATALKAN\n\n' +
-                'Lanjutkan penghapusan?';
-    return confirm(msg);
+  const deleteModal = document.getElementById('deleteModal');
+  const deleteModalTitle = document.getElementById('deleteModalTitle');
+  const deleteModalSubtitle = document.getElementById('deleteModalSubtitle');
+  const deleteModalConfirm = document.getElementById('deleteModalConfirm');
+  const deleteModalCancel = document.getElementById('deleteModalCancel');
+  let pendingDeleteForm = null;
+
+  function closeDeleteModal() {
+    if (!deleteModal) return;
+    deleteModal.classList.remove('active');
+    deleteModal.setAttribute('aria-hidden', 'true');
+    pendingDeleteForm = null;
   }
+
+  function openDeleteModal(form, eventName) {
+    pendingDeleteForm = form;
+    if (deleteModalTitle) deleteModalTitle.textContent = 'Hapus event "' + eventName + '"?';
+    if (deleteModalSubtitle) deleteModalSubtitle.textContent = 'Event ini akan dihapus permanen bersama semua data terkaitnya.';
+    if (deleteModal) {
+      deleteModal.classList.add('active');
+      deleteModal.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  function deleteEventConfirm(button, eventName) {
+    openDeleteModal(button.closest('form'), eventName);
+    return false;
+  }
+
+  if (deleteModalCancel) {
+    deleteModalCancel.addEventListener('click', closeDeleteModal);
+  }
+
+  if (deleteModalConfirm) {
+    deleteModalConfirm.addEventListener('click', () => {
+      if (pendingDeleteForm) pendingDeleteForm.submit();
+    });
+  }
+
+  if (deleteModal) {
+    deleteModal.addEventListener('click', (event) => {
+      if (event.target === deleteModal) closeDeleteModal();
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeDeleteModal();
+  });
 </script>
 </body>
 </html>
