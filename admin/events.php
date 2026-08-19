@@ -1518,7 +1518,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                   <input type="hidden" name="set_default_event" value="1">
                   <input type="hidden" name="slug" value="<?= htmlspecialchars($ev['slug']) ?>">
-                  <button class="event-action warning" type="submit" onclick="return confirm('Jadikan event ini sebagai event utama di root domain?')">
+                  <button class="event-action warning" type="submit" onclick='return eventActionConfirm(this, "Jadikan event ini sebagai event utama?", "Event ini akan tampil sebagai halaman utama root domain brand.", "OK, Jadikan Utama")'>
                     Jadikan Utama
                   </button>
                 </form>
@@ -1528,7 +1528,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                   <input type="hidden" name="toggle_status" value="1">
                   <input type="hidden" name="slug" value="<?= htmlspecialchars($ev['slug']) ?>">
-                  <button class="event-action <?= $eventStatus === 'active' ? 'danger' : 'warning' ?>" type="submit" onclick="return confirm('Yakin ingin <?= $eventStatus === 'active' ? 'menonaktifkan' : 'mengaktifkan kembali' ?> event ini?')">
+                  <button class="event-action <?= $eventStatus === 'active' ? 'danger' : 'warning' ?>" type="submit" onclick='return eventActionConfirm(this, <?= json_encode($eventStatus === 'active' ? 'Nonaktifkan event ini?' : 'Aktifkan kembali event ini?') ?>, <?= json_encode($eventStatus === 'active' ? 'Event akan disembunyikan dari status aktif, tetapi data dan file event tetap aman.' : 'Event akan dikembalikan ke status aktif dan dapat digunakan kembali.') ?>, <?= json_encode($eventStatus === 'active' ? 'OK, Nonaktifkan' : 'OK, Aktifkan') ?>)'>
                     <?= $eventStatus === 'active' ? 'Nonaktifkan' : 'Aktifkan' ?>
                   </button>
                 </form>
@@ -1619,39 +1619,50 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
   const deleteModalSubtitle = document.getElementById('deleteModalSubtitle');
   const deleteModalConfirm = document.getElementById('deleteModalConfirm');
   const deleteModalCancel = document.getElementById('deleteModalCancel');
-  let pendingDeleteForm = null;
+  let pendingActionForm = null;
 
-  function closeDeleteModal() {
+  function closeActionModal() {
     if (!deleteModal) return;
     deleteModal.classList.remove('active');
     deleteModal.setAttribute('aria-hidden', 'true');
-    pendingDeleteForm = null;
+    pendingActionForm = null;
   }
 
-  function openDeleteModal(form, eventName) {
-    pendingDeleteForm = form;
-    if (deleteModalTitle) deleteModalTitle.textContent = 'Hapus event "' + eventName + '"?';
-    if (deleteModalSubtitle) deleteModalSubtitle.textContent = 'Event ini akan dihapus permanen bersama semua data terkaitnya.';
+  function openActionModal(form, title, subtitle, confirmText) {
+    pendingActionForm = form;
+    if (deleteModalTitle) deleteModalTitle.textContent = title;
+    if (deleteModalSubtitle) deleteModalSubtitle.textContent = subtitle;
+    if (deleteModalConfirm) deleteModalConfirm.textContent = confirmText || 'OK, Lanjutkan';
     if (deleteModal) {
       deleteModal.classList.add('active');
       deleteModal.setAttribute('aria-hidden', 'false');
     }
   }
 
+  function eventActionConfirm(button, title, subtitle, confirmText) {
+    openActionModal(button.closest('form'), title, subtitle, confirmText);
+    return false;
+  }
+
   function deleteEventConfirm(button, eventName) {
-    openDeleteModal(button.closest('form'), eventName);
+    openActionModal(
+      button.closest('form'),
+      'Hapus event "' + eventName + '"?',
+      'Event ini akan dihapus permanen bersama semua data terkaitnya.',
+      'OK, Hapus'
+    );
     return false;
   }
 
   if (deleteModalCancel) {
-    deleteModalCancel.addEventListener('click', closeDeleteModal);
+    deleteModalCancel.addEventListener('click', closeActionModal);
   }
 
   if (deleteModalConfirm) {
     deleteModalConfirm.addEventListener('click', () => {
-      if (!pendingDeleteForm) return;
-      const form = pendingDeleteForm;
-      closeDeleteModal();
+      if (!pendingActionForm) return;
+      const form = pendingActionForm;
+      closeActionModal();
       if (typeof form.requestSubmit === 'function') {
         form.requestSubmit();
       } else {
@@ -1662,12 +1673,12 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
 
   if (deleteModal) {
     deleteModal.addEventListener('click', (event) => {
-      if (event.target === deleteModal) closeDeleteModal();
+      if (event.target === deleteModal) closeActionModal();
     });
   }
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeDeleteModal();
+    if (event.key === 'Escape') closeActionModal();
   });
 </script>
 </body>
