@@ -1350,7 +1350,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                   <input type="hidden" name="delete_event" value="1">
                   <input type="hidden" name="slug" value="<?= htmlspecialchars($ev['slug']) ?>">
-                  <button class="event-action danger icon" type="submit" title="Hapus event permanen" onclick="return deleteEventConfirm(this, <?= json_encode($ev['name']) ?>)">
+                  <button class="event-action danger icon" type="submit" title="Hapus event permanen" onclick='return deleteEventConfirm(this, <?= json_encode($ev['name']) ?>)'>
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 11v6m4-6v6M4 7h16M9 7V4h6v3m-7 0 1 13h8l1-13" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                   </button>
                 </form>
