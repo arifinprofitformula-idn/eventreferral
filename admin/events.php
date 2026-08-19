@@ -427,10 +427,15 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     background: rgba(255,255,255,0.035);
     border-color: color-mix(in srgb, var(--gold) 22%, transparent);
   }
-  .btn-danger {
+  .btn-danger, .event-action.danger {
     color: #fff;
-    background: rgba(239,68,68,0.11);
-    border-color: rgba(239,68,68,0.28);
+    background: linear-gradient(135deg, rgba(239,68,68,0.96), rgba(185,28,28,0.96));
+    border-color: rgba(239,68,68,0.55);
+    box-shadow: 0 12px 26px rgba(239,68,68,0.22);
+  }
+  .btn-danger:hover, .event-action.danger:hover {
+    border-color: rgba(248,113,113,0.72);
+    box-shadow: 0 14px 30px rgba(239,68,68,0.30);
   }
   .notice {
     border: 1px solid var(--border-soft);
@@ -1341,6 +1346,14 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
                     <?= $eventStatus === 'active' ? 'Nonaktifkan' : 'Aktifkan' ?>
                   </button>
                 </form>
+                <form class="inline-form" method="POST">
+                  <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                  <input type="hidden" name="delete_event" value="1">
+                  <input type="hidden" name="slug" value="<?= htmlspecialchars($ev['slug']) ?>">
+                  <button class="event-action danger icon" type="submit" title="Hapus event permanen" onclick="return deleteEventConfirm(this, <?= json_encode($ev['name']) ?>)">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 11v6m4-6v6M4 7h16M9 7V4h6v3m-7 0 1 13h8l1-13" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                </form>
               <?php endif; ?>
             </div>
           </div>
@@ -1392,6 +1405,19 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
 
   if (eventSearch) {
     eventSearch.addEventListener('input', filterEvents);
+  }
+
+  function deleteEventConfirm(button, eventName) {
+    const msg = '⚠️  HAPUS EVENT PERMANEN\n\n' +
+                'Event: ' + eventName + '\n\n' +
+                'Setelah dihapus, data berikut akan HILANG:\n' +
+                '  • Landing page event\n' +
+                '  • Data pendaftar (leads)\n' +
+                '  • Data pengundang (referrers)\n' +
+                '  • Folder file di server\n\n' +
+                '❌ Aksi ini TIDAK BISA DIBATALKAN\n\n' +
+                'Lanjutkan penghapusan?';
+    return confirm(msg);
   }
 </script>
 </body>
