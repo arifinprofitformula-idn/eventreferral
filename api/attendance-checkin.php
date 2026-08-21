@@ -47,8 +47,36 @@ if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csr
     exit;
 }
 
+function attendance_checkin_extract_qr_token(string $value): string {
+    $raw = trim($value);
+    if ($raw === '') {
+        return '';
+    }
+
+    if (preg_match('/^[a-f0-9]{64}$/i', $raw, $match)) {
+        return strtolower($match[0]);
+    }
+
+    $parts = parse_url($raw);
+    if (is_array($parts) && !empty($parts['query'])) {
+        parse_str($parts['query'], $query);
+        foreach (['qr_token', 'token', 'qr'] as $key) {
+            $candidate = isset($query[$key]) ? (string)$query[$key] : '';
+            if (preg_match('/^[a-f0-9]{64}$/i', $candidate, $match)) {
+                return strtolower($match[0]);
+            }
+        }
+    }
+
+    if (preg_match('/[a-f0-9]{64}/i', $raw, $match)) {
+        return strtolower($match[0]);
+    }
+
+    return '';
+}
+
 $eventSlug = clean($input['event'] ?? '');
-$qrToken = isset($input['qr_token']) ? preg_replace('/[^a-f0-9]/', '', strtolower((string)$input['qr_token'])) : '';
+$qrToken = isset($input['qr_token']) ? attendance_checkin_extract_qr_token((string)$input['qr_token']) : '';
 $registrantId = isset($input['registrant_id']) ? (int)$input['registrant_id'] : 0;
 $methodInput = (string)($input['check_in_method'] ?? '');
 $allowedMethods = ['qr_scan', 'manual_admin', 'self_checkin'];

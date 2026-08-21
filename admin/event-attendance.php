@@ -618,6 +618,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
 (function () {
   var EVENT_SLUG = <?= json_encode($eventSlug) ?>;
   var CSRF_TOKEN = <?= json_encode($_SESSION['csrf_token']) ?>;
+  var API_BASE = new URL('../api/', window.location.href).pathname;
   var STATUS_LABEL = <?= json_encode($statusLabel) ?>;
 
   var toastEl = document.getElementById('toast');
@@ -649,10 +650,28 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     }
   }
 
+  function extractQrToken(decodedText) {
+    var raw = String(decodedText || '').trim();
+    var direct = raw.match(/^[a-f0-9]{64}$/i);
+    if (direct) return direct[0].toLowerCase();
+
+    try {
+      var url = new URL(raw, window.location.origin);
+      var keys = ['qr_token', 'token', 'qr'];
+      for (var i = 0; i < keys.length; i++) {
+        var candidate = url.searchParams.get(keys[i]) || '';
+        if (/^[a-f0-9]{64}$/i.test(candidate)) return candidate.toLowerCase();
+      }
+    } catch (e) {}
+
+    var embedded = raw.match(/[a-f0-9]{64}/i);
+    return embedded ? embedded[0].toLowerCase() : raw;
+  }
+
   function submitCheckin(payload, onDone) {
     payload.event = EVENT_SLUG;
     payload.csrf_token = CSRF_TOKEN;
-    fetch('/api/attendance-checkin.php', {
+    fetch(API_BASE + 'attendance-checkin.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -722,7 +741,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
         scanLocked = true;
         scannerResult.textContent = 'Memproses...';
         scannerResult.className = 'scanner-result';
-        submitCheckin({ qr_token: decodedText, check_in_method: 'qr_scan' }, function (data) {
+        submitCheckin({ qr_token: extractQrToken(decodedText), check_in_method: 'qr_scan' }, function (data) {
           if (data && data.success) {
             scannerResult.textContent = data.message;
             scannerResult.className = 'scanner-result ok';
@@ -762,7 +781,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     }
     var btn = this;
     btn.disabled = true;
-    fetch('/api/attendance-finalize.php', {
+    fetch(API_BASE + 'attendance-finalize.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ event: EVENT_SLUG, csrf_token: CSRF_TOKEN, min_hadir: 1 })
