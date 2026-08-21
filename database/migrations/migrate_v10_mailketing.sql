@@ -1,4 +1,6 @@
 -- Mailketing integration schema
+ALTER TABLE brands
+ADD COLUMN IF NOT EXISTS mailketing_api_token VARCHAR(255) NULL AFTER disclaimer_text;
 -- Jalankan sekali di database production via phpMyAdmin/CLI.
 
 CREATE TABLE IF NOT EXISTS event_email_settings (
@@ -14,8 +16,11 @@ CREATE TABLE IF NOT EXISTS event_email_settings (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uniq_event_email (brand_id, event_slug),
-    CONSTRAINT fk_email_settings_brand FOREIGN KEY (brand_id) REFERENCES brands(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CONSTRAINT fk_email_settings_brand FOREIGN KEY (brand_id) REFERENCES brands (id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
 
-ALTER TABLE brands ADD COLUMN IF NOT EXISTS sender_name VARCHAR(150) NULL AFTER disclaimer_text;
-ALTER TABLE brands ADD COLUMN IF NOT EXISTS sender_email VARCHAR(150) NULL AFTER sender_name;
+ALTER TABLE brands
+ADD COLUMN IF NOT EXISTS sender_name VARCHAR(150) NULL AFTER disclaimer_text;
+
+ALTER TABLE brands
+ADD COLUMN IF NOT EXISTS sender_email VARCHAR(150) NULL AFTER sender_name;

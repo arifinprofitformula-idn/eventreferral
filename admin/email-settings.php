@@ -131,7 +131,7 @@ if (!$eventNotFound && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $html = build_invitation_email_html($brand, $event, $testSettings, 'Budi Santoso');
                 $senderName = !empty($brand['sender_name']) ? $brand['sender_name'] : MAILKETING_SENDER_NAME;
                 $senderEmail = !empty($brand['sender_email']) ? $brand['sender_email'] : MAILKETING_SENDER_EMAIL;
-                mailketing_send_email($testEmail, $formValues['subject'], $html, $senderName, $senderEmail);
+                mailketing_send_email($testEmail, $formValues['subject'], $html, $senderName, $senderEmail, $brand);
                 $notice = 'Test email berhasil dikirim ke ' . htmlspecialchars($testEmail) . '.';
                 $noticeType = 'success';
             } catch (Throwable $e) {

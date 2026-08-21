@@ -41,7 +41,7 @@ if (empty($_SESSION['admin_brand_id']) || (int)$_SESSION['admin_brand_id'] !== (
 }
 
 try {
-    $lists = mailketing_get_lists();
+    $lists = mailketing_get_lists($brand);
     mailketing_lists_json([
         'success' => true,
         'connected' => true,

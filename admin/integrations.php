@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/mailketing.php';
 require_once __DIR__ . '/../includes/admin_nav.php';
 start_secure_session();
 
@@ -14,6 +15,7 @@ $pdo = get_db();
 $notice = null;
 $noticeType = 'success';
 $fieldErrors = [];
+$mailketingToken = (string)($brand['mailketing_api_token'] ?? '');
 
 $formValues = [
     'sender_name'  => $brand['sender_name'] ?? '',
@@ -30,39 +32,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notice = 'Sesi tidak valid. Silakan refresh halaman lalu coba lagi.';
         $noticeType = 'error';
     } else {
+        $action = $_POST['action'] ?? 'save_sender';
         $formValues['sender_name'] = trim(clean($_POST['sender_name'] ?? ''));
         $formValues['sender_email'] = trim(clean($_POST['sender_email'] ?? ''));
 
-        if ($formValues['sender_name'] === '' || mb_strlen($formValues['sender_name']) < 2) {
+        if ($action === 'test_mailketing') {
+            try {
+                $testToken = trim($_POST['mailketing_api_token'] ?? '');
+                $lists = mailketing_get_lists($brand, $testToken !== '' ? $testToken : null);
+                $notice = 'Koneksi Mailketing berhasil. ' . count($lists) . ' list tersedia.';
+                $noticeType = 'success';
+            } catch (Throwable $e) {
+                $notice = 'Koneksi Mailketing gagal: ' . $e->getMessage();
+                $noticeType = 'error';
+            }
+        } else {
+            $newMailketingToken = trim($_POST['mailketing_api_token'] ?? '');
+            $clearMailketingToken = !empty($_POST['clear_mailketing_api_token']);
+
+          if ($formValues['sender_name'] === '' || mb_strlen($formValues['sender_name']) < 2) {
             $fieldErrors['sender_name'] = 'Nama pengirim wajib diisi, minimal 2 karakter.';
-        }
-        if ($formValues['sender_email'] === '' || !filter_var($formValues['sender_email'], FILTER_VALIDATE_EMAIL)) {
+          }
+          if ($formValues['sender_email'] === '' || !filter_var($formValues['sender_email'], FILTER_VALIDATE_EMAIL)) {
             $fieldErrors['sender_email'] = 'Email pengirim tidak valid.';
-        }
+          }
 
-        $brandDomainRoot = preg_replace('/^www\./', '', strtolower($brand['domain']));
-        $senderDomain = strtolower(substr(strrchr($formValues['sender_email'], '@') ?: '', 1));
-        if (empty($fieldErrors['sender_email']) && $senderDomain !== $brandDomainRoot) {
+          $brandDomainRoot = preg_replace('/^www\./', '', strtolower($brand['domain']));
+          $senderDomain = strtolower(substr(strrchr($formValues['sender_email'], '@') ?: '', 1));
+          if (empty($fieldErrors['sender_email']) && $senderDomain !== $brandDomainRoot) {
             $fieldErrors['sender_email'] = 'Email pengirim harus menggunakan domain ' . htmlspecialchars($brandDomainRoot) . ' (contoh: info@' . htmlspecialchars($brandDomainRoot) . ').';
-        }
+          }
 
-        if (!empty($fieldErrors)) {
+          if (!empty($fieldErrors)) {
             $notice = 'Pengaturan belum dapat disimpan. Periksa kembali data yang diisi.';
             $noticeType = 'error';
-        } else {
+          } else {
             try {
-                $stmt = $pdo->prepare('UPDATE brands SET sender_name = ?, sender_email = ? WHERE id = ?');
-                $stmt->execute([$formValues['sender_name'], $formValues['sender_email'], (int)$brand['id']]);
+              $finalMailketingToken = $clearMailketingToken ? '' : ($newMailketingToken !== '' ? $newMailketingToken : $mailketingToken);
+              $stmt = $pdo->prepare('UPDATE brands SET sender_name = ?, sender_email = ?, mailketing_api_token = ? WHERE id = ?');
+              $stmt->execute([$formValues['sender_name'], $formValues['sender_email'], $finalMailketingToken, (int)$brand['id']]);
 
-                header('Location: integrations.php?saved=1');
-                exit;
+              header('Location: integrations.php?saved=1');
+              exit;
             } catch (Exception $e) {
-                $notice = 'Pengaturan belum dapat disimpan. Periksa kembali data yang diisi.';
-                $noticeType = 'error';
+              $notice = 'Pengaturan belum dapat disimpan. Periksa kembali data yang diisi.';
+              $noticeType = 'error';
+            }
             }
         }
     }
 }
+
+    $mailketingToken = (string)($brand['mailketing_api_token'] ?? $mailketingToken);
+    $maskedMailketingToken = $mailketingToken !== ''
+      ? substr($mailketingToken, 0, 6) . str_repeat('*', max(4, strlen($mailketingToken) - 10)) . substr($mailketingToken, -4)
+      : '';
 
 $brandName = $brand['name'] ?? $brand['slug'];
 $brandDomainRoot = preg_replace('/^www\./', '', strtolower($brand['domain']));
@@ -327,6 +351,7 @@ if ($defaultEventSlug !== '' && is_valid_event_slug($defaultEventSlug)) {
     padding: 13px 14px;
     transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
   }
+  input[type=password] { width: 100%; min-height: 52px; color: var(--text); background: #111110; border: 1px solid rgba(255,255,255,0.11); border-radius: 14px; font: inherit; font-size: 14px; outline: none; padding: 13px 14px; }
   input:focus { border-color: color-mix(in srgb, var(--accent-soft) 54%, transparent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent); }
   .field.has-error input { border-color: rgba(239,68,68,0.48); box-shadow: 0 0 0 4px rgba(239,68,68,0.08); }
   .hint { color: var(--muted); font-size: 11.5px; line-height: 1.55; margin-top: 7px; }
@@ -471,8 +496,24 @@ if ($defaultEventSlug !== '' && is_valid_event_slug($defaultEventSlug)) {
         </div>
       </div>
 
+      <div class="panel-head" style="margin-top:28px;">
+        <span class="icon-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 14a5 5 0 1 1 3.9-8.1L22 17v3h-3v2h-3v-2h-2v-3.1l-4.1-4.1A5 5 0 0 1 7 14Zm0-3a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div>
+          <h2>Mailketing</h2>
+          <p>API Key disimpan aman di database untuk brand ini dan digunakan oleh semua fitur Mailketing.</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="mailketing-api-token">API Key Mailketing</label>
+        <input type="password" id="mailketing-api-token" name="mailketing_api_token" value="" placeholder="<?= htmlspecialchars($maskedMailketingToken ?: 'Masukkan API Key Mailketing') ?>" autocomplete="new-password">
+        <div class="hint">Kosongkan saat menyimpan untuk mempertahankan key yang tersimpan. Key tidak ditampilkan kembali.</div>
+        <?php if ($mailketingToken !== ''): ?><label style="justify-content:flex-start;font-weight:500;margin-top:10px;"><input type="checkbox" name="clear_mailketing_api_token" value="1"> Hapus API Key tersimpan</label><?php endif; ?>
+      </div>
+
       <div class="form-actions">
-        <button type="submit" class="btn btn-primary" id="saveBtn">Simpan Pengaturan</button>
+        <button type="submit" name="action" value="save_sender" class="btn btn-primary" id="saveBtn">Simpan Pengaturan</button>
+        <button type="submit" name="action" value="test_mailketing" class="btn btn-secondary" id="testMailketingBtn">Test Koneksi Mailketing</button>
         <a class="btn btn-secondary" href="dashboard.php">Kembali ke Dashboard</a>
       </div>
     </form>

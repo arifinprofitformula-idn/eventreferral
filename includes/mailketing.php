@@ -5,13 +5,31 @@
  * Semua fungsi di sini FAIL-SAFE — kegagalan tidak boleh mengganggu alur submit_lead.php.
  */
 
-function mailketing_request(string $endpoint, array $params): array
+function mailketing_get_api_token(?array $brand = null, ?string $overrideToken = null): string
 {
-    if (!defined('MAILKETING_API_TOKEN') || MAILKETING_API_TOKEN === '') {
-        throw new RuntimeException('MAILKETING_API_TOKEN belum diisi di config.php.');
+    if ($overrideToken !== null && trim($overrideToken) !== '') {
+        return trim($overrideToken);
     }
 
-    $params['api_token'] = MAILKETING_API_TOKEN;
+    if ($brand === null && function_exists('get_current_brand')) {
+        $brand = get_current_brand();
+    }
+
+    if (is_array($brand) && array_key_exists('mailketing_api_token', $brand)) {
+        return trim((string)$brand['mailketing_api_token']);
+    }
+
+    return defined('MAILKETING_API_TOKEN') ? trim((string)MAILKETING_API_TOKEN) : '';
+}
+
+function mailketing_request(string $endpoint, array $params, ?array $brand = null, ?string $overrideToken = null): array
+{
+    $apiToken = mailketing_get_api_token($brand, $overrideToken);
+    if ($apiToken === '') {
+        throw new RuntimeException('API Key Mailketing belum diatur di halaman Integrasi.');
+    }
+
+    $params['api_token'] = $apiToken;
 
     $ch = curl_init("https://api.mailketing.co.id/api/v1/{$endpoint}");
     $verifySsl = !defined('MAILKETING_SSL_VERIFY') || MAILKETING_SSL_VERIFY;
@@ -52,7 +70,7 @@ function mailketing_request(string $endpoint, array $params): array
     return $data;
 }
 
-function mailketing_send_email(string $toEmail, string $subject, string $htmlContent, ?string $fromName = null, ?string $fromEmail = null): array
+function mailketing_send_email(string $toEmail, string $subject, string $htmlContent, ?string $fromName = null, ?string $fromEmail = null, ?array $brand = null): array
 {
     return mailketing_request('send', [
         'from_name'  => $fromName ?: MAILKETING_SENDER_NAME,
@@ -60,12 +78,12 @@ function mailketing_send_email(string $toEmail, string $subject, string $htmlCon
         'recipient'  => $toEmail,
         'subject'    => $subject,
         'content'    => $htmlContent,
-    ]);
+    ], $brand);
 }
 
-function mailketing_get_lists(): array
+function mailketing_get_lists(?array $brand = null, ?string $overrideToken = null): array
 {
-    $result = mailketing_request('viewlist', []);
+    $result = mailketing_request('viewlist', [], $brand, $overrideToken);
     $lists = $result['data'] ?? $result['response'] ?? $result['lists'] ?? $result;
 
     if (isset($lists['data']) && is_array($lists['data'])) {
@@ -79,7 +97,7 @@ function mailketing_get_lists(): array
     return array_values(array_filter($lists, 'is_array'));
 }
 
-function mailketing_add_subscriber(string $email, string $firstName, string $listId, ?string $mobile = null): array
+function mailketing_add_subscriber(string $email, string $firstName, string $listId, ?string $mobile = null, ?array $brand = null): array
 {
     $params = [
         'email'      => $email,
@@ -91,7 +109,7 @@ function mailketing_add_subscriber(string $email, string $firstName, string $lis
         $params['mobile'] = preg_replace('/[^0-9]/', '', $mobile);
     }
 
-    return mailketing_request('addsubtolist', $params);
+    return mailketing_request('addsubtolist', $params, $brand);
 }
 
 function mailketing_parse_event_start(array $event): ?DateTimeImmutable
@@ -262,10 +280,10 @@ function send_event_invitation_email(array $brand, array $event, string $leadNam
         $senderName  = !empty($brand['sender_name']) ? $brand['sender_name'] : MAILKETING_SENDER_NAME;
         $senderEmail = !empty($brand['sender_email']) ? $brand['sender_email'] : MAILKETING_SENDER_EMAIL;
 
-        mailketing_send_email($leadEmail, $subject, $html, $senderName, $senderEmail);
+        mailketing_send_email($leadEmail, $subject, $html, $senderName, $senderEmail, $brand);
 
         if (!empty($settings['mailketing_list_id'])) {
-            mailketing_add_subscriber($leadEmail, $leadName, $settings['mailketing_list_id'], $leadMobile);
+            mailketing_add_subscriber($leadEmail, $leadName, $settings['mailketing_list_id'], $leadMobile, $brand);
         }
     } catch (Throwable $e) {
         error_log('[Mailketing] Gagal kirim email undangan: ' . $e->getMessage());
