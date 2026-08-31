@@ -2,7 +2,7 @@ Options -Indexes
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule !^(?:submit_lead|create_referrer|event_info|track|generate_marketing_content|regenerate_style_caption|mailketing_get_lists|generate_ai_landing|publish_ai_landing|attendance-checkin|attendance-finalize|attendance-confirm|event-testimonials|lucky-draw-start|lucky-draw-status|lucky-draw-confirm|lucky-draw-void|lucky-draw-names)\.php$ - [F,L,NC]
+  RewriteRule !^(?:submit_lead|create_referrer|event_info|track|generate_marketing_content|regenerate_style_caption|mailketing_get_lists|generate_ai_landing|publish_ai_landing|attendance-checkin|attendance-finalize|attendance-confirm|event-testimonials|lucky-draw-start|lucky-draw-status|lucky-draw-confirm|lucky-draw-void|lucky-draw-names|city-list)\.php$ - [F,L,NC]
   RewriteCond %{REQUEST_METHOD} !POST
   RewriteRule ^(?:submit_lead|create_referrer|generate_marketing_content|regenerate_style_caption|generate_ai_landing|publish_ai_landing|attendance-checkin|attendance-finalize|attendance-confirm|lucky-draw-start|lucky-draw-confirm|lucky-draw-void)\.php$ - [F,L]
 </IfModule>

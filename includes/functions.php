@@ -404,6 +404,8 @@ function render_landing_template(array $filled, array $brand, array $eventBrief)
         '{{TESTIMONIAL_NAME}}' => landing_block_field($blocks, 'testimonial', 'name'),
 
         '{{FAQ_TITLE}}' => landing_block_field($blocks, 'faq', 'title'),
+
+        '{{CITY_DATALIST_OPTIONS}}' => render_city_datalist_options(),
     ];
 
     return strtr($html, $replacements);

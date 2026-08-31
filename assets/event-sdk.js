@@ -280,9 +280,42 @@
     return extra;
   }
 
+  /**
+   * Tambahkan <datalist> kota kanonik ke input[name="kota"] di form, supaya peserta
+   * cenderung memilih dari suggestion (mengurangi typo/variasi penulisan) tanpa mengunci
+   * mereka ke daftar tsb — tetap bisa ketik bebas kalau kotanya tidak ada di daftar.
+   * Sumber data: api/city-list.php (satu-satunya daftar kanonik, sama dengan sisi PHP).
+   */
+  function enhanceCityField(form) {
+    var kotaInput = form.querySelector('input[name="kota"]');
+    if (!kotaInput || kotaInput.hasAttribute('list')) return;
+
+    var datalist = document.createElement('datalist');
+    datalist.id = 'rgCityList';
+    kotaInput.setAttribute('list', 'rgCityList');
+    kotaInput.setAttribute('autocomplete', 'off');
+    form.appendChild(datalist);
+
+    fetch(API_BASE + 'city-list.php')
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data.success || !Array.isArray(data.cities)) return;
+        data.cities.forEach(function (city) {
+          var opt = document.createElement('option');
+          opt.value = city;
+          datalist.appendChild(opt);
+        });
+      })
+      .catch(function () {
+        // Diam saja — kota tetap bisa diisi manual walau daftar gagal dimuat.
+      });
+  }
+
   function bindForm() {
     var form = document.querySelector('[data-rg-form]') || document.getElementById('regForm');
     if (!form) return;
+
+    enhanceCityField(form);
 
     var submitBtn = form.querySelector('[type="submit"], button:not([type])');
     var originalBtnText = submitBtn ? submitBtn.textContent : '';

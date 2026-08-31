@@ -29,7 +29,7 @@ if (!$input) {
 $name     = clean($input['name'] ?? '');
 $email    = clean($input['email'] ?? '');
 $wa       = clean($input['whatsapp'] ?? '');
-$kota     = clean($input['kota'] ?? '');
+$kota     = normalize_city_name(clean($input['kota'] ?? ''));
 $refCode  = clean($input['ref'] ?? '');
 
 $brand = get_current_brand();

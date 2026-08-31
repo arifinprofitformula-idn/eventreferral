@@ -254,7 +254,7 @@ $windowMessage = [
           </div>
           <div class="field">
             <label for="kota">Kota Domisili</label>
-            <input type="text" id="kota" placeholder="Contoh: Jakarta">
+            <input type="text" id="kota" list="cityList" placeholder="Contoh: Jakarta" autocomplete="off">
           </div>
           <div class="field">
             <label for="refCodeManual">Kode Referral Pengundang (jika ada)</label>
@@ -295,6 +295,8 @@ $windowMessage = [
 
         <button type="button" class="btn" id="confirmBtn">Konfirmasi Kehadiran</button>
       </div>
+
+      <datalist id="cityList"><?= render_city_datalist_options() ?></datalist>
     </form>
   <?php endif; ?>
 </div>

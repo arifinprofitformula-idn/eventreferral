@@ -10,3 +10,4 @@
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/brand.php';
 require_once __DIR__ . '/theme.php';
+require_once __DIR__ . '/city_list.php';

@@ -574,9 +574,11 @@ gtag('config', '<?= htmlspecialchars($trackingEvent['ga_measurement_id']) ?>');
 
         <div class="field">
           <label>Kota Domisili <span class="req">*</span></label>
-          <input type="text" name="kota" placeholder="Kota kamu" required minlength="2">
+          <input type="text" name="kota" list="cityList" placeholder="Kota kamu" required minlength="2" autocomplete="off">
           <div class="field-error">Kota domisili wajib diisi.</div>
         </div>
+
+        <datalist id="cityList"><?= render_city_datalist_options() ?></datalist>
 
         <button type="submit" class="submit-btn" id="submitBtn">Daftar Sekarang — Saya Siap Hadir</button>
         <p class="microcopy">🔒 Data kamu aman. Tidak akan kami bagikan ke pihak manapun.</p>

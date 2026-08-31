@@ -156,7 +156,7 @@ function attendance_mask_name(string $name): string {
  */
 function validate_walkin_attendee_fields(string $name, string $email, string $kota, string $whatsappRaw): array {
     $name = clean($name);
-    $kota = clean($kota);
+    $kota = normalize_city_name(clean($kota));
     $email = clean($email);
 
     $errors = [];
