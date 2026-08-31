@@ -29,7 +29,6 @@ function admin_nav_items(): array {
                 ['key' => 'event-attendance', 'href' => 'event-attendance.php', 'label' => 'Kehadiran Event'],
                 ['key' => 'event-attendance-report', 'href' => 'event-attendance-report.php', 'label' => 'Rekap Kehadiran'],
                 ['key' => 'event-insights', 'href' => 'event-insights.php', 'label' => 'Insight Peserta'],
-                ['key' => 'normalize-city-data', 'href' => 'normalize-city-data.php', 'label' => 'Rapikan Data Kota'],
                 ['key' => 'lucky-draw', 'href' => 'lucky-draw-control.php', 'label' => 'Kontrol Undian'],
                 ['key' => 'rewards', 'href' => 'rewards.php', 'label' => 'Reward'],
             ],
