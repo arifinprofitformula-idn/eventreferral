@@ -8,6 +8,30 @@ $brand = require_admin_for_brand(get_current_brand());
 $brandId = (int)$brand['id'];
 $pdo = get_db();
 
+$selectedMonth = filter_input(INPUT_GET, 'month', FILTER_VALIDATE_INT, [
+    'options' => ['min_range' => 1, 'max_range' => 12],
+]);
+$selectedYear = filter_input(INPUT_GET, 'year', FILTER_VALIDATE_INT, [
+    'options' => ['min_range' => 2000, 'max_range' => 2100],
+]);
+$selectedMonth = $selectedMonth ?: null;
+$selectedYear = $selectedYear ?: null;
+
+$monthNames = [
+    1 => 'Januari',
+    2 => 'Februari',
+    3 => 'Maret',
+    4 => 'April',
+    5 => 'Mei',
+    6 => 'Juni',
+    7 => 'Juli',
+    8 => 'Agustus',
+    9 => 'September',
+    10 => 'Oktober',
+    11 => 'November',
+    12 => 'Desember',
+];
+
 // Fitur ini butuh migrate_v18 (attendance_source di event_attendance). Cek dulu supaya
 // halaman ini tidak error mentah di server yang belum menjalankan migrasi tsb.
 $reportReady = false;
@@ -19,24 +43,63 @@ try {
 }
 
 $rows = [];
+$availableYears = [];
 if ($reportReady) {
-    $stmt = $pdo->prepare('
+    $yearStmt = $pdo->prepare('
+        SELECT DISTINCT YEAR(event_date) AS event_year
+        FROM events
+        WHERE brand_id = ? AND event_date IS NOT NULL
+        ORDER BY event_year DESC
+    ');
+    $yearStmt->execute([$brandId]);
+    $availableYears = array_map('intval', array_filter($yearStmt->fetchAll(PDO::FETCH_COLUMN)));
+    if ($selectedYear !== null && !in_array($selectedYear, $availableYears, true)) {
+        $availableYears[] = $selectedYear;
+        rsort($availableYears);
+    }
+    if (empty($availableYears)) {
+        $availableYears[] = (int)date('Y');
+    }
+
+    $where = ['e.brand_id = ?'];
+    $params = [$brandId];
+    if ($selectedMonth !== null) {
+        $where[] = 'MONTH(e.event_date) = ?';
+        $params[] = $selectedMonth;
+    }
+    if ($selectedYear !== null) {
+        $where[] = 'YEAR(e.event_date) = ?';
+        $params[] = $selectedYear;
+    }
+    $whereSql = implode(' AND ', $where);
+
+    $stmt = $pdo->prepare("
         SELECT e.slug, e.name,
             (SELECT COUNT(*) FROM leads l WHERE l.brand_id = e.brand_id AND l.event_slug = e.slug) AS total_leads,
-            (SELECT COUNT(*) FROM event_attendance ea WHERE ea.event_id = e.id AND ea.attendance_status = "hadir") AS total_hadir,
-            (SELECT COUNT(*) FROM event_attendance ea WHERE ea.event_id = e.id AND ea.attendance_status = "hadir" AND ea.attendance_source = "terdaftar") AS hadir_terdaftar,
-            (SELECT COUNT(*) FROM event_attendance ea WHERE ea.event_id = e.id AND ea.attendance_status = "hadir" AND ea.attendance_source = "tidak_terdaftar") AS hadir_walkin
+            (SELECT COUNT(*) FROM event_attendance ea WHERE ea.event_id = e.id AND ea.attendance_status = \"hadir\") AS total_hadir,
+            (SELECT COUNT(*) FROM event_attendance ea WHERE ea.event_id = e.id AND ea.attendance_status = \"hadir\" AND ea.attendance_source = \"terdaftar\") AS hadir_terdaftar,
+            (SELECT COUNT(*) FROM event_attendance ea WHERE ea.event_id = e.id AND ea.attendance_status = \"hadir\" AND ea.attendance_source = \"tidak_terdaftar\") AS hadir_walkin
         FROM events e
-        WHERE e.brand_id = ?
-        ORDER BY (e.slug = ?) DESC, e.created_at DESC
-    ');
-    $stmt->execute([$brandId, $brand['default_event_slug']]);
+        WHERE {$whereSql}
+        ORDER BY (e.slug = ?) DESC, (e.event_date IS NULL) ASC, e.event_date DESC, e.created_at DESC
+    ");
+    $params[] = $brand['default_event_slug'];
+    $stmt->execute($params);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 $grandLeads = array_sum(array_column($rows, 'total_leads'));
 $grandHadir = array_sum(array_column($rows, 'total_hadir'));
 $grandConversion = $grandLeads > 0 ? round($grandHadir / $grandLeads * 100, 1) : 0;
+$filterActive = $selectedMonth !== null || $selectedYear !== null;
+$periodParts = [];
+if ($selectedMonth !== null) {
+    $periodParts[] = $monthNames[$selectedMonth] ?? '';
+}
+if ($selectedYear !== null) {
+    $periodParts[] = (string)$selectedYear;
+}
+$periodLabel = $periodParts ? implode(' ', array_filter($periodParts)) : 'Semua periode';
 $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.png';
 ?>
 <!DOCTYPE html>
@@ -84,6 +147,27 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
     border: 1px solid var(--border-gold); border-radius: 22px; padding: 22px; margin-bottom: 18px;
   }
+  .filter-card {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .filter-title { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+  .filter-period { font-size: 18px; font-weight: 900; }
+  .filter-form { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+  .filter-field { display: grid; gap: 6px; min-width: 150px; }
+  .filter-field label { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+  .filter-field select {
+    appearance: none; border: 1px solid var(--border-soft); border-radius: 12px; background: rgba(8,8,7,0.72);
+    color: var(--text); font: inherit; font-size: 13px; font-weight: 700; min-height: 42px; padding: 0 36px 0 12px;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 18px) 18px, calc(100% - 13px) 18px; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+  }
+  .filter-actions { display: flex; gap: 8px; align-items: center; }
+  .btn {
+    min-height: 42px; border-radius: 12px; border: 1px solid var(--border-gold); padding: 0 14px;
+    color: var(--gold-soft); background: color-mix(in srgb, var(--gold) 12%, transparent); font-size: 13px; font-weight: 900;
+    text-decoration: none; cursor: pointer;
+  }
+  .btn.secondary { display: inline-flex; align-items: center; color: var(--muted); border-color: var(--border-soft); background: rgba(255,255,255,0.04); }
   h2 { font-size: 18px; font-weight: 900; margin-bottom: 4px; }
   .desc { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
   .table-scroll { overflow-x: auto; border: 1px solid var(--border-soft); border-radius: 16px; }
@@ -106,6 +190,8 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
   @media (max-width: 900px) { .stats { grid-template-columns: repeat(2, minmax(0,1fr)); } }
   @media (max-width: 760px) {
     .topbar-inner, .wrap { padding-left: 16px; padding-right: 16px; }
+    .filter-card, .filter-form, .filter-field, .filter-actions { width: 100%; }
+    .filter-actions .btn { flex: 1; }
     .desktop-table { display: none; }
     .mobile-cards { display: block; }
     .stats { grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -130,9 +216,44 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     <div class="section-card">
       <p class="empty">Fitur rekap kehadiran belum aktif di server ini. Jalankan migrasi <code>migrate_v18_alter_event_attendance_self_confirm.sql</code> terlebih dahulu.</p>
     </div>
-  <?php elseif (empty($rows)): ?>
+  <?php else: ?>
+
+  <section class="section-card filter-card">
+    <div>
+      <div class="filter-title">Periode Event</div>
+      <div class="filter-period"><?= htmlspecialchars($periodLabel) ?></div>
+    </div>
+    <form class="filter-form" method="GET">
+      <div class="filter-field">
+        <label for="month">Bulan</label>
+        <select id="month" name="month">
+          <option value="">Semua Bulan</option>
+          <?php foreach ($monthNames as $monthNumber => $monthName): ?>
+            <option value="<?= (int)$monthNumber ?>" <?= $selectedMonth === (int)$monthNumber ? 'selected' : '' ?>><?= htmlspecialchars($monthName) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="year">Tahun</label>
+        <select id="year" name="year">
+          <option value="">Semua Tahun</option>
+          <?php foreach ($availableYears as $year): ?>
+            <option value="<?= (int)$year ?>" <?= $selectedYear === (int)$year ? 'selected' : '' ?>><?= (int)$year ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button class="btn" type="submit">Terapkan</button>
+        <?php if ($filterActive): ?>
+          <a class="btn secondary" href="event-attendance-report.php">Reset</a>
+        <?php endif; ?>
+      </div>
+    </form>
+  </section>
+
+  <?php if (empty($rows)): ?>
     <div class="section-card">
-      <p class="empty">Belum ada event untuk brand ini.</p>
+      <p class="empty"><?= $filterActive ? 'Tidak ada event pada periode ini.' : 'Belum ada event untuk brand ini.' ?></p>
     </div>
   <?php else: ?>
 
@@ -198,6 +319,7 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
     </div>
   </section>
 
+  <?php endif; ?>
   <?php endif; ?>
 </main>
 </body>
