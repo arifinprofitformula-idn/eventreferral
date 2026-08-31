@@ -288,6 +288,10 @@ $windowMessage = [
           <label for="feedback">Feedback Event (opsional)</label>
           <textarea id="feedback" placeholder="Kesan, saran, atau masukan kamu untuk acara ini"></textarea>
         </div>
+        <div class="field">
+          <label for="nextTopicInterest">Tema Apa yang ingin Anda Pelajari berikutnya? (opsional)</label>
+          <textarea id="nextTopicInterest" placeholder="Ceritakan tema yang kamu minati untuk event berikutnya"></textarea>
+        </div>
 
         <button type="button" class="btn" id="confirmBtn">Konfirmasi Kehadiran</button>
       </div>
@@ -390,6 +394,7 @@ $windowMessage = [
     var infoSource = document.getElementById('infoSource').value;
     var participantStatus = document.getElementById('participantStatus').value;
     var feedback = document.getElementById('feedback').value.trim();
+    var nextTopicInterest = document.getElementById('nextTopicInterest').value.trim();
 
     if (code === '') {
       showAlert('Kode kehadiran wajib diisi.', false);
@@ -402,7 +407,8 @@ $windowMessage = [
 
     var payload = {
       action: 'confirm', slug: EVENT_SLUG, whatsapp: wa, attendance_code: code, csrf_token: CSRF_TOKEN,
-      info_source: infoSource, participant_status: participantStatus, feedback: feedback
+      info_source: infoSource, participant_status: participantStatus, feedback: feedback,
+      next_topic_interest: nextTopicInterest
     };
 
     if (!isRegistered) {

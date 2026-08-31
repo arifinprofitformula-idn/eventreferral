@@ -31,6 +31,13 @@ try {
 } catch (Throwable $e) {
     $extraFieldsReady = false;
 }
+$nextTopicReady = false;
+try {
+    $columnCheck = $pdo->query("SHOW COLUMNS FROM event_attendance LIKE 'next_topic_interest'");
+    $nextTopicReady = (bool)$columnCheck->fetch(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $nextTopicReady = false;
+}
 
 $infoSourceLabel = attendance_info_source_options();
 $participantStatusLabel = attendance_participant_status_options();
@@ -72,6 +79,9 @@ if ($eventSlug !== '') {
         }
         if ($extraFieldsReady) {
             $extraSelect .= ', ea.info_source, ea.participant_status, ea.feedback_notes';
+        }
+        if ($nextTopicReady) {
+            $extraSelect .= ', ea.next_topic_interest';
         }
         $stmt = $pdo->prepare('
             SELECT l.id AS registrant_id, l.name, l.whatsapp, l.email, l.kota,
@@ -584,6 +594,9 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
             <?php endif; ?>
             <?php if (!empty($r['feedback_notes'])): ?>
               <div class="row-feedback">&ldquo;<?= nl2br(htmlspecialchars($r['feedback_notes'])) ?>&rdquo;</div>
+            <?php endif; ?>
+            <?php if (!empty($r['next_topic_interest'])): ?>
+              <div class="row-feedback">Tema berikutnya: &ldquo;<?= nl2br(htmlspecialchars($r['next_topic_interest'])) ?>&rdquo;</div>
             <?php endif; ?>
           </div>
           <div>

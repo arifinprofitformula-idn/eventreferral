@@ -153,7 +153,8 @@ if ($action === 'confirm') {
     $extra = validate_attendance_extra_fields(
         (string)($input['info_source'] ?? ''),
         (string)($input['participant_status'] ?? ''),
-        (string)($input['feedback'] ?? '')
+        (string)($input['feedback'] ?? ''),
+        (string)($input['next_topic_interest'] ?? '')
     );
     if (!empty($extra['errors'])) {
         http_response_code(422);
@@ -179,6 +180,14 @@ if ($action === 'confirm') {
         $extraFieldsReady = (bool)$columnCheck->fetch(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {
         $extraFieldsReady = false;
+    }
+
+    $nextTopicReady = false;
+    try {
+        $columnCheck = $pdo->query("SHOW COLUMNS FROM event_attendance LIKE 'next_topic_interest'");
+        $nextTopicReady = (bool)$columnCheck->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $nextTopicReady = false;
     }
 
     try {
@@ -232,6 +241,10 @@ if ($action === 'confirm') {
                 $updateParams[] = $extra['info_source'];
                 $updateParams[] = $extra['participant_status'];
                 $updateParams[] = $extra['feedback'];
+            }
+            if ($nextTopicReady) {
+                $setParts[] = 'next_topic_interest = ?';
+                $updateParams[] = $extra['next_topic_interest'];
             }
             $updateParams[] = (int)$attendance['id'];
 
@@ -304,6 +317,11 @@ if ($action === 'confirm') {
                 $insertCols[] = 'feedback_notes';
                 $insertPlaceholders[] = '?';
                 $insertParams[] = $extra['feedback'];
+            }
+            if ($nextTopicReady) {
+                $insertCols[] = 'next_topic_interest';
+                $insertPlaceholders[] = '?';
+                $insertParams[] = $extra['next_topic_interest'];
             }
 
             $stmt = $pdo->prepare('INSERT INTO event_attendance (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $insertPlaceholders) . ')');

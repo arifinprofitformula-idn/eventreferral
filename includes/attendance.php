@@ -206,12 +206,12 @@ function attendance_participant_status_options(): array {
 
 /**
  * Validasi field tambahan konfirmasi kehadiran (info_source, participant_status wajib;
- * feedback opsional). Dipakai di KEDUA jalur (terdaftar maupun walk-in) karena field ini
- * melekat ke kehadiran di event ini, bukan ke profil pendaftar.
+ * feedback dan next_topic_interest opsional). Dipakai di KEDUA jalur (terdaftar maupun
+ * walk-in) karena field ini melekat ke kehadiran di event ini, bukan ke profil pendaftar.
  *
- * @return array{errors: string[], info_source: ?string, participant_status: ?string, feedback: ?string}
+ * @return array{errors: string[], info_source: ?string, participant_status: ?string, feedback: ?string, next_topic_interest: ?string}
  */
-function validate_attendance_extra_fields(string $infoSource, string $participantStatus, string $feedback): array {
+function validate_attendance_extra_fields(string $infoSource, string $participantStatus, string $feedback, string $nextTopicInterest = ''): array {
     $errors = [];
 
     if (!array_key_exists($infoSource, attendance_info_source_options())) {
@@ -228,10 +228,16 @@ function validate_attendance_extra_fields(string $infoSource, string $participan
         $feedback = mb_substr($feedback, 0, 1000);
     }
 
+    $nextTopicInterest = clean($nextTopicInterest);
+    if (mb_strlen($nextTopicInterest) > 1000) {
+        $nextTopicInterest = mb_substr($nextTopicInterest, 0, 1000);
+    }
+
     return [
         'errors' => $errors,
         'info_source' => $infoSource !== '' ? $infoSource : null,
         'participant_status' => $participantStatus !== '' ? $participantStatus : null,
         'feedback' => $feedback !== '' ? $feedback : null,
+        'next_topic_interest' => $nextTopicInterest !== '' ? $nextTopicInterest : null,
     ];
 }
