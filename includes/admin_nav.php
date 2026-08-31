@@ -28,6 +28,7 @@ function admin_nav_items(): array {
                 ['key' => 'event-settings', 'href' => 'event-settings.php', 'label' => 'Pengaturan Event'],
                 ['key' => 'event-attendance', 'href' => 'event-attendance.php', 'label' => 'Kehadiran Event'],
                 ['key' => 'event-attendance-report', 'href' => 'event-attendance-report.php', 'label' => 'Rekap Kehadiran'],
+                ['key' => 'event-insights', 'href' => 'event-insights.php', 'label' => 'Insight Peserta'],
                 ['key' => 'lucky-draw', 'href' => 'lucky-draw-control.php', 'label' => 'Kontrol Undian'],
                 ['key' => 'rewards', 'href' => 'rewards.php', 'label' => 'Reward'],
             ],
