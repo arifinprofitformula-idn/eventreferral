@@ -160,3 +160,126 @@ Perintah untuk update project:
 cd /home/bisnisem/repositories/rahasiaemas.id
 bash deploy/deploy.sh
 ```
+
+## Simple LMS & eCourse
+
+Fitur Simple LMS tersedia di:
+
+- Katalog publik: `/course/`
+- Register siswa: `/course/register.php`
+- Login siswa: `/course/login.php`
+- Dashboard siswa: `/course/my-courses.php`
+- Admin eCourse: `/admin/lms-courses.php`
+- Admin user & role: `/admin/lms-users.php`
+- Admin order: `/admin/lms-orders.php`
+- Admin progress: `/admin/lms-progress.php`
+
+### Role LMS
+
+- Guest: hanya melihat katalog dan detail course.
+- Free User: akses course gratis + progress tracking.
+- Paid User: akses course premium, quiz, sertifikat, dan course gratis.
+- Admin LMS: akses penuh untuk course dan monitoring.
+
+Role utama disimpan di `lms_users.primary_role`. Role tambahan scalable lewat `lms_roles` dan `lms_user_roles` untuk kebutuhan masa depan seperti `instructor` dan `moderator`.
+
+### Database LMS
+
+Migration LMS ada di:
+
+```text
+database/migrations/migrate_v25_lms.sql
+database/migrations/migrate_v26_lms_course_builder.sql
+```
+
+`migrate_v25_lms.sql` membuat struktur LMS inti. `migrate_v26_lms_course_builder.sql` menambah metadata course, kategori, tag, instructor, bundle, promo code, dan material pendukung.
+
+Modul LMS juga menjalankan auto-check schema saat halaman LMS/admin LMS dibuka. Untuk production, tetap disarankan import migration manual lewat phpMyAdmin agar struktur database eksplisit dan terkontrol.
+
+Tabel utama:
+
+- `lms_users`
+- `lms_roles`
+- `lms_user_roles`
+- `lms_courses`
+- `lms_modules`
+- `lms_lessons`
+- `lms_enrollments`
+- `lms_lesson_progress`
+- `lms_orders`
+- `lms_role_logs`
+- `lms_notifications`
+- `lms_categories`
+- `lms_tags`
+- `lms_course_tags`
+- `lms_course_instructors`
+- `lms_bundles`
+- `lms_bundle_courses`
+- `lms_promo_codes`
+- `lms_course_materials`
+
+### Course Builder Admin
+
+Form pengisian course tersedia di:
+
+```text
+/admin/lms-course-form.php
+```
+
+Akses juga tersedia dari `/admin/lms-courses.php` lewat tombol `+ Form Pengisian Course Baru` dan link `Edit Course`.
+
+Field wajib:
+
+- Judul course
+- Deskripsi
+- Kategori
+- Tipe akses (`free` atau `paid`)
+- Harga untuk course premium
+- Status (`draft`, `published`, `archived`)
+
+Field opsional:
+
+- Cover image
+- Upload media awal: video, PDF, atau external URL
+- Durasi course
+- Level (`beginner`, `intermediate`, `advanced`)
+- Tags
+- Sertifikat aktif/nonaktif
+- Instructor
+
+UX form:
+
+- Dropdown dark theme dengan background `#222` dan teks putih.
+- Validasi client-side dan server-side.
+- Tombol `Save Draft`, `Publish`, dan `Cancel`.
+- Live preview modal sebelum publish.
+- Alert status setelah simpan.
+
+Upload disimpan ke `uploads/lms/` dan dilindungi validasi MIME serta ekstensi file.
+
+### Checkout & Payment
+
+Checkout premium saat ini memakai simulator internal di `/course/checkout.php` karena codebase belum punya payment gateway existing.
+
+- Simulasi sukses: membuat order `paid`, upgrade role ke `paid`, enroll course premium, kirim notifikasi/email.
+- Simulasi gagal: membuat order `failed`, role tetap `free`.
+
+Untuk integrasi gateway riil seperti Midtrans/Xendit, gunakan alur:
+
+1. Buat invoice pada tombol checkout.
+2. Simpan order sebagai `pending`.
+3. Terima webhook payment provider.
+4. Verifikasi signature webhook.
+5. Jika settlement/success, panggil `lms_process_checkout_success()`.
+6. Jika failed/expired, panggil `lms_process_checkout_failed()`.
+
+Jangan mengandalkan redirect browser sebagai bukti pembayaran.
+
+### Keamanan LMS
+
+- Semua mutasi siswa butuh session login.
+- Admin LMS memakai `require_admin_for_brand()`.
+- Semua query LMS memakai prepared statement.
+- Akses premium divalidasi server-side lewat role dan enrollment.
+- Progress API menolak lesson yang tidak dimiliki brand aktif.
+- Session LMS disinkronkan ulang dari database di setiap request protected.

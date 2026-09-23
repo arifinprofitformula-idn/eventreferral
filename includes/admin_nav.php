@@ -34,36 +34,36 @@ function admin_nav_items(): array {
             ],
         ],
         [
-            'key' => 'marketing',
-            'label' => 'Marketing',
-            'icon' => 'M3 10a1 1 0 0 1 1-1h2l7-4v14l-7-4H4a1 1 0 0 1-1-1v-3Zm15-4a5 5 0 0 1 0 8m2.5-11a8 8 0 0 1 0 14',
+            'key' => 'marketing-data',
+            'label' => 'Marketing & Analitik',
+            'icon' => 'M3 3v18h18M7 16v-5m5 5V8m5 8V5',
             'children' => [
                 ['key' => 'marketing-content', 'href' => 'marketing-content.php', 'label' => 'Konten Marketing'],
-                ['key' => 'email-settings', 'href' => 'email-settings.php', 'label' => 'Pengaturan Email'],
-                ['key' => 'integrations', 'href' => 'integrations.php', 'label' => 'Pengaturan Integrasi'],
+                ['key' => 'visitor-analytics', 'href' => 'visitor-analytics.php', 'label' => 'Analitik Pengunjung'],
                 ['key' => 'tracking', 'href' => 'tracking.php', 'label' => 'Tracking Pixel'],
             ],
         ],
         [
-            'key' => 'visitor-analytics',
-            'href' => 'visitor-analytics.php',
-            'label' => 'Analitik Pengunjung',
-            'icon' => 'M3 3v18h18M7 16v-5m5 5V8m5 8V5',
-        ],
-        [
-            'key' => 'documentation',
-            'href' => 'documentation.php',
-            'label' => 'Dokumentasi',
-            'icon' => 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15Z',
-        ],
-        [
-            'key' => 'system',
-            'label' => 'Sistem',
-            'icon' => 'M12 2 4 5v6c0 5 3.4 8.6 8 11 4.6-2.4 8-6 8-11V5l-8-3Z',
-            'superadmin_only' => true,
+            'key' => 'lms',
+            'label' => 'Course',
+            'icon' => 'M12 6.25278V19.25M12 6.25278C10.8321 5.47686 9.24649 5 7.5 5C5.75351 5 4.16789 5.47686 3 6.25278V19.25C4.16789 18.4741 5.75351 18 7.5 18C9.24649 18 10.8321 18.4741 12 19.25M12 6.25278C13.1679 5.47686 14.7535 5 16.5 5C18.2465 5 19.8321 5.47686 21 6.25278V19.25C19.8321 18.4741 18.2465 18 16.5 18C14.7535 18 13.1679 18.4741 12 19.25',
             'children' => [
-                ['key' => 'admin-users', 'href' => 'admin-users.php', 'label' => 'Kelola Admin'],
-                ['key' => 'ai-settings', 'href' => 'ai-settings.php', 'label' => 'Pengaturan AI'],
+                ['key' => 'lms-courses', 'href' => 'lms-courses.php', 'label' => 'Kelola Course'],
+                ['key' => 'lms-users', 'href' => 'lms-users.php', 'label' => 'User & Role'],
+                ['key' => 'lms-orders', 'href' => 'lms-orders.php', 'label' => 'Order & Pembayaran'],
+                ['key' => 'lms-progress', 'href' => 'lms-progress.php', 'label' => 'Progress Belajar'],
+            ],
+        ],
+        [
+            'key' => 'settings',
+            'label' => 'Pengaturan',
+            'icon' => 'M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5ZM19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2 3.46-.08-.02a1.7 1.7 0 0 0-1.8-.23l-.5.29a1.7 1.7 0 0 0-.85 1.7V22h-4v-.09a1.7 1.7 0 0 0-.85-1.7l-.5-.29a1.7 1.7 0 0 0-1.8.23l-.08.02-2-3.46.06-.06A1.7 1.7 0 0 0 4.6 15v-.58a1.7 1.7 0 0 0-1-1.55L3.5 12.8v-4l.1-.04a1.7 1.7 0 0 0 1-1.55v-.58a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2-3.46.08.02a1.7 1.7 0 0 0 1.8.23l.5-.29a1.7 1.7 0 0 0 .85-1.7V0h4v.09a1.7 1.7 0 0 0 .85 1.7l.5.29a1.7 1.7 0 0 0 1.8-.23l.08-.02 2 3.46-.06.06a1.7 1.7 0 0 0-.34 1.88v.58a1.7 1.7 0 0 0 1 1.55l.1.04v4l-.1.04a1.7 1.7 0 0 0-1 1.55V15Z',
+            'children' => [
+                ['key' => 'email-settings', 'href' => 'email-settings.php', 'label' => 'Email'],
+                ['key' => 'integrations', 'href' => 'integrations.php', 'label' => 'Integrasi'],
+                ['key' => 'documentation', 'href' => 'documentation.php', 'label' => 'Dokumentasi'],
+                ['key' => 'admin-users', 'href' => 'admin-users.php', 'label' => 'Kelola Admin', 'superadmin_only' => true],
+                ['key' => 'ai-settings', 'href' => 'ai-settings.php', 'label' => 'Pengaturan AI', 'superadmin_only' => true],
             ],
         ],
     ];
@@ -151,6 +151,7 @@ function render_admin_nav(string $activeKey): void {
             </summary>
             <div class="adm-dropdown">
               <?php foreach ($item['children'] as $child): ?>
+                <?php if (!empty($child['superadmin_only']) && !$isSuperadmin) continue; ?>
                 <a href="<?= htmlspecialchars($child['href']) ?>" class="<?= $child['key'] === $activeKey ? 'active' : '' ?>"><?= htmlspecialchars($child['label']) ?></a>
               <?php endforeach; ?>
             </div>
