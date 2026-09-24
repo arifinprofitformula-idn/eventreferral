@@ -209,11 +209,52 @@ if (!function_exists('render_lms_header')) {
     font-size: 13px;
     color: var(--muted);
   }
+  .lms-mobile-nav { display: none; }
   @media (max-width: 768px) {
-    .lms-nav-container { height: auto; padding: 14px 18px; flex-direction: column; align-items: stretch; }
-    .lms-menu { justify-content: center; flex-wrap: wrap; }
-    .lms-auth-box { justify-content: center; flex-wrap: wrap; }
-    .lms-main { padding: 24px 16px 56px; }
+    body { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
+    .lms-navbar { background: rgba(14,14,13,.92); backdrop-filter: blur(22px); }
+    .lms-nav-container {
+      height: 62px; padding: 9px 16px; flex-direction: row; align-items: center; gap: 10px;
+    }
+    .lms-nav-container > div:first-child { min-width: 0; flex: 1; }
+    .lms-brand { min-width: 0; gap: 9px; }
+    .lms-brand img { max-width: 108px; height: 34px; }
+    .lms-brand-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+    .lms-brand-text span { font-size: 10px; padding-left: 3px; }
+    .role-pill { flex: 0 0 auto; padding: 4px 7px; font-size: 8.5px; letter-spacing: .25px; }
+    .lms-menu { display: none; }
+    .lms-auth-box { flex: 0 0 auto; justify-content: flex-end; }
+    .lms-auth-box > div > span, .lms-auth-box .btn-lms { display: none; }
+    .lms-auth-box > .btn-lms-ghost { display: none; }
+    .lms-auth-box > .btn-lms-gold { display: inline-flex; padding: 8px 11px; border-radius: 10px; font-size: 11px; }
+    .notif-bell { width: 36px; height: 36px; }
+    .lms-main { padding: 20px 16px 42px; }
+    .lms-footer { padding-bottom: 110px; }
+    .lms-mobile-nav {
+      position: fixed; left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 1000;
+      display: grid; grid-template-columns: repeat(4, 1fr); align-items: center;
+      min-height: 66px; padding: 7px 6px;
+      border: 1px solid color-mix(in srgb, var(--gold) 25%, rgba(255,255,255,.1)); border-radius: 22px;
+      background: rgba(17,17,15,.93); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      box-shadow: 0 16px 48px rgba(0,0,0,.52), inset 0 1px 0 rgba(255,255,255,.07);
+    }
+    .lms-mobile-item {
+      position: relative; min-height: 51px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; padding: 4px 2px; border-radius: 15px; color: var(--muted); font-size: 10px; font-weight: 750;
+      transition: color .18s ease, background .18s ease, transform .18s ease;
+    }
+    .lms-mobile-item:active { transform: scale(.92); }
+    .lms-mobile-item.active { color: var(--gold-soft); background: var(--gold-glow); }
+    .lms-mobile-item.active::before {
+      content: ''; position: absolute; top: 0; width: 22px; height: 2px; border-radius: 4px;
+      background: var(--gold-soft); box-shadow: 0 0 12px color-mix(in srgb, var(--gold) 80%, transparent);
+    }
+    .lms-mobile-item svg { width: 21px; height: 21px; }
+    .lms-mobile-count {
+      position: absolute; top: 1px; left: calc(50% + 7px); display: grid; place-items: center;
+      min-width: 18px; height: 18px; padding: 0 5px; border: 2px solid #11110f; border-radius: 999px;
+      color: #fff; background: var(--danger); font-size: 9px;
+    }
   }
 </style>
 </head>
@@ -257,6 +298,34 @@ if (!function_exists('render_lms_header')) {
     </div>
   </div>
 </header>
+<nav class="lms-mobile-nav" aria-label="Navigasi siswa mobile">
+  <a class="lms-mobile-item <?= $activePage === 'catalog' ? 'active' : '' ?>" href="/course/index.php">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 6.25V19.25M12 6.25C10.8 5.45 9.3 5 7.5 5S4.2 5.45 3 6.25v13C4.2 18.45 5.7 18 7.5 18s3.3.45 4.5 1.25M12 6.25C13.2 5.45 14.7 5 16.5 5s3.3.45 4.5 1.25v13C19.8 18.45 18.3 18 16.5 18s-3.3.45-4.5 1.25" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Katalog</span>
+  </a>
+  <?php if ($user): ?>
+    <a class="lms-mobile-item <?= $activePage === 'my_courses' ? 'active' : '' ?>" href="/course/my-courses.php">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 6 8-3 8 3-8 3-8-3Zm2 3v6c3 2 9 2 12 0V9M20 7v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Course Saya</span>
+    </a>
+    <a class="lms-mobile-item <?= $activePage === 'notifications' ? 'active' : '' ?>" href="/course/notifications.php">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <?php if ($unreadCount > 0): ?><span class="lms-mobile-count"><?= $unreadCount > 99 ? '99+' : $unreadCount ?></span><?php endif; ?><span>Notifikasi</span>
+    </a>
+    <a class="lms-mobile-item" href="/course/logout.php">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 17 15 12l-5-5M15 12H3m8-9h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Keluar</span>
+    </a>
+  <?php else: ?>
+    <a class="lms-mobile-item <?= $activePage === 'login' ? 'active' : '' ?>" href="/course/login.php">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Masuk</span>
+    </a>
+    <a class="lms-mobile-item <?= $activePage === 'register' ? 'active' : '' ?>" href="/course/register.php">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm10-4v6m3-3h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Daftar</span>
+    </a>
+    <a class="lms-mobile-item" href="/">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-7H9v7H3V10.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Beranda</span>
+    </a>
+  <?php endif; ?>
+</nav>
 <main class="lms-main">
         <?php
     }

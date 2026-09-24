@@ -209,7 +209,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
     <div class="toc-title">Daftar Isi</div>
     <ol>
       <li><a href="#arsitektur">Arsitektur Sistem</a></li>
-      <li><a href="#riwayat">Riwayat Versi (v1 → v12)</a></li>
+      <li><a href="#riwayat">Riwayat Versi (v1 → v13)</a></li>
       <li><a href="#brand-baru">Menambah Brand Baru</a></li>
       <li><a href="#migrasi">Urutan Migrasi Database</a></li>
       <li><a href="#deploy">Deploy Production</a></li>
@@ -225,7 +225,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
       <h1>Dokumentasi Sistem <?= htmlspecialchars($brand['name']) ?></h1>
       <p>Referensi teknis lengkap: arsitektur saat ini, riwayat perubahan sejak pertama dibangun, urutan migrasi database, dan pola deploy production yang dipakai tim.</p>
       <div class="hero-meta">
-        <div><strong>v12</strong>Versi aplikasi saat ini</div>
+        <div><strong>v13</strong>Versi aplikasi saat ini</div>
         <div><strong>Multi-brand</strong>Mode operasi</div>
         <div><strong>Git + webhook + auto-SSL</strong>Pola deploy</div>
       </div>
@@ -320,7 +320,15 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
             </div>
           </div>
           <div class="tl-item">
-            <div class="tl-badge current">v12</div>
+            <div class="tl-badge current">v13</div>
+            <div class="tl-body">
+              <strong>Navigasi mobile portal siswa dan guest</strong>
+              <p>Shared layout LMS kini memakai header mobile 62px dan bottom navigation khusus pengguna non-admin. Guest mendapat akses cepat Katalog, Masuk, Daftar, dan Beranda. Siswa mendapat Katalog, Course Saya, Notifikasi (dengan badge unread real-time), dan Keluar. Perubahan otomatis berlaku ke katalog, detail course, checkout, login/register, My Courses, lesson, dan notifikasi di semua brand.</p>
+              <div class="tl-tags"><span class="tag">includes/lms_layout.php</span><span class="tag">Student Portal</span><span class="tag">Guest UX</span></div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-badge">v12</div>
             <div class="tl-body">
               <strong>Navigasi mobile bottom bar + bottom sheet</strong>
               <p>Seluruh halaman admin kini memakai bottom navigation mobile tetap di bawah layar (Home, Event, Course, Order, Lainnya), badge order pending real-time, serta bottom sheet untuk menu sekunder. Elemen dipindahkan ke <code>document.body</code> agar tidak terikat stacking/layout header. Dashboard mobile juga dipadatkan: header 58px, hero/title/tombol lebih ringkas, card statistik naik ke area layar awal, dan ruang bawah aman untuk navigasi.</p>
@@ -502,7 +510,7 @@ git checkout main && bash deploy/deploy.sh</code></pre>
   </main>
 </div>
 
-<p class="foot">Dokumentasi ini mengikuti kondisi aplikasi versi v12 (multi-brand + LMS + transfer bank manual + auto-SSL + navigasi mobile). Perbarui halaman ini setiap kali menambah <code>migrate_v*.sql</code> baru atau workflow server baru.</p>
+<p class="foot">Dokumentasi ini mengikuti kondisi aplikasi versi v13 (multi-brand + LMS + transfer bank manual + auto-SSL + navigasi mobile admin/siswa). Perbarui halaman ini setiap kali menambah <code>migrate_v*.sql</code> baru atau workflow server baru.</p>
 
 </body>
 </html>
