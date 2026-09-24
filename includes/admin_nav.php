@@ -86,6 +86,17 @@ function admin_nav_group_active(array $item, string $activeKey): bool {
 /** Render style + markup nav admin. $activeKey harus cocok dengan salah satu 'key' di admin_nav_items(). */
 function render_admin_nav(string $activeKey): void {
     $isSuperadmin = !empty($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'superadmin';
+    $pendingOrderCount = 0;
+    try {
+        $currentBrand = get_current_brand();
+        if ($currentBrand && table_exists(get_db(), 'lms_orders')) {
+            $stmtPending = get_db()->prepare("SELECT COUNT(*) FROM lms_orders WHERE brand_id = ? AND payment_status = 'pending'");
+            $stmtPending->execute([(int)$currentBrand['id']]);
+            $pendingOrderCount = (int)$stmtPending->fetchColumn();
+        }
+    } catch (Throwable $e) {
+        $pendingOrderCount = 0;
+    }
     ?>
     <style>
       .adm-nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; position: relative; }
@@ -130,13 +141,90 @@ function render_admin_nav(string $activeKey): void {
         border-color: rgba(255,255,255,0.10);
         background: rgba(255,255,255,0.035);
       }
+      .adm-mobile-nav, .adm-mobile-sheet, .adm-mobile-backdrop { display: none; }
       @media (max-width: 760px) {
-        .adm-nav { width: 100%; }
-        .adm-nav a, .adm-nav summary { padding: 10px 12px; font-size: 12.5px; }
-        .adm-nav .adm-dropdown {
-          position: static; margin-top: 4px; padding-left: 10px;
-          background: transparent; border: 0; box-shadow: none;
+        body { padding-bottom: calc(88px + env(safe-area-inset-bottom)) !important; }
+        .topbar-inner {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-between !important;
+          min-height: 60px !important;
+          padding-top: 10px !important;
+          padding-bottom: 10px !important;
         }
+        .topbar-brand, .brand, .brand-link {
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 10px !important;
+          max-width: 75% !important;
+        }
+        .topbar-brand img, .brand img, .brand-link img {
+          max-height: 34px !important;
+          width: auto !important;
+          object-fit: contain !important;
+        }
+        .adm-nav { display: none !important; }
+        .adm-mobile-nav {
+          position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 1000;
+          display: grid; grid-template-columns: repeat(5, 1fr); align-items: center;
+          min-height: 66px; padding: 7px 5px calc(7px + env(safe-area-inset-bottom));
+          border: 1px solid color-mix(in srgb, var(--gold, #D6A536) 24%, rgba(255,255,255,.12));
+          border-radius: 22px;
+          background: rgba(18,18,17,.92); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+          box-shadow: 0 16px 48px rgba(0,0,0,.52), inset 0 1px 0 rgba(255,255,255,.07);
+        }
+        .adm-mobile-item {
+          position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+          gap: 4px; min-width: 0; min-height: 52px; padding: 5px 2px;
+          color: var(--muted, #A8A29A); border: 0; border-radius: 16px; background: transparent;
+          text-decoration: none; font: inherit; font-size: 10px; font-weight: 700; letter-spacing: .01em;
+          cursor: pointer; transition: transform .18s ease, color .18s ease, background .18s ease;
+        }
+        .adm-mobile-item:active { transform: scale(.92); }
+        .adm-mobile-item.active {
+          color: var(--gold-soft, #F4D27A);
+          background: linear-gradient(145deg, color-mix(in srgb, var(--gold, #D6A536) 18%, transparent), rgba(255,255,255,.025));
+        }
+        .adm-mobile-item.active::before {
+          content: ''; position: absolute; top: 1px; width: 22px; height: 2px; border-radius: 4px;
+          background: var(--gold-soft, #F4D27A); box-shadow: 0 0 12px color-mix(in srgb, var(--gold, #D6A536) 80%, transparent);
+        }
+        .adm-mobile-item svg { width: 21px; height: 21px; }
+        .adm-mobile-badge {
+          position: absolute; top: 2px; left: calc(50% + 8px); display: grid; place-items: center;
+          min-width: 18px; height: 18px; padding: 0 5px; border: 2px solid #121211; border-radius: 999px;
+          color: #fff; background: #EF4444; font-size: 9px; line-height: 1; box-shadow: 0 3px 10px rgba(239,68,68,.42);
+        }
+        .adm-mobile-backdrop {
+          position: fixed; inset: 0; z-index: 1001; display: block; opacity: 0; visibility: hidden;
+          background: rgba(0,0,0,.64); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+          transition: opacity .24s ease, visibility .24s ease;
+        }
+        .adm-mobile-backdrop.open { opacity: 1; visibility: visible; }
+        .adm-mobile-sheet {
+          position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 1002; display: block;
+          max-height: min(78vh, 640px); overflow-y: auto; overflow-x: hidden;
+          padding: 8px 16px calc(22px + env(safe-area-inset-bottom));
+          border: 1px solid color-mix(in srgb, var(--gold, #D6A536) 22%, rgba(255,255,255,.09));
+          border-radius: 26px; background: rgba(20,20,19,.98); box-shadow: 0 -22px 70px rgba(0,0,0,.58);
+          transform: translateY(calc(100% + 24px)); visibility: hidden;
+          transition: transform .28s cubic-bezier(.22,.9,.32,1), visibility .28s ease;
+        }
+        .adm-mobile-sheet.open { transform: translateY(0); visibility: visible; }
+        .adm-sheet-handle { width: 42px; height: 4px; margin: 4px auto 14px; border-radius: 4px; background: rgba(255,255,255,.24); }
+        .adm-sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        .adm-sheet-head strong { font-size: 17px; color: var(--text, #F7F3E8); }
+        .adm-sheet-close { width: 36px; height: 36px; border: 1px solid rgba(255,255,255,.09); border-radius: 50%; color: var(--text,#fff); background: rgba(255,255,255,.05); font-size: 20px; }
+        .adm-sheet-section { margin: 16px 0 8px; color: var(--gold-soft,#F4D27A); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+        .adm-sheet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+        .adm-sheet-link {
+          position: relative; min-height: 80px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between;
+          gap: 8px; padding: 13px 11px; border: 1px solid rgba(255,255,255,.07); border-radius: 16px;
+          color: var(--text,#F7F3E8); background: rgba(255,255,255,.035); text-decoration: none; font-size: 11px; font-weight: 650;
+        }
+        .adm-sheet-link.active { border-color: var(--border-gold,rgba(214,165,54,.3)); background: color-mix(in srgb, var(--gold,#D6A536) 11%, transparent); }
+        .adm-sheet-link svg { width: 20px; height: 20px; color: var(--gold-soft,#F4D27A); }
+        .adm-sheet-link.danger { color: #FCA5A5; }
       }
     </style>
     <nav class="adm-nav" aria-label="Navigasi admin">
@@ -168,6 +256,50 @@ function render_admin_nav(string $activeKey): void {
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 17 15 12l-5-5M15 12H3m8-9h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
     </nav>
+
+    <nav class="adm-mobile-nav" aria-label="Navigasi admin mobile">
+      <a class="adm-mobile-item <?= $activeKey === 'dashboard' ? 'active' : '' ?>" href="dashboard.php">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Home</span>
+      </a>
+      <a class="adm-mobile-item <?= admin_nav_group_active(admin_nav_items()[1], $activeKey) ? 'active' : '' ?>" href="events.php">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Event</span>
+      </a>
+      <a class="adm-mobile-item <?= in_array($activeKey, ['lms-courses','lms-users','lms-progress','lms-course-form'], true) ? 'active' : '' ?>" href="lms-courses.php">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 6.25V19.25M12 6.25C10.83 5.48 9.25 5 7.5 5S4.17 5.48 3 6.25v13C4.17 18.47 5.75 18 7.5 18s3.33.47 4.5 1.25M12 6.25C13.17 5.48 14.75 5 16.5 5s3.33.48 4.5 1.25v13C19.83 18.47 18.25 18 16.5 18s-3.33.47-4.5 1.25" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Course</span>
+      </a>
+      <a class="adm-mobile-item <?= $activeKey === 'lms-orders' ? 'active' : '' ?>" href="lms-orders.php">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <?php if ($pendingOrderCount > 0): ?><span class="adm-mobile-badge"><?= $pendingOrderCount > 99 ? '99+' : $pendingOrderCount ?></span><?php endif; ?>
+        <span>Order</span>
+      </a>
+      <button type="button" class="adm-mobile-item" id="admMoreButton" aria-controls="admMobileSheet" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>Lainnya</span>
+      </button>
+    </nav>
+
+    <div class="adm-mobile-backdrop" id="admMobileBackdrop"></div>
+    <aside class="adm-mobile-sheet" id="admMobileSheet" aria-hidden="true" aria-label="Menu admin lainnya">
+      <div class="adm-sheet-handle"></div>
+      <div class="adm-sheet-head"><strong>Menu Admin</strong><button type="button" class="adm-sheet-close" id="admSheetClose" aria-label="Tutup">×</button></div>
+      <?php foreach (admin_nav_items() as $sheetGroup): ?>
+        <?php if (($sheetGroup['key'] ?? '') === 'dashboard' || (!empty($sheetGroup['superadmin_only']) && !$isSuperadmin)) continue; ?>
+        <div class="adm-sheet-section"><?= htmlspecialchars($sheetGroup['label']) ?></div>
+        <div class="adm-sheet-grid">
+          <?php $sheetLinks = !empty($sheetGroup['children']) ? $sheetGroup['children'] : [$sheetGroup]; ?>
+          <?php foreach ($sheetLinks as $sheetLink): ?>
+            <?php if (!empty($sheetLink['superadmin_only']) && !$isSuperadmin) continue; ?>
+            <a class="adm-sheet-link <?= ($sheetLink['key'] ?? '') === $activeKey ? 'active' : '' ?>" href="<?= htmlspecialchars($sheetLink['href']) ?>">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="<?= htmlspecialchars($sheetGroup['icon'] ?? 'M5 12h14') ?>" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span><?= htmlspecialchars($sheetLink['label']) ?></span>
+              <?php if (($sheetLink['key'] ?? '') === 'lms-orders' && $pendingOrderCount > 0): ?><span class="adm-mobile-badge"><?= $pendingOrderCount > 99 ? '99+' : $pendingOrderCount ?></span><?php endif; ?>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      <?php endforeach; ?>
+      <div class="adm-sheet-section">Akun</div>
+      <div class="adm-sheet-grid"><a class="adm-sheet-link danger" href="logout.php"><svg viewBox="0 0 24 24" fill="none"><path d="M10 17 15 12l-5-5M15 12H3m8-9h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Keluar</span></a></div>
+    </aside>
+
     <script>
       (function () {
         var groups = document.querySelectorAll('.adm-nav details');
@@ -183,6 +315,28 @@ function render_admin_nav(string $activeKey): void {
           groups.forEach(function (el) {
             if (el.open && !el.contains(e.target)) el.open = false;
           });
+        });
+
+        var moreBtn = document.getElementById('admMoreButton');
+        var sheet = document.getElementById('admMobileSheet');
+        var backdrop = document.getElementById('admMobileBackdrop');
+        var closeBtn = document.getElementById('admSheetClose');
+
+        function toggleSheet(open) {
+          if (!sheet || !backdrop) return;
+          var state = typeof open === 'boolean' ? open : !sheet.classList.contains('open');
+          sheet.classList.toggle('open', state);
+          backdrop.classList.toggle('open', state);
+          sheet.setAttribute('aria-hidden', state ? 'false' : 'true');
+          if (moreBtn) moreBtn.setAttribute('aria-expanded', state ? 'true' : 'false');
+          document.body.style.overflow = state ? 'hidden' : '';
+        }
+
+        if (moreBtn) moreBtn.addEventListener('click', function () { toggleSheet(true); });
+        if (closeBtn) closeBtn.addEventListener('click', function () { toggleSheet(false); });
+        if (backdrop) backdrop.addEventListener('click', function () { toggleSheet(false); });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && sheet && sheet.classList.contains('open')) toggleSheet(false);
         });
       })();
     </script>
