@@ -209,7 +209,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
     <div class="toc-title">Daftar Isi</div>
     <ol>
       <li><a href="#arsitektur">Arsitektur Sistem</a></li>
-      <li><a href="#riwayat">Riwayat Versi (v1 → v11)</a></li>
+      <li><a href="#riwayat">Riwayat Versi (v1 → v12)</a></li>
       <li><a href="#brand-baru">Menambah Brand Baru</a></li>
       <li><a href="#migrasi">Urutan Migrasi Database</a></li>
       <li><a href="#deploy">Deploy Production</a></li>
@@ -225,7 +225,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
       <h1>Dokumentasi Sistem <?= htmlspecialchars($brand['name']) ?></h1>
       <p>Referensi teknis lengkap: arsitektur saat ini, riwayat perubahan sejak pertama dibangun, urutan migrasi database, dan pola deploy production yang dipakai tim.</p>
       <div class="hero-meta">
-        <div><strong>v11</strong>Versi skema saat ini</div>
+        <div><strong>v12</strong>Versi aplikasi saat ini</div>
         <div><strong>Multi-brand</strong>Mode operasi</div>
         <div><strong>Git + webhook + auto-SSL</strong>Pola deploy</div>
       </div>
@@ -320,7 +320,15 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
             </div>
           </div>
           <div class="tl-item">
-            <div class="tl-badge current">v11</div>
+            <div class="tl-badge current">v12</div>
+            <div class="tl-body">
+              <strong>Navigasi mobile bottom bar + bottom sheet</strong>
+              <p>Seluruh halaman admin kini memakai bottom navigation mobile tetap di bawah layar (Home, Event, Course, Order, Lainnya), badge order pending real-time, serta bottom sheet untuk menu sekunder. Elemen dipindahkan ke <code>document.body</code> agar tidak terikat stacking/layout header. Dashboard mobile juga dipadatkan: header 58px, hero/title/tombol lebih ringkas, card statistik naik ke area layar awal, dan ruang bawah aman untuk navigasi.</p>
+              <div class="tl-tags"><span class="tag">includes/admin_nav.php</span><span class="tag">admin/dashboard.php</span><span class="tag">Mobile UX</span></div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-badge">v11</div>
             <div class="tl-body">
               <strong>Auto-provision Nginx + SSL untuk brand baru</strong>
               <p><code>admin/setup-brand.php</code> kini otomatis membuat Nginx server block, memvalidasi A record domain (root + <code>www</code>) ke IP VPS, menjalankan <code>certbot</code>, dan mengaktifkan redirect HTTPS — tanpa langkah manual di server. Hasil provisioning (berhasil/gagal beserta pesannya) langsung ditampilkan di halaman onboarding.</p>
@@ -494,7 +502,7 @@ git checkout main && bash deploy/deploy.sh</code></pre>
   </main>
 </div>
 
-<p class="foot">Dokumentasi ini mengikuti kondisi sistem versi v11 (multi-brand + LMS + transfer bank manual + auto-SSL brand). Perbarui halaman ini setiap kali menambah <code>migrate_v*.sql</code> baru atau workflow server baru.</p>
+<p class="foot">Dokumentasi ini mengikuti kondisi aplikasi versi v12 (multi-brand + LMS + transfer bank manual + auto-SSL + navigasi mobile). Perbarui halaman ini setiap kali menambah <code>migrate_v*.sql</code> baru atau workflow server baru.</p>
 
 </body>
 </html>

@@ -165,7 +165,7 @@ function render_admin_nav(string $activeKey): void {
         }
         .adm-nav { display: none !important; }
         .adm-mobile-nav {
-          position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 1000;
+          position: fixed !important; left: 12px !important; right: 12px !important; top: auto !important; bottom: calc(10px + env(safe-area-inset-bottom)) !important; z-index: 1000;
           display: grid; grid-template-columns: repeat(5, 1fr); align-items: center;
           min-height: 66px; padding: 7px 5px calc(7px + env(safe-area-inset-bottom));
           border: 1px solid color-mix(in srgb, var(--gold, #D6A536) 24%, rgba(255,255,255,.12));
@@ -317,9 +317,14 @@ function render_admin_nav(string $activeKey): void {
           });
         });
 
-        var moreBtn = document.getElementById('admMoreButton');
+        var mobileNav = document.querySelector('.adm-mobile-nav');
         var sheet = document.getElementById('admMobileSheet');
         var backdrop = document.getElementById('admMobileBackdrop');
+        if (mobileNav && mobileNav.parentNode !== document.body) document.body.appendChild(mobileNav);
+        if (backdrop && backdrop.parentNode !== document.body) document.body.appendChild(backdrop);
+        if (sheet && sheet.parentNode !== document.body) document.body.appendChild(sheet);
+
+        var moreBtn = document.getElementById('admMoreButton');
         var closeBtn = document.getElementById('admSheetClose');
 
         function toggleSheet(open) {

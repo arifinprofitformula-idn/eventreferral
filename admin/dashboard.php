@@ -633,26 +633,41 @@ function whatsapp_link(?string $number): ?string
       padding-left: 16px;
       padding-right: 16px;
     }
+    .topbar { min-height: 58px; }
     .topbar-inner {
-      min-height: auto;
-      padding-top: 16px;
-      padding-bottom: 16px;
-      align-items: flex-start;
+      min-height: 58px;
+      padding-top: 9px;
+      padding-bottom: 9px;
+      align-items: center;
     }
-    .brand img { width: 112px; }
+    .brand img { width: auto; max-width: 118px; max-height: 34px; }
     .nav { gap: 8px; }
     .nav a { padding: 10px 12px; font-size: 12.5px; }
+    .wrap { padding-top: 18px; }
     .hero {
       border-radius: 22px;
-      padding: 28px;
+      padding: 24px 20px;
+      gap: 22px;
+    }
+    .hero h1, h1 {
+      font-size: clamp(32px, 9vw, 40px);
+      line-height: 1.03;
+      letter-spacing: -0.035em;
+    }
+    .subtitle {
+      margin-top: 14px;
+      font-size: 15px;
+      line-height: 1.55;
     }
     .hero-actions, .toolbar-actions, .section-head, .toolbar {
       align-items: stretch;
       flex-direction: column;
     }
+    .hero-actions { gap: 10px; }
     .btn, .search-input { width: 100%; }
-    .stats { grid-template-columns: 1fr; }
-    .stat-card { min-height: 166px; }
+    .hero .btn { min-height: 48px; padding: 13px 18px; border-radius: 15px; }
+    .stats { grid-template-columns: 1fr; gap: 14px; margin-top: 16px; }
+    .stat-card { min-height: 140px; padding: 20px; border-radius: 20px; }
     .section-card { padding: 16px; }
     .desktop-table { display: none; }
     .mobile-cards {
@@ -681,14 +696,9 @@ function whatsapp_link(?string $number): ?string
     .lead-card { grid-template-columns: 1fr; }
   }
   @media (max-width: 520px) {
-    .topbar-inner {
-      display: grid;
-      grid-template-columns: 1fr;
-    }
-    .brand { justify-content: space-between; }
-    .nav { justify-content: flex-start; }
-    h1 { font-size: 30px; }
-    .hero { padding: 24px; }
+    .topbar-inner { display: flex; }
+    .brand { justify-content: flex-start; }
+    .hero { padding: 22px 18px; }
   }
 </style>
 </head>
