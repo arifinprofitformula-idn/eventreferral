@@ -4,6 +4,20 @@
  * Core modular LMS: RBAC, auto-migration, courses, progress, checkout sync, notifications.
  */
 
+if (!function_exists('lms_add_column_if_missing')) {
+    function lms_add_column_if_missing(PDO $pdo, string $table, string $column, string $alterSql): void {
+        try {
+            $stmt = $pdo->prepare("SHOW COLUMNS FROM `{$table}` LIKE ?");
+            $stmt->execute([$column]);
+            if (!$stmt->fetch(PDO::FETCH_ASSOC)) {
+                $pdo->exec($alterSql);
+            }
+        } catch (Throwable $e) {
+            error_log('[LMS] Gagal ensure column ' . $table . '.' . $column . ': ' . $e->getMessage());
+        }
+    }
+}
+
 if (!function_exists('lms_ensure_schema')) {
     function lms_ensure_schema(PDO $pdo): void {
         static $checked = false;
@@ -43,50 +57,39 @@ if (!function_exists('lms_ensure_schema')) {
             }
         }
 
-        $paymentSettingsReady = table_exists($pdo, 'lms_payment_settings');
-        $hasPaymentColumns = false;
-        try {
-            $stmt = $pdo->query("SHOW COLUMNS FROM lms_orders LIKE 'midtrans_transaction_id'");
-            $hasPaymentColumns = (bool)$stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (Throwable $e) {
-            $hasPaymentColumns = false;
+        if (!table_exists($pdo, 'lms_payment_settings')) {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS lms_payment_settings (
+                    brand_id INT NOT NULL PRIMARY KEY,
+                    active_method ENUM('bank_transfer', 'midtrans') NOT NULL DEFAULT 'bank_transfer',
+                    bank_transfer_enabled TINYINT(1) NOT NULL DEFAULT 1,
+                    bank_code VARCHAR(40) NULL,
+                    bank_name VARCHAR(120) NULL,
+                    bank_logo_path VARCHAR(255) NULL,
+                    bank_account_number VARCHAR(80) NULL,
+                    bank_account_name VARCHAR(150) NULL,
+                    bank_instructions TEXT NULL,
+                    admin_whatsapp VARCHAR(25) NULL,
+                    midtrans_enabled TINYINT(1) NOT NULL DEFAULT 0,
+                    midtrans_environment ENUM('sandbox', 'production') NOT NULL DEFAULT 'sandbox',
+                    midtrans_server_key VARCHAR(255) NULL,
+                    midtrans_client_key VARCHAR(255) NULL,
+                    midtrans_merchant_id VARCHAR(100) NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_lms_payment_settings_brand FOREIGN KEY (brand_id) REFERENCES brands (id) ON DELETE CASCADE
+                ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4
+            ");
         }
 
-        if (!$paymentSettingsReady || !$hasPaymentColumns) {
-            $sqlFile = __DIR__ . '/../database/migrations/migrate_v27_lms_payment_settings.sql';
-            if (is_file($sqlFile)) {
-                $sql = file_get_contents($sqlFile);
-                if ($sql !== false) {
-                    $pdo->exec($sql);
-                }
-            }
-        }
-
-        $hasBankBranding = false;
-        try {
-            $stmt = $pdo->query("SHOW COLUMNS FROM lms_payment_settings LIKE 'bank_logo_path'");
-            $hasBankBranding = (bool)$stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (Throwable $e) {
-            $hasBankBranding = false;
-        }
-        if (!$hasBankBranding) {
-            $sqlFile = __DIR__ . '/../database/migrations/migrate_v28_lms_bank_branding.sql';
-            $sql = is_file($sqlFile) ? file_get_contents($sqlFile) : false;
-            if ($sql !== false) $pdo->exec($sql);
-        }
-
-        $hasPaymentProof = false;
-        try {
-            $stmt = $pdo->query("SHOW COLUMNS FROM lms_orders LIKE 'payment_proof_path'");
-            $hasPaymentProof = (bool)$stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (Throwable $e) {
-            $hasPaymentProof = false;
-        }
-        if (!$hasPaymentProof) {
-            $sqlFile = __DIR__ . '/../database/migrations/migrate_v29_lms_payment_proof.sql';
-            $sql = is_file($sqlFile) ? file_get_contents($sqlFile) : false;
-            if ($sql !== false) $pdo->exec($sql);
-        }
+        lms_add_column_if_missing($pdo, 'lms_payment_settings', 'bank_code', "ALTER TABLE lms_payment_settings ADD COLUMN bank_code VARCHAR(40) NULL AFTER bank_transfer_enabled");
+        lms_add_column_if_missing($pdo, 'lms_payment_settings', 'bank_logo_path', "ALTER TABLE lms_payment_settings ADD COLUMN bank_logo_path VARCHAR(255) NULL AFTER bank_name");
+        lms_add_column_if_missing($pdo, 'lms_payment_settings', 'admin_whatsapp', "ALTER TABLE lms_payment_settings ADD COLUMN admin_whatsapp VARCHAR(25) NULL AFTER bank_instructions");
+        lms_add_column_if_missing($pdo, 'lms_orders', 'midtrans_transaction_id', "ALTER TABLE lms_orders ADD COLUMN midtrans_transaction_id VARCHAR(120) NULL AFTER payment_method");
+        lms_add_column_if_missing($pdo, 'lms_orders', 'payment_reference', "ALTER TABLE lms_orders ADD COLUMN payment_reference VARCHAR(120) NULL AFTER midtrans_transaction_id");
+        lms_add_column_if_missing($pdo, 'lms_orders', 'payment_payload', "ALTER TABLE lms_orders ADD COLUMN payment_payload JSON NULL AFTER payment_reference");
+        lms_add_column_if_missing($pdo, 'lms_orders', 'payment_proof_path', "ALTER TABLE lms_orders ADD COLUMN payment_proof_path VARCHAR(255) NULL AFTER payment_payload");
+        lms_add_column_if_missing($pdo, 'lms_orders', 'payment_proof_uploaded_at', "ALTER TABLE lms_orders ADD COLUMN payment_proof_uploaded_at DATETIME NULL AFTER payment_proof_path");
 
         $checked = true;
     }

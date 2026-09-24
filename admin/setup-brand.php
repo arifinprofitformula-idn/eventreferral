@@ -28,6 +28,24 @@ $pdo = get_db();
 $errors = [];
 $success = null;
 
+function provision_brand_domain_after_create(string $domain): array {
+    $domain = strtolower(trim($domain));
+    if (!preg_match('/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/', $domain)) {
+        return ['ok' => false, 'message' => 'Domain tidak valid untuk auto-provision.'];
+    }
+
+    $cmd = 'sudo /usr/local/sbin/provision-brand-domain.sh ' . escapeshellarg($domain) . ' 2>&1';
+    $output = [];
+    $exitCode = 0;
+    exec($cmd, $output, $exitCode);
+
+    return [
+        'ok' => $exitCode === 0,
+        'message' => implode("\n", array_slice($output, -12)),
+        'exit_code' => $exitCode,
+    ];
+}
+
 $formValues = [
     'slug' => '',
     'domain' => '',
@@ -148,10 +166,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_brand'])) {
 
                 $pdo->commit();
 
+                $provisionResult = provision_brand_domain_after_create($formValues['domain']);
+
                 $success = [
                     'slug' => $formValues['slug'],
                     'domain' => $formValues['domain'],
                     'admin_username' => $formValues['admin_username'],
+                    'provision_ok' => $provisionResult['ok'],
+                    'provision_message' => $provisionResult['message'],
                 ];
 
                 $formValues['slug'] = $formValues['domain'] = $formValues['name'] = $formValues['admin_username'] = '';
@@ -473,9 +495,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_brand'])) {
         Brand berhasil disimpan — <code><?= htmlspecialchars($success['slug']) ?></code>.<br>
         Domain: <code><?= htmlspecialchars($success['domain']) ?></code><br>
         Username admin: <code><?= htmlspecialchars($success['admin_username']) ?></code><br><br>
-        Langkah selanjutnya (production): arahkan Addon Domain <code><?= htmlspecialchars($success['domain']) ?></code>
-        ke folder public_html yang sama, lalu aktifkan SSL. Untuk tes lokal, buka
-        <code>?__brand=<?= htmlspecialchars($success['slug']) ?></code> dari localhost.
+        <?php if ($success['provision_ok']): ?>
+          <strong>Web + SSL aktif otomatis.</strong><br>
+          Buka: <a href="https://<?= htmlspecialchars($success['domain']) ?>" target="_blank" rel="noopener">https://<?= htmlspecialchars($success['domain']) ?></a>
+        <?php else: ?>
+          <strong>Brand tersimpan, tetapi aktivasi domain/SSL belum berhasil.</strong><br>
+          Pastikan DNS A record <code><?= htmlspecialchars($success['domain']) ?></code> dan <code>www.<?= htmlspecialchars($success['domain']) ?></code> mengarah ke VPS, lalu jalankan ulang provisioning.<br>
+          <small><?= nl2br(htmlspecialchars($success['provision_message'])) ?></small>
+        <?php endif; ?>
       </p>
     </div>
   <?php endif; ?>
