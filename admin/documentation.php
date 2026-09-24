@@ -209,7 +209,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
     <div class="toc-title">Daftar Isi</div>
     <ol>
       <li><a href="#arsitektur">Arsitektur Sistem</a></li>
-      <li><a href="#riwayat">Riwayat Versi (v1 → v8)</a></li>
+      <li><a href="#riwayat">Riwayat Versi (v1 → v11)</a></li>
       <li><a href="#brand-baru">Menambah Brand Baru</a></li>
       <li><a href="#migrasi">Urutan Migrasi Database</a></li>
       <li><a href="#deploy">Deploy Production</a></li>
@@ -225,9 +225,9 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
       <h1>Dokumentasi Sistem <?= htmlspecialchars($brand['name']) ?></h1>
       <p>Referensi teknis lengkap: arsitektur saat ini, riwayat perubahan sejak pertama dibangun, urutan migrasi database, dan pola deploy production yang dipakai tim.</p>
       <div class="hero-meta">
-        <div><strong>v8</strong>Versi skema saat ini</div>
+        <div><strong>v11</strong>Versi skema saat ini</div>
         <div><strong>Multi-brand</strong>Mode operasi</div>
-        <div><strong>Git + cron/webhook</strong>Pola deploy</div>
+        <div><strong>Git + webhook + auto-SSL</strong>Pola deploy</div>
       </div>
     </div>
 
@@ -320,7 +320,31 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
             </div>
           </div>
           <div class="tl-item">
-            <div class="tl-badge current">v8</div>
+            <div class="tl-badge current">v11</div>
+            <div class="tl-body">
+              <strong>Auto-provision Nginx + SSL untuk brand baru</strong>
+              <p><code>admin/setup-brand.php</code> kini otomatis membuat Nginx server block, memvalidasi A record domain (root + <code>www</code>) ke IP VPS, menjalankan <code>certbot</code>, dan mengaktifkan redirect HTTPS — tanpa langkah manual di server. Hasil provisioning (berhasil/gagal beserta pesannya) langsung ditampilkan di halaman onboarding.</p>
+              <div class="tl-tags"><span class="tag">admin/setup-brand.php</span><span class="tag">/usr/local/sbin/provision-brand-domain.sh</span><span class="tag">/etc/sudoers.d/brand-provision</span></div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-badge">v10</div>
+            <div class="tl-body">
+              <strong>Payment Settings + Transfer Bank Manual untuk eCourse</strong>
+              <p>Tabel <code>lms_payment_settings</code> per brand (nama/nomor/logo bank, WhatsApp admin, toggle Midtrans). Checkout eCourse kini membuat order <code>pending</code>, menerima upload bukti transfer (<code>payment_proof_path</code>), dan admin meng-approve/reject manual lewat <code>admin/lms-orders.php</code> — approve otomatis upgrade role user ke <em>Paid</em> dan meng-enroll course. Midtrans disiapkan sebagai opsi lanjutan, belum live.</p>
+              <div class="tl-tags"><span class="tag">migrate_v27_lms_payment_settings.sql</span><span class="tag">migrate_v28_lms_bank_branding.sql</span><span class="tag">migrate_v29_lms_payment_proof.sql</span><span class="tag">admin/payment-settings.php</span></div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-badge">v9</div>
+            <div class="tl-body">
+              <strong>Sistem eCourse LMS (RBAC, materi, progress)</strong>
+              <p>Modul <code>includes/lms_core.php</code> menambah RBAC role (<code>free</code>/<code>paid</code>/<code>admin</code>/dst), tabel course/modul/lesson/enrollment/progress/notifikasi/order per brand. Auto-migrasi skema berjalan sendiri lewat <code>lms_ensure_schema()</code> saat halaman LMS pertama diakses — tidak perlu jalankan SQL manual di instalasi yang sudah berjalan.</p>
+              <div class="tl-tags"><span class="tag">migrate_v25_lms.sql</span><span class="tag">includes/lms_core.php</span><span class="tag">course/*.php</span></div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-badge">v8</div>
             <div class="tl-body">
               <strong>Root event per brand — versi saat ini</strong>
               <p>Kolom <code>default_event_slug</code> di <code>brands</code>, sehingga brand baru tidak berebut slug <code>default</code> dengan brand rahasiaemas yang sudah ada. Brand baru diberi slug root <code>{brand_slug}-default</code> otomatis oleh <code>admin/setup-brand.php</code>.</p>
@@ -337,18 +361,19 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 5v6c0 5 3.4 8.6 8 11 4.6-2.4 8-6 8-11V5l-8-3Z"/></svg>
           Menambah Brand Baru
         </div>
-        <p class="card-subtitle">Alur operasional lewat <code>admin/setup-brand.php</code> — hanya Coach yang menjalankan ini.</p>
+        <p class="card-subtitle">Alur operasional lewat <code>admin/setup-brand.php</code> — hanya Coach yang menjalankan ini. Sejak v11, aktivasi domain + SSL berjalan otomatis, tidak perlu langkah manual di server.</p>
 
         <ol class="steps">
-          <li><span><strong>Siapkan domain.</strong> Domain baru sudah diarahkan sebagai Addon Domain di cPanel ke folder <code>public_html</code> yang sama dengan brand lain.</span></li>
+          <li><span><strong>Arahkan DNS domain baru.</strong> Buat A record root domain dan <code>www</code> menunjuk ke IP VPS produksi — wajib beres <em>sebelum</em> submit form, karena provisioning SSL akan memvalidasi keduanya.</span></li>
           <li><span><strong>Buka <code>admin/setup-brand.php?key=...</code></strong> memakai <code>MASTER_SETUP_KEY</code> dari <code>config.php</code> — bukan PIN/password admin brand manapun.</span></li>
           <li><span><strong>Isi identitas brand</strong> — slug, domain, nama, tagline, logo, WhatsApp default, disclaimer, preset tema (atau warna custom).</span></li>
           <li><span><strong>Isi kredensial admin brand ini</strong> — username dan password terpisah dari brand lain.</span></li>
-          <li><span><strong>Simpan.</strong> Sistem otomatis membuat baris <code>brands</code> baru dan satu event root domain dengan slug <code>{brand_slug}-default</code>.</span></li>
-          <li><span><strong>Aktifkan SSL</strong> untuk domain baru lewat cPanel (Let's Encrypt).</span></li>
+          <li><span><strong>Simpan.</strong> Sistem membuat baris <code>brands</code> baru, satu event root domain dengan slug <code>{brand_slug}-default</code>, lalu otomatis menjalankan <code>/usr/local/sbin/provision-brand-domain.sh</code>: membuat Nginx server block, mengecek A record, menerbitkan SSL via <code>certbot</code>, dan mengaktifkan redirect HTTPS.</span></li>
+          <li><span><strong>Cek hasil di layar.</strong> Halaman ini langsung menampilkan status berhasil (link domain aktif) atau gagal (pesan error dari certbot/Nginx) — kalau gagal, brand tetap tersimpan di database dan bisa diprovisioning ulang setelah DNS diperbaiki.</span></li>
         </ol>
 
         <div class="callout warn"><strong>Catatan —</strong> slug event tetap unik secara global. Jika slug yang diinginkan sudah dipakai brand lain, sistem akan menolak saat validasi domain/slug brand (bukan slug event, yang dibuat otomatis).</div>
+        <div class="callout">Script provisioning berjalan lewat <code>sudo</code> tanpa password khusus untuk user <code>www-data</code> (diatur di <code>/etc/sudoers.d/brand-provision</code>, dibatasi hanya untuk perintah <code>provision-brand-domain.sh</code>). Log lengkap tiap eksekusi ada di <code>/var/log/brand-provision.log</code>.</div>
       </div>
     </section>
 
@@ -371,7 +396,10 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
             <tr><td class="strong">6</td><td><code>migrate_v7_multibrand.sql</code></td><td>Tahap 1/3 — brand_id masih boleh <code>NULL</code>.</td></tr>
             <tr><td class="strong">7</td><td><code>admin/migrate-legacy.php</code> (buka sekali di browser)</td><td>Tahap 2/3 — backfill <code>brand_id</code>. <strong>Hapus file ini setelah sukses.</strong></td></tr>
             <tr><td class="strong">8</td><td><code>migrate_v7_multibrand_finalize.sql</code></td><td>Tahap 3/3 — mengunci <code>brand_id</code> NOT NULL + foreign key. Cek dulu tidak ada baris <code>brand_id IS NULL</code>.</td></tr>
-            <tr><td class="strong">9</td><td><code>migrate_v8_default_event_slug.sql</code></td><td>Versi saat ini. Aman diulang (idempoten).</td></tr>
+            <tr><td class="strong">9</td><td><code>migrate_v8_default_event_slug.sql</code></td><td>Aman diulang (idempoten).</td></tr>
+            <tr><td class="strong">10</td><td><code>migrate_v25_lms.sql</code></td><td>Dijalankan otomatis oleh <code>lms_ensure_schema()</code> saat halaman LMS pertama diakses — tidak perlu manual.</td></tr>
+            <tr><td class="strong">11</td><td><code>migrate_v27_lms_payment_settings.sql</code> → <code>v28_lms_bank_branding.sql</code> → <code>v29_lms_payment_proof.sql</code></td><td>Juga auto-run berurutan oleh <code>lms_ensure_schema()</code>, cek kolom per kolom sebelum <code>ALTER TABLE</code> (kompatibel MySQL tanpa <code>ADD COLUMN IF NOT EXISTS</code>).</td></tr>
+            <tr><td class="strong">12</td><td>Tidak ada file <code>.sql</code> — provisioning infrastruktur</td><td>v11 (auto-SSL brand) mengubah <code>admin/setup-brand.php</code> dan menambah script <code>/usr/local/sbin/provision-brand-domain.sh</code> di server, bukan skema database.</td></tr>
           </table>
         </div>
 
@@ -456,6 +484,8 @@ git checkout main && bash deploy/deploy.sh</code></pre>
             <tr><td class="strong">Migrasi v7 finalize gagal</td><td>Masih ada baris <code>brand_id IS NULL</code> — jalankan ulang <code>admin/migrate-legacy.php</code> sebelum finalize.</td></tr>
             <tr><td class="strong">Login admin brand gagal</td><td>Cek <code>admin_username</code>/<code>admin_password_hash</code> di tabel <code>brands</code> untuk brand terkait.</td></tr>
             <tr><td class="strong">Deploy otomatis tidak jalan</td><td>Cek <code>deploy.log</code> di folder <code>shared</code> — kemungkinan working tree di server tidak bersih.</td></tr>
+            <tr><td class="strong">Domain brand baru gagal SSL/tidak aktif</td><td>A record root domain atau <code>www</code> belum mengarah ke IP VPS saat submit form — cek pesan error di halaman <code>setup-brand.php</code> dan log <code>/var/log/brand-provision.log</code>, lalu jalankan ulang <code>sudo /usr/local/sbin/provision-brand-domain.sh domain.tld</code> setelah DNS benar.</td></tr>
+            <tr><td class="strong">Checkout eCourse tidak masuk order</td><td>Cek tabel <code>lms_payment_settings</code> untuk brand terkait — <code>bank_transfer_enabled</code> harus <code>1</code> dan data rekening terisi lewat <code>admin/payment-settings.php</code>.</td></tr>
           </table>
         </div>
       </div>
@@ -464,7 +494,7 @@ git checkout main && bash deploy/deploy.sh</code></pre>
   </main>
 </div>
 
-<p class="foot">Dokumentasi ini mengikuti kondisi sistem versi v8 (multi-brand). Perbarui halaman ini setiap kali menambah <code>migrate_v*.sql</code> baru.</p>
+<p class="foot">Dokumentasi ini mengikuti kondisi sistem versi v11 (multi-brand + LMS + transfer bank manual + auto-SSL brand). Perbarui halaman ini setiap kali menambah <code>migrate_v*.sql</code> baru atau workflow server baru.</p>
 
 </body>
 </html>
