@@ -99,7 +99,7 @@ render_lms_header($brand, null, 'login');
     <button type="submit" class="btn-lms btn-lms-gold" style="width:100%;height:48px;margin-top:6px;">Login</button>
 
     <p style="text-align:center;font-size:13px;color:var(--muted);margin-top:6px;">
-      Belum punya akun? <a href="/course/register.php" style="color:var(--gold-soft);font-weight:700;">Daftar Gratis</a>
+      Belum punya akun? <a href="/course/register.php?redirect=<?= urlencode($redirect) ?>" style="color:var(--gold-soft);font-weight:700;">Daftar Akun Baru</a>
     </p>
   </form>
 </div>

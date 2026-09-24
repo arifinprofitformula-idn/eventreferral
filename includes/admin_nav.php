@@ -60,6 +60,7 @@ function admin_nav_items(): array {
             'icon' => 'M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5ZM19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2 3.46-.08-.02a1.7 1.7 0 0 0-1.8-.23l-.5.29a1.7 1.7 0 0 0-.85 1.7V22h-4v-.09a1.7 1.7 0 0 0-.85-1.7l-.5-.29a1.7 1.7 0 0 0-1.8.23l-.08.02-2-3.46.06-.06A1.7 1.7 0 0 0 4.6 15v-.58a1.7 1.7 0 0 0-1-1.55L3.5 12.8v-4l.1-.04a1.7 1.7 0 0 0 1-1.55v-.58a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2-3.46.08.02a1.7 1.7 0 0 0 1.8.23l.5-.29a1.7 1.7 0 0 0 .85-1.7V0h4v.09a1.7 1.7 0 0 0 .85 1.7l.5.29a1.7 1.7 0 0 0 1.8-.23l.08-.02 2 3.46-.06.06a1.7 1.7 0 0 0-.34 1.88v.58a1.7 1.7 0 0 0 1 1.55l.1.04v4l-.1.04a1.7 1.7 0 0 0-1 1.55V15Z',
             'children' => [
                 ['key' => 'email-settings', 'href' => 'email-settings.php', 'label' => 'Email'],
+                ['key' => 'payment-settings', 'href' => 'payment-settings.php', 'label' => 'Pembayaran'],
                 ['key' => 'integrations', 'href' => 'integrations.php', 'label' => 'Integrasi'],
                 ['key' => 'documentation', 'href' => 'documentation.php', 'label' => 'Dokumentasi'],
                 ['key' => 'admin-users', 'href' => 'admin-users.php', 'label' => 'Kelola Admin', 'superadmin_only' => true],

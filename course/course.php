@@ -208,26 +208,30 @@ render_lms_header($brand, $user, 'catalog');
     </div>
 
     <?php if (!$user): ?>
+      <?php
+        $guestDestination = $isFree
+          ? '/course/' . $course['slug']
+          : '/course/checkout.php?slug=' . urlencode($course['slug']);
+        $registrationUrl = '/course/register.php?redirect=' . urlencode($guestDestination);
+        $loginUrl = '/course/login.php?redirect=' . urlencode($guestDestination);
+      ?>
       <div style="display:grid;gap:10px;">
-        <a href="/course/login.php?redirect=<?= urlencode('/course/' . $course['slug']) ?>" class="btn-lms btn-lms-gold" style="width:100%;">
-          Login untuk Akses Materi
+        <a href="<?= htmlspecialchars($registrationUrl) ?>" class="btn-lms btn-lms-gold" style="width:100%;padding:14px;">
+          <?= $isFree ? 'Daftar & Mulai Belajar' : 'Beli Sekarang' ?> →
         </a>
-        <a href="/course/register.php" class="btn-lms btn-lms-ghost" style="width:100%;">
-          Daftar Akun Baru
-        </a>
-        <p style="font-size:11.5px;color:var(--muted);text-align:center;margin-top:4px;">
-          Tamu (Guest) hanya dapat melihat daftar silabus dan ringkasan eCourse.
+        <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px;line-height:1.6;">
+          Sudah punya akun? <a href="<?= htmlspecialchars($loginUrl) ?>" style="color:var(--gold-soft);font-weight:800;">Login di sini</a>
         </p>
       </div>
     <?php elseif ($canAccess): ?>
       <div style="display:grid;gap:10px;">
         <?php if ($nextLesson): ?>
-          <a href="/course/lesson.php?id=<?= (int)$nextLesson['id'] ?>" class="btn-lms btn-lms-gold" style="width:100%;">
-            Lanjutkan Belajar (Continue) →
+          <a href="/course/lesson.php?id=<?= (int)$nextLesson['id'] ?>" class="btn-lms btn-lms-gold" style="width:100%;padding:14px;">
+            Mulai Belajar →
           </a>
         <?php else: ?>
-          <a href="/course/my-courses.php" class="btn-lms btn-lms-gold" style="width:100%;">
-            Buka Dashboard My Courses
+          <a href="/course/my-courses.php" class="btn-lms btn-lms-gold" style="width:100%;padding:14px;">
+            Mulai Belajar →
           </a>
         <?php endif; ?>
         <div style="font-size:12px;color:var(--success);text-align:center;font-weight:700;">
@@ -237,10 +241,10 @@ render_lms_header($brand, $user, 'catalog');
     <?php else: ?>
       <div style="display:grid;gap:12px;">
         <div style="background:rgba(214,165,54,0.1);border:1px solid var(--border-gold);padding:12px 14px;border-radius:12px;font-size:12.5px;color:var(--gold-soft);line-height:1.5;">
-          Kursus ini merupakan materi <strong>Premium</strong>. Status akun Anda saat ini: <strong>User Free</strong>.
+          Kursus ini merupakan materi <strong>Premium</strong>. Selesaikan checkout untuk mengaktifkan akses belajar.
         </div>
         <a href="/course/checkout.php?slug=<?= urlencode($course['slug']) ?>" class="btn-lms btn-lms-gold" style="width:100%;padding:14px;">
-          Beli & Upgrade ke Paid User →
+          Mulai Belajar →
         </a>
       </div>
     <?php endif; ?>

@@ -94,20 +94,22 @@ $logoPath = $brand['logo_path'] ? '..' . $brand['logo_path'] : '../assets/logo.p
   <section class="panel">
     <div class="table-scroll">
       <table>
-        <thead><tr><th>No. Order</th><th>User</th><th>eCourse</th><th>Jumlah</th><th>Status</th><th>Tanggal</th></tr></thead>
+        <thead><tr><th>No. Order</th><th>User</th><th>eCourse</th><th>Jumlah</th><th>Metode</th><th>Bukti</th><th>Status</th><th>Tanggal</th></tr></thead>
         <tbody>
           <?php foreach ($orders as $o): ?>
             <tr>
-              <td><code><?= lo_h($o['order_number']) ?></code></td>
+              <td><code><?= lo_h($o['order_number']) ?></code><?php if (!empty($o['midtrans_transaction_id'])): ?><br><span class="muted">MID: <?= lo_h($o['midtrans_transaction_id']) ?></span><?php endif; ?></td>
               <td><?= lo_h($o['user_name']) ?><br><span class="muted"><?= lo_h($o['user_email']) ?></span></td>
               <td><?= lo_h($o['course_title']) ?></td>
               <td>Rp <?= number_format((int)$o['amount'], 0, ',', '.') ?></td>
+              <td><?= lo_h(lms_payment_method_label((string)$o['payment_method'])) ?></td>
+              <td><?php if (!empty($o['payment_proof_path'])): ?><a href="<?= lo_h($o['payment_proof_path']) ?>" target="_blank" rel="noopener" style="color:var(--gold-soft);font-weight:800;">Lihat Bukti</a><br><span class="muted"><?= !empty($o['payment_proof_uploaded_at']) ? date('d M H:i', strtotime($o['payment_proof_uploaded_at'])) : '' ?></span><?php else: ?><span class="muted">Belum ada</span><?php endif; ?></td>
               <td><span class="pill pill-<?= $o['payment_status'] ?>"><?= strtoupper($o['payment_status']) ?></span></td>
               <td class="muted"><?= date('d M Y, H:i', strtotime($o['created_at'])) ?></td>
             </tr>
           <?php endforeach; ?>
           <?php if (empty($orders)): ?>
-            <tr><td colspan="6" class="muted" style="text-align:center;padding:30px;">Belum ada transaksi.</td></tr>
+            <tr><td colspan="8" class="muted" style="text-align:center;padding:30px;">Belum ada transaksi.</td></tr>
           <?php endif; ?>
         </tbody>
       </table>

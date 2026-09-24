@@ -43,6 +43,51 @@ if (!function_exists('lms_ensure_schema')) {
             }
         }
 
+        $paymentSettingsReady = table_exists($pdo, 'lms_payment_settings');
+        $hasPaymentColumns = false;
+        try {
+            $stmt = $pdo->query("SHOW COLUMNS FROM lms_orders LIKE 'midtrans_transaction_id'");
+            $hasPaymentColumns = (bool)$stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            $hasPaymentColumns = false;
+        }
+
+        if (!$paymentSettingsReady || !$hasPaymentColumns) {
+            $sqlFile = __DIR__ . '/../database/migrations/migrate_v27_lms_payment_settings.sql';
+            if (is_file($sqlFile)) {
+                $sql = file_get_contents($sqlFile);
+                if ($sql !== false) {
+                    $pdo->exec($sql);
+                }
+            }
+        }
+
+        $hasBankBranding = false;
+        try {
+            $stmt = $pdo->query("SHOW COLUMNS FROM lms_payment_settings LIKE 'bank_logo_path'");
+            $hasBankBranding = (bool)$stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            $hasBankBranding = false;
+        }
+        if (!$hasBankBranding) {
+            $sqlFile = __DIR__ . '/../database/migrations/migrate_v28_lms_bank_branding.sql';
+            $sql = is_file($sqlFile) ? file_get_contents($sqlFile) : false;
+            if ($sql !== false) $pdo->exec($sql);
+        }
+
+        $hasPaymentProof = false;
+        try {
+            $stmt = $pdo->query("SHOW COLUMNS FROM lms_orders LIKE 'payment_proof_path'");
+            $hasPaymentProof = (bool)$stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            $hasPaymentProof = false;
+        }
+        if (!$hasPaymentProof) {
+            $sqlFile = __DIR__ . '/../database/migrations/migrate_v29_lms_payment_proof.sql';
+            $sql = is_file($sqlFile) ? file_get_contents($sqlFile) : false;
+            if ($sql !== false) $pdo->exec($sql);
+        }
+
         $checked = true;
     }
 }
@@ -760,5 +805,181 @@ HTML;
             'From: ' . ($brand['name'] ?? 'RahasiaEmas.id') . ' <noreply@' . ($brand['domain'] ?? 'rahasiaemas.id') . '>',
         ];
         @mail($email, $subject, $html, implode("\r\n", $headers));
+    }
+}
+
+if (!function_exists('lms_bank_catalog')) {
+    function lms_bank_catalog(): array {
+        return [
+            'bca' => 'Bank Central Asia (BCA)',
+            'bri' => 'Bank Rakyat Indonesia (BRI)',
+            'mandiri' => 'Bank Mandiri',
+            'bni' => 'Bank Negara Indonesia (BNI)',
+            'bsi' => 'Bank Syariah Indonesia (BSI)',
+            'cimb' => 'CIMB Niaga',
+            'permata' => 'PermataBank',
+            'danamon' => 'Bank Danamon',
+            'ocbc' => 'OCBC Indonesia',
+            'panin' => 'PaninBank',
+            'maybank' => 'Maybank Indonesia',
+            'btn' => 'Bank Tabungan Negara (BTN)',
+            'mega' => 'Bank Mega',
+            'jago' => 'Bank Jago',
+            'seabank' => 'SeaBank Indonesia',
+            'blu' => 'blu by BCA Digital',
+            'bank_dki' => 'Bank DKI',
+            'bank_jabar' => 'Bank BJB',
+            'bank_jateng' => 'Bank Jateng',
+            'bank_jatim' => 'Bank Jatim',
+            'other' => 'Bank Lainnya',
+        ];
+    }
+}
+
+if (!function_exists('lms_store_bank_logo')) {
+    function lms_store_bank_logo(array $file, ?string $oldPath = null): string {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) return (string)$oldPath;
+        if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'] ?? '')) {
+            throw new RuntimeException('Upload logo bank gagal.');
+        }
+        if ((int)($file['size'] ?? 0) <= 0 || (int)$file['size'] > 2 * 1024 * 1024) {
+            throw new RuntimeException('Logo bank maksimal 2 MB.');
+        }
+        $extension = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+        $allowed = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'webp' => 'image/webp'];
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+        if (!isset($allowed[$extension]) || $mime !== $allowed[$extension]) {
+            throw new RuntimeException('Logo bank harus PNG, JPG, atau WEBP.');
+        }
+        $relativeDir = '/uploads/lms/banks';
+        $absoluteDir = dirname(__DIR__) . $relativeDir;
+        if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0755, true) && !is_dir($absoluteDir)) {
+            throw new RuntimeException('Folder logo bank tidak dapat dibuat.');
+        }
+        $path = $relativeDir . '/' . bin2hex(random_bytes(16)) . '.' . $extension;
+        if (!move_uploaded_file($file['tmp_name'], dirname(__DIR__) . $path)) {
+            throw new RuntimeException('Logo bank gagal disimpan.');
+        }
+        if ($oldPath && str_starts_with($oldPath, $relativeDir . '/')) {
+            $oldFile = dirname(__DIR__) . $oldPath;
+            if (is_file($oldFile)) @unlink($oldFile);
+        }
+        return $path;
+    }
+}
+
+if (!function_exists('lms_default_payment_settings')) {
+    function lms_default_payment_settings(array $brand): array {
+        return [
+            'brand_id' => (int)($brand['id'] ?? 0),
+            'active_method' => 'bank_transfer',
+            'bank_transfer_enabled' => 1,
+            'bank_code' => '',
+            'bank_name' => '',
+            'bank_account_number' => '',
+            'bank_account_name' => $brand['name'] ?? '',
+            'bank_instructions' => "Transfer sesuai nominal checkout. Setelah transfer, simpan bukti pembayaran dan hubungi admin untuk verifikasi manual.",
+            'admin_whatsapp' => $brand['whatsapp_default'] ?? '',
+            'midtrans_enabled' => 0,
+            'midtrans_environment' => 'sandbox',
+            'midtrans_server_key' => '',
+            'midtrans_client_key' => '',
+            'midtrans_merchant_id' => '',
+            'bank_logo_path' => '',
+        ];
+    }
+}
+
+if (!function_exists('lms_get_payment_settings')) {
+    function lms_get_payment_settings(PDO $pdo, array $brand): array {
+        lms_ensure_schema($pdo);
+        $brandId = (int)$brand['id'];
+        $defaults = lms_default_payment_settings($brand);
+
+        $stmt = $pdo->prepare('SELECT * FROM lms_payment_settings WHERE brand_id = ? LIMIT 1');
+        $stmt->execute([$brandId]);
+        $settings = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$settings) {
+            $stmt = $pdo->prepare('
+                INSERT INTO lms_payment_settings (brand_id, active_method, bank_transfer_enabled, bank_account_name, bank_instructions)
+                VALUES (?, ?, ?, ?, ?)
+            ');
+            $stmt->execute([$brandId, $defaults['active_method'], 1, $defaults['bank_account_name'], $defaults['bank_instructions']]);
+            return $defaults;
+        }
+
+        return array_merge($defaults, $settings);
+    }
+}
+
+if (!function_exists('lms_payment_method_label')) {
+    function lms_payment_method_label(string $method): string {
+        return match ($method) {
+            'midtrans' => 'Midtrans Snap',
+            'bank_transfer' => 'Transfer via Bank',
+            'manual_simulator' => 'Simulator Manual',
+            default => $method,
+        };
+    }
+}
+
+if (!function_exists('lms_mask_secret')) {
+    function lms_mask_secret(?string $value): string {
+        $value = trim((string)$value);
+        if ($value === '') return '';
+        return substr($value, 0, 6) . str_repeat('*', max(4, strlen($value) - 10)) . substr($value, -4);
+    }
+}
+
+if (!function_exists('lms_store_payment_proof')) {
+    function lms_store_payment_proof(array $file): string {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            throw new RuntimeException('Silakan pilih file bukti pembayaran terlebih dahulu.');
+        }
+        if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'] ?? '')) {
+            throw new RuntimeException('Upload bukti pembayaran gagal. Coba lagi.');
+        }
+        if ((int)($file['size'] ?? 0) <= 0 || (int)$file['size'] > 5 * 1024 * 1024) {
+            throw new RuntimeException('Ukuran bukti pembayaran maksimal 5 MB.');
+        }
+        $extension = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+        $allowed = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'webp' => 'image/webp', 'pdf' => 'application/pdf'];
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+        if (!isset($allowed[$extension]) || $mime !== $allowed[$extension]) {
+            throw new RuntimeException('Bukti pembayaran harus berupa gambar (PNG/JPG/WEBP) atau PDF.');
+        }
+        $relativeDir = '/uploads/lms/payment-proofs';
+        $absoluteDir = dirname(__DIR__) . $relativeDir;
+        if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0755, true) && !is_dir($absoluteDir)) {
+            throw new RuntimeException('Folder bukti pembayaran tidak dapat dibuat.');
+        }
+        $path = $relativeDir . '/' . bin2hex(random_bytes(16)) . '.' . $extension;
+        if (!move_uploaded_file($file['tmp_name'], dirname(__DIR__) . $path)) {
+            throw new RuntimeException('Bukti pembayaran gagal disimpan.');
+        }
+        return $path;
+    }
+}
+
+if (!function_exists('lms_attach_payment_proof')) {
+    function lms_attach_payment_proof(PDO $pdo, int $userId, string $orderNumber, string $proofPath): bool {
+        $stmt = $pdo->prepare('
+            UPDATE lms_orders
+            SET payment_proof_path = ?, payment_proof_uploaded_at = CURRENT_TIMESTAMP
+            WHERE order_number = ? AND user_id = ? AND payment_status = "pending"
+        ');
+        $stmt->execute([$proofPath, $orderNumber, $userId]);
+        return $stmt->rowCount() > 0;
+    }
+}
+
+if (!function_exists('lms_admin_whatsapp_link')) {
+    function lms_admin_whatsapp_link(array $paymentSettings, string $orderNumber, string $courseTitle, int $amount): ?string {
+        $raw = trim((string)($paymentSettings['admin_whatsapp'] ?? ''));
+        if ($raw === '') return null;
+        $number = function_exists('normalize_whatsapp') ? normalize_whatsapp($raw) : preg_replace('/[^0-9]/', '', $raw);
+        if ($number === '') return null;
+        $message = "Halo Admin, saya sudah transfer untuk order {$orderNumber} ({$courseTitle}) sebesar Rp " . number_format($amount, 0, ',', '.') . ". Mohon dikonfirmasi. Terima kasih.";
+        return 'https://wa.me/' . $number . '?text=' . rawurlencode($message);
     }
 }

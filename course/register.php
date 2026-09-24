@@ -138,7 +138,7 @@ render_lms_header($brand, null, 'register');
     <button type="submit" class="btn-lms btn-lms-gold" style="width:100%;height:48px;margin-top:6px;">Daftar Sekarang — Gratis</button>
 
     <p style="text-align:center;font-size:13px;color:var(--muted);margin-top:6px;">
-      Sudah punya akun? <a href="/course/login.php" style="color:var(--gold-soft);font-weight:700;">Login di sini</a>
+      Sudah punya akun? <a href="/course/login.php?redirect=<?= urlencode($redirect) ?>" style="color:var(--gold-soft);font-weight:700;">Login di sini</a>
     </p>
   </form>
 </div>
