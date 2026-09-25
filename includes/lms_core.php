@@ -85,6 +85,9 @@ if (!function_exists('lms_ensure_schema')) {
         lms_add_column_if_missing($pdo, 'lms_payment_settings', 'bank_code', "ALTER TABLE lms_payment_settings ADD COLUMN bank_code VARCHAR(40) NULL AFTER bank_transfer_enabled");
         lms_add_column_if_missing($pdo, 'lms_payment_settings', 'bank_logo_path', "ALTER TABLE lms_payment_settings ADD COLUMN bank_logo_path VARCHAR(255) NULL AFTER bank_name");
         lms_add_column_if_missing($pdo, 'lms_payment_settings', 'admin_whatsapp', "ALTER TABLE lms_payment_settings ADD COLUMN admin_whatsapp VARCHAR(25) NULL AFTER bank_instructions");
+        if (table_exists($pdo, 'lms_categories')) {
+            lms_add_column_if_missing($pdo, 'lms_categories', 'description', "ALTER TABLE lms_categories ADD COLUMN description TEXT NULL AFTER slug");
+        }
         lms_add_column_if_missing($pdo, 'lms_orders', 'midtrans_transaction_id', "ALTER TABLE lms_orders ADD COLUMN midtrans_transaction_id VARCHAR(120) NULL AFTER payment_method");
         lms_add_column_if_missing($pdo, 'lms_orders', 'payment_reference', "ALTER TABLE lms_orders ADD COLUMN payment_reference VARCHAR(120) NULL AFTER midtrans_transaction_id");
         lms_add_column_if_missing($pdo, 'lms_orders', 'payment_payload', "ALTER TABLE lms_orders ADD COLUMN payment_payload JSON NULL AFTER payment_reference");

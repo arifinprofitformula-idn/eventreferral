@@ -207,11 +207,59 @@ class LmsCourseFormBuilder {
     padding: 24px;
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
   }
+  .lms-category-row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .lms-category-row .lms-dark-select {
+    flex: 1;
+    min-width: 0;
+  }
+  .lms-category-add-btn {
+    white-space: nowrap;
+    background: rgba(214, 165, 54, 0.16);
+    color: var(--lms-form-gold-soft);
+    border-color: rgba(214, 165, 54, 0.38);
+  }
+  .lms-category-add-btn:hover {
+    background: rgba(214, 165, 54, 0.24);
+  }
+  .lms-category-search {
+    margin-bottom: 8px;
+  }
+  .lms-category-notice {
+    display: none;
+    margin-top: 10px;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .lms-category-notice.ok {
+    display: block;
+    color: #bbf7d0;
+    background: rgba(34,197,94,0.12);
+    border: 1px solid rgba(34,197,94,0.3);
+  }
+  .lms-category-notice.error {
+    display: block;
+    color: #fecaca;
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.3);
+  }
+  .lms-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+  }
   @media (max-width: 768px) {
     .lms-form-grid { grid-template-columns: 1fr; }
     .lms-actions-bar { flex-direction: column; align-items: stretch; }
     .lms-actions-bar > div { width: 100%; display: flex; flex-direction: column; gap: 8px; }
     .lms-btn { width: 100%; }
+    .lms-category-row { flex-direction: column; }
   }
 </style>
 CSS;
@@ -294,7 +342,12 @@ CSS;
 
         $out .= '<div class="lms-form-field">';
         $out .= '<label class="lms-form-label">Kategori <span class="req">*</span></label>';
+        $out .= '<input type="search" id="fieldCategorySearch" class="lms-dark-input lms-category-search" placeholder="Cari kategori..." autocomplete="off" oninput="filterCategoryOptions();">';
+        $out .= '<div class="lms-category-row">';
         $out .= '<select name="category_id" id="fieldCategory" required class="lms-dark-select">' . $catOptions . '</select>';
+        $out .= '<button type="button" class="lms-btn lms-category-add-btn" onclick="openCategoryModal();">+ Tambah Kategori</button>';
+        $out .= '</div>';
+        $out .= '<div id="categoryInlineNotice" class="lms-category-notice"></div>';
         $out .= '</div>';
 
         $out .= '<div class="lms-form-field">';
@@ -456,6 +509,28 @@ CSS;
 
         $out .= '</form>';
 
+        $out .= '<div id="lmsCategoryModal" class="lms-modal-overlay">';
+        $out .= '<div class="lms-modal" style="width:min(100%,520px);">';
+        $out .= '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;">';
+        $out .= '<h3 style="font-size:18px;margin:0;color:var(--lms-form-gold-soft);">Tambah Kategori Course</h3>';
+        $out .= '<button type="button" onclick="closeCategoryModal();" class="lms-btn lms-btn-cancel" style="padding:6px 12px;font-size:12px;">✕ Tutup</button>';
+        $out .= '</div>';
+        $out .= '<div class="lms-form-field">';
+        $out .= '<label class="lms-form-label">Nama kategori <span class="req">*</span></label>';
+        $out .= '<input type="text" id="newCategoryName" class="lms-dark-input" maxlength="100" placeholder="Contoh: Strategi Investasi">';
+        $out .= '</div>';
+        $out .= '<div class="lms-form-field" style="margin-top:12px;">';
+        $out .= '<label class="lms-form-label">Deskripsi kategori (opsional)</label>';
+        $out .= '<textarea id="newCategoryDescription" rows="3" class="lms-dark-textarea" maxlength="1000" placeholder="Deskripsi singkat kategori..."></textarea>';
+        $out .= '</div>';
+        $out .= '<div id="categoryModalNotice" class="lms-category-notice"></div>';
+        $out .= '<div class="lms-modal-actions">';
+        $out .= '<button type="button" class="lms-btn lms-btn-cancel" onclick="closeCategoryModal();">Cancel</button>';
+        $out .= '<button type="button" id="saveCategoryBtn" class="lms-btn lms-btn-publish" onclick="submitNewCategory();">Simpan Kategori</button>';
+        $out .= '</div>';
+        $out .= '</div>';
+        $out .= '</div>';
+
         // MODAL PREVIEW
         $out .= '<div id="lmsPreviewModal" class="lms-modal-overlay">';
         $out .= '<div class="lms-modal">';
@@ -467,6 +542,7 @@ CSS;
         $out .= '</div>';
         $out .= '</div>';
 
+        $out .= '<script>const lmsCategoryCsrfToken = ' . json_encode($csrfToken) . '; const lmsAddCategoryEndpoint = "/admin/api/add-category.php";</script>';
         $out .= <<<'JS'
 <script>
 function togglePriceRequirement() {
@@ -484,49 +560,93 @@ function togglePriceRequirement() {
 
 function toggleMaterialInputs() {
   const mType = document.getElementById('quickMaterialType').value;
-  const wrapUpload = document.getElementById('wrapMaterialUpload');
-  const wrapUrl = document.getElementById('wrapMaterialUrl');
-  const wrapQuiz = document.getElementById('wrapMaterialQuiz');
-
-  wrapUpload.style.display = (mType === 'video' || mType === 'pdf') ? 'grid' : 'none';
-  wrapUrl.style.display = (mType === 'video') ? 'grid' : 'none';
-  wrapQuiz.style.display = (mType === 'quiz') ? 'grid' : 'none';
+  document.getElementById('wrapMaterialUpload').style.display = (mType === 'video' || mType === 'pdf') ? 'grid' : 'none';
+  document.getElementById('wrapMaterialUrl').style.display = mType === 'video' ? 'grid' : 'none';
+  document.getElementById('wrapMaterialQuiz').style.display = mType === 'quiz' ? 'grid' : 'none';
 }
 
-function validateCourseForm(form) {
+function validateCourseForm() {
   const title = document.getElementById('fieldTitle').value.trim();
   const desc = document.getElementById('fieldDescription').value.trim();
   const cat = document.getElementById('fieldCategory').value.trim();
   const status = document.getElementById('fieldStatus').value.trim();
   const access = document.getElementById('fieldAccessType').value;
   const price = parseInt(document.getElementById('fieldPrice').value, 10) || 0;
-
-  if (!title) {
-    alert('Judul course wajib diisi.');
-    document.getElementById('fieldTitle').focus();
-    return false;
-  }
-  if (!cat) {
-    alert('Kategori wajib dipilih.');
-    document.getElementById('fieldCategory').focus();
-    return false;
-  }
-  if (!status) {
-    alert('Status wajib dipilih.');
-    document.getElementById('fieldStatus').focus();
-    return false;
-  }
-  if (!desc) {
-    alert('Deskripsi wajib diisi.');
-    document.getElementById('fieldDescription').focus();
-    return false;
-  }
-  if (access === 'premium' && price <= 0) {
-    alert('Course berbayar (Premium) wajib memiliki harga di atas 0.');
-    document.getElementById('fieldPrice').focus();
-    return false;
-  }
+  if (!title) { alert('Judul course wajib diisi.'); document.getElementById('fieldTitle').focus(); return false; }
+  if (!cat) { alert('Kategori wajib dipilih.'); document.getElementById('fieldCategory').focus(); return false; }
+  if (!status) { alert('Status wajib dipilih.'); document.getElementById('fieldStatus').focus(); return false; }
+  if (!desc) { alert('Deskripsi wajib diisi.'); document.getElementById('fieldDescription').focus(); return false; }
+  if (access === 'premium' && price <= 0) { alert('Course berbayar (Premium) wajib memiliki harga di atas 0.'); document.getElementById('fieldPrice').focus(); return false; }
   return true;
+}
+
+function showCategoryNotice(targetId, message, type) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  el.textContent = message;
+  el.className = 'lms-category-notice ' + (type === 'ok' ? 'ok' : 'error');
+}
+
+function clearCategoryNotice(targetId) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  el.textContent = '';
+  el.className = 'lms-category-notice';
+}
+
+function openCategoryModal() {
+  clearCategoryNotice('categoryModalNotice');
+  document.getElementById('newCategoryName').value = '';
+  document.getElementById('newCategoryDescription').value = '';
+  document.getElementById('lmsCategoryModal').style.display = 'grid';
+  setTimeout(() => document.getElementById('newCategoryName').focus(), 50);
+}
+
+function closeCategoryModal() {
+  document.getElementById('lmsCategoryModal').style.display = 'none';
+}
+
+function filterCategoryOptions() {
+  const query = document.getElementById('fieldCategorySearch').value.trim().toLowerCase();
+  const select = document.getElementById('fieldCategory');
+  Array.from(select.options).forEach((option) => {
+    option.hidden = option.value !== '' && query !== '' && !option.text.toLowerCase().includes(query);
+  });
+}
+
+async function submitNewCategory() {
+  const nameInput = document.getElementById('newCategoryName');
+  const descInput = document.getElementById('newCategoryDescription');
+  const button = document.getElementById('saveCategoryBtn');
+  const name = nameInput.value.trim();
+  clearCategoryNotice('categoryModalNotice');
+  clearCategoryNotice('categoryInlineNotice');
+  if (!name) { showCategoryNotice('categoryModalNotice', 'Nama kategori wajib diisi.', 'error'); nameInput.focus(); return; }
+  button.disabled = true;
+  button.textContent = 'Menyimpan...';
+  try {
+    const body = new URLSearchParams({ csrf_token: lmsCategoryCsrfToken, name, description: descInput.value.trim() });
+    const response = await fetch(lmsAddCategoryEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body,
+      credentials: 'same-origin'
+    });
+    const data = await response.json().catch(() => ({ ok: false, message: 'Respons server tidak valid.' }));
+    if (!response.ok || !data.ok) { showCategoryNotice('categoryModalNotice', data.message || 'Kategori gagal disimpan.', 'error'); return; }
+    const select = document.getElementById('fieldCategory');
+    select.add(new Option(data.category.name, String(data.category.id), true, true));
+    select.value = String(data.category.id);
+    document.getElementById('fieldCategorySearch').value = '';
+    filterCategoryOptions();
+    closeCategoryModal();
+    showCategoryNotice('categoryInlineNotice', data.message || 'Kategori berhasil ditambahkan.', 'ok');
+  } catch (error) {
+    showCategoryNotice('categoryModalNotice', 'Koneksi gagal. Coba lagi.', 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Simpan Kategori';
+  }
 }
 
 function openLivePreviewModal() {
@@ -537,25 +657,18 @@ function openLivePreviewModal() {
   const access = document.getElementById('fieldAccessType').value;
   const price = parseInt(document.getElementById('fieldPrice').value, 10) || 0;
   const status = document.getElementById('fieldStatus').value;
-
   const content = document.getElementById('lmsPreviewContent');
-  content.innerHTML = `
-    <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
-      <span style="font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px;background:${access==='free'?'rgba(59,130,246,0.2)':'rgba(214,165,54,0.25)'};color:${access==='free'?'#93c5fd':'#f4d27a'};border:1px solid rgba(255,255,255,0.1);">
-        ${access === 'free' ? 'FREE ACCESS' : 'PREMIUM COURSE'}
-      </span>
-      <span style="font-size:12px;color:#a8a29a;">Kategori: <strong style="color:#fff;">${catName}</strong></span>
-      <span style="font-size:12px;color:#a8a29a;">Status: <strong style="color:#fff;">${status.toUpperCase()}</strong></span>
-    </div>
-    <h2 style="font-size:22px;margin:0 0 10px;color:#fff;">${title}</h2>
-    <p style="font-size:13.5px;color:#a8a29a;line-height:1.6;white-space:pre-wrap;margin-bottom:16px;">${desc}</p>
-    <div style="padding:14px;background:rgba(255,255,255,0.04);border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:13px;color:#a8a29a;">Biaya Kursus</span>
-      <span style="font-size:20px;font-weight:800;color:${access==='free'?'#93c5fd':'#f4d27a'};">
-        ${access === 'free' ? 'GRATIS' : 'Rp ' + price.toLocaleString('id-ID')}
-      </span>
-    </div>
-  `;
+  content.replaceChildren();
+  const heading = document.createElement('h2');
+  heading.style.cssText = 'font-size:22px;margin:0 0 10px;color:#fff;';
+  heading.textContent = title;
+  const metadata = document.createElement('p');
+  metadata.style.cssText = 'font-size:12px;color:#a8a29a;margin-bottom:12px;';
+  metadata.textContent = `Kategori: ${catName} | Status: ${status.toUpperCase()} | ${access === 'free' ? 'GRATIS' : 'Rp ' + price.toLocaleString('id-ID')}`;
+  const description = document.createElement('p');
+  description.style.cssText = 'font-size:13.5px;color:#a8a29a;line-height:1.6;white-space:pre-wrap;';
+  description.textContent = desc;
+  content.append(heading, metadata, description);
   document.getElementById('lmsPreviewModal').style.display = 'grid';
 }
 
