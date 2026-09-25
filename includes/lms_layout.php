@@ -4,6 +4,8 @@
  * Shared UI Layout & Navigation untuk LMS User, Guest, dan Student Portal.
  */
 
+require_once __DIR__ . '/pwa.php';
+
 if (!function_exists('render_lms_header')) {
     function render_lms_header(array $brand, ?array $user, string $activePage = 'courses'): void {
         $brandName = htmlspecialchars($brand['name'] ?? 'RahasiaEmas.id', ENT_QUOTES, 'UTF-8');
@@ -35,6 +37,7 @@ if (!function_exists('render_lms_header')) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= $brandName ?> — Simple LMS</title>
+<?php render_pwa_head_tags($brand); ?>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   <?= get_theme_css_vars($brand) ?>
@@ -346,6 +349,7 @@ if (!function_exists('render_lms_footer')) {
     </div>
   </div>
 </footer>
+<?php render_pwa_register_script(); ?>
 </body>
 </html>
         <?php

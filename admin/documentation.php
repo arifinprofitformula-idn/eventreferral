@@ -209,7 +209,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
     <div class="toc-title">Daftar Isi</div>
     <ol>
       <li><a href="#arsitektur">Arsitektur Sistem</a></li>
-      <li><a href="#riwayat">Riwayat Versi (v1 → v13)</a></li>
+      <li><a href="#riwayat">Riwayat Versi (v1 → v14)</a></li>
       <li><a href="#brand-baru">Menambah Brand Baru</a></li>
       <li><a href="#migrasi">Urutan Migrasi Database</a></li>
       <li><a href="#deploy">Deploy Production</a></li>
@@ -225,7 +225,7 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
       <h1>Dokumentasi Sistem <?= htmlspecialchars($brand['name']) ?></h1>
       <p>Referensi teknis lengkap: arsitektur saat ini, riwayat perubahan sejak pertama dibangun, urutan migrasi database, dan pola deploy production yang dipakai tim.</p>
       <div class="hero-meta">
-        <div><strong>v13</strong>Versi aplikasi saat ini</div>
+        <div><strong>v14</strong>Versi aplikasi saat ini</div>
         <div><strong>Multi-brand</strong>Mode operasi</div>
         <div><strong>Git + webhook + auto-SSL</strong>Pola deploy</div>
       </div>
@@ -320,7 +320,15 @@ $brandInitials = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $brand['na
             </div>
           </div>
           <div class="tl-item">
-            <div class="tl-badge current">v13</div>
+            <div class="tl-badge current">v14</div>
+            <div class="tl-body">
+              <strong>Progressive Web App (PWA)</strong>
+              <p>Landing page, portal eCourse, dan panel admin kini dapat diinstal ke home screen sebagai aplikasi standalone. Manifest dibuat dinamis per brand, dilengkapi icon 192/512, theme color, Apple touch icon, dan shortcut eCourse/Admin. Service worker hanya meng-cache aset statis; halaman admin, API, login, logout, checkout, dan PHP dinamis tidak di-cache demi keamanan serta konsistensi data.</p>
+              <div class="tl-tags"><span class="tag">manifest.php</span><span class="tag">sw.js</span><span class="tag">includes/pwa.php</span><span class="tag">assets/pwa/*</span></div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-badge">v13</div>
             <div class="tl-body">
               <strong>Navigasi mobile portal siswa dan guest</strong>
               <p>Shared layout LMS kini memakai header mobile 62px dan bottom navigation khusus pengguna non-admin. Guest mendapat akses cepat Katalog, Masuk, Daftar, dan Beranda. Siswa mendapat Katalog, Course Saya, Notifikasi (dengan badge unread real-time), dan Keluar. Perubahan otomatis berlaku ke katalog, detail course, checkout, login/register, My Courses, lesson, dan notifikasi di semua brand.</p>
@@ -510,7 +518,7 @@ git checkout main && bash deploy/deploy.sh</code></pre>
   </main>
 </div>
 
-<p class="foot">Dokumentasi ini mengikuti kondisi aplikasi versi v13 (multi-brand + LMS + transfer bank manual + auto-SSL + navigasi mobile admin/siswa). Perbarui halaman ini setiap kali menambah <code>migrate_v*.sql</code> baru atau workflow server baru.</p>
+<p class="foot">Dokumentasi ini mengikuti kondisi aplikasi versi v14 (multi-brand + LMS + transfer bank manual + auto-SSL + navigasi mobile + PWA). Perbarui halaman ini setiap kali menambah <code>migrate_v*.sql</code> baru atau workflow server baru.</p>
 
 </body>
 </html>

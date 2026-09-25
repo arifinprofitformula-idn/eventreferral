@@ -302,6 +302,22 @@ function render_admin_nav(string $activeKey): void {
 
     <script>
       (function () {
+        if (!document.querySelector('link[rel="manifest"]')) {
+          var manifestLink = document.createElement('link');
+          manifestLink.rel = 'manifest';
+          manifestLink.href = '/manifest.php';
+          document.head.appendChild(manifestLink);
+        }
+        if (!document.querySelector('meta[name="theme-color"]')) {
+          var themeMeta = document.createElement('meta');
+          themeMeta.name = 'theme-color';
+          themeMeta.content = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim() || '#D6A536';
+          document.head.appendChild(themeMeta);
+        }
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+        }
+
         var groups = document.querySelectorAll('.adm-nav details');
         groups.forEach(function (el) {
           el.addEventListener('toggle', function () {

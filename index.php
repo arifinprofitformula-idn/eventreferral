@@ -5,6 +5,7 @@ header('Expires: Wed, 11 Jan 1984 05:00:00 GMT');
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/bootstrap.php';
+require_once __DIR__ . '/includes/pwa.php';
 
 $brand = require_brand_or_404(get_current_brand());
 $brandId = (int)$brand['id'];
@@ -50,7 +51,7 @@ if ($defaultEventSlug !== '' && $defaultEventIsActive) {
                 $html
             );
 
-            echo $html;
+            echo inject_pwa_into_html($html, $brand);
             exit;
         }
     }
